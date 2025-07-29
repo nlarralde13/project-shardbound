@@ -1,0 +1,29 @@
+.tooltip-box {
+  position: absolute;
+  background: #1b1a17;
+  color: #f4e9cd;
+  border: 1px solid #c0a36e;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-family: 'Georgia', serif;
+  font-size: 13px;
+  line-height: 1.4;
+  box-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+  max-width: 240px;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.tooltip-box .label {
+  font-weight: bold;
+  color: #e2c275;
+}
+
+.tooltip-box .value {
+  color: #f4e9cd;
+}
+
+.tooltip-box .divider {
+  border-top: 1px solid #4a3d2a;
+  margin: 6px 0;
+}
