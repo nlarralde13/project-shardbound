@@ -1,0 +1,62 @@
+/project-shardbound/
+├── /public/
+│   ├── index.html
+│   ├── styles.css
+│   └── /regions/
+│       └── region_0_0.json
+│
+├── /src/
+│   ├── main.js                ← bootloader
+│   ├── settings.json          ← global config
+│
+│   ├── /regions/              ← region loading, stitching, saving
+│   │   ├── regionLoader.js
+│   │   ├── renderRegion.js
+│   │   └── regionSchema.js
+│
+│   ├── /rooms/                ← per-tile narrative & events
+│   │   ├── roomEngine.js
+│   │   ├── roomSchema.js
+│   │   ├── sceneRenderer.js
+│   │   └── choiceHandlers.js
+│
+│   ├── /players/              ← player state & inventory
+│   │   ├── player.js
+│   │   ├── inventory.js
+│   │   ├── playerStats.js
+│   │   └── characterBuilder.js
+│
+│   ├── /combat/               ← turn-based battle system
+│   │   ├── battleEngine.js
+│   │   ├── enemyTemplates.js
+│   │   ├── combatUI.js
+│   │   └── actionResolver.js
+│
+│   ├── /crafting/             ← professions and item creation
+│   │   ├── craftingEngine.js
+│   │   ├── craftingSchema.js
+│   │   ├── recipes.js
+│   │   ├── materials.js
+│   │   └── craftingUI.js
+│
+│   ├── /ui/                   ← all renderable UI panels and overlays
+│   │   ├── mapOverlay.js
+│   │   ├── tooltip.js
+│   │   ├── devPanel.js
+│   │   ├── actionMenu.js
+│   │   └── hudRenderer.js
+│
+│   ├── /items/                ← weapons, tools, gear
+│   │   ├── itemSchema.js
+│   │   ├── weapons.js
+│   │   ├── tools.js
+│   │   ├── armor.js
+│   │   └── consumables.js
+│
+│   ├── /utils/                ← shared logic/helpers
+│   │   ├── colorUtils.js
+│   │   ├── randomUtils.js
+│   │   ├── coordUtils.js
+│   │   └── dataHelpers.js
+│
+└── README.md
