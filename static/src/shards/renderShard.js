@@ -4,6 +4,8 @@ import { TILE_WIDTH, TILE_HEIGHT } from '../config/mapConfig.js';
 
 //rendershard.js
 export async function renderShard(ctx, shardData) {
+    console.log("blah")
+    console.log("[renderShard] 🎨 Rendering shard:", shardData);
     console.log("[renderShard] Starting render with:", shardData.width, "×", shardData.height);
 
     const biomeColors = {

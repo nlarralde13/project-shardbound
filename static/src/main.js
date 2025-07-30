@@ -3,6 +3,7 @@ import { createTooltip, updateTooltip, hideTooltip } from './ui/tooltip.js';
 import { initCamera, centerViewport } from './ui/camera.js';
 import { TILE_WIDTH, TILE_HEIGHT } from './config/mapConfig.js';
 
+console.log("[main.js] ✅ Script loaded");
 
 
 async function loadSettings() {
@@ -42,6 +43,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     wrapper.id = 'canvasWrapper';
     wrapper.style.width = `${50 * TILE_WIDTH}px`;
     wrapper.style.height = `${50 * TILE_HEIGHT}px`;
+    wrapper.style.position = 'relative'; 
     
 
     const canvas = document.createElement('canvas');
@@ -59,7 +61,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     const ctx = canvas.getContext('2d');
     const shard = await loadShard();
+    console.log("[main.js] 🧩 About to render shard:", shard);
     renderShard(ctx, shard);
+    console.log("[main.js] ✅ renderShard() was called");
+
     
 
     //init camera and map zoom

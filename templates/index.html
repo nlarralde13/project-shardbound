@@ -1,29 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Project Shardbound</title>
-  <link rel="stylesheet" href="/static/styles.css" />
-  <link rel="stylesheet" href="/static/tooltip.css" />
-
-  <script type="module" src="/static/src/main.js" defer></script>
+  <meta charset="UTF-8">
+  <title>🧙 PROJECT SHARDBOUND</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <!-- Fantasy Vibes Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=UnifrakturCook:wght@700&display=swap" rel="stylesheet">
 </head>
 <body>
   <div id="gameUI">
-    <div id="topBar">[TOP BAR]</div>
+    <div id="banner">🧙‍♂️ PROJECT SHARDBOUND: Rise of the Ember Crown 🔥</div>
 
-    <div id="middleRow">
-      <div id="left-Bar">[LEFT BAR]</div>
+    <div id="mainLayout">
+      <!-- Left Sidebar -->
+      <div id="leftBar">
+        <div id="backpack" class="panelBox">
+          <h3>🎒 Satchel</h3>
+          <button>🧪 Health Potion</button>
+          <button>🗝️ Ancient Key</button>
+          <button>📜 Scroll of Fire</button>
+        </div>
+        <div id="journal" class="panelBox">
+          <h3>📖 Quest Log</h3>
+          <p>⛏️ Mine the Crystal Caves</p>
+          <p>🐍 Defeat the Basilisk</p>
+          <p>👑 Find the Lost Princess</p>
+        </div>
+      </div>
 
-      <div id="viewportWrapper">
-      <div id="viewport"></div>
-      <div id="devToolsPanel">[DEV TOOLS]</div>
-      <div id="zoomOverlay">100%</div>
+      <!-- Center Panel -->
+      <div id="centerPanel">
+        <div id="viewportWrapper">
+          <div id="viewport">
+            <!-- Your canvas will render here -->
+          </div>
+        </div>
+        <div id="actionBar">
+          <button>⚔️ Slash</button>
+          <button>🔥 Fireball</button>
+          <button>🛡️ Shield Up</button>
+          <button>🦅 Summon Hawk</button>
+          <button>🌪️ Arcane Tempest</button>
+        </div>
+        <div id="inputBar">
+          <input type="text" placeholder="Say something brave, foolish hero..." />
+        </div>
+      </div>
+
+      <!-- Right Sidebar -->
+      <div id="rightBar">
+        <div id="menuPanel" class="panelBox">
+          <h3>📜 Guild Hall</h3>
+          <p>📚 Wiki of Lore</p>
+          <p>💬 Town Square</p>
+          <p>📢 Herald’s Announcements</p>
+        </div>
+      </div>
     </div>
-
-    </div>
-
-    <div id="bottomBar">[BOTTOM BAR]</div>
   </div>
+  <script type="module" src="/static/src/main.js"></script>
+  <div id="devToolsPanel" style="display: none;">
+  <p><strong>Dev Panel</strong></p>
+</div>
+
 </body>
 </html>
