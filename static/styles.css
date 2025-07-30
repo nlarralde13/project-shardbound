@@ -98,15 +98,36 @@ canvas {
 
 /* === Action & Input Bars === */
 #actionBar {
-  background: rgba(20, 10, 5, 0.9);
-  border: 2px solid #632a14;
+  background: rgba(10, 10, 10, 0.85);
+  border: 2px solid #333;
   border-radius: 8px;
-  padding: 10px;
-  width: 100%;
+  padding: 8px;
+  width: fit-content;
   max-width: 640px;
-  text-align: center;
-  box-shadow: 0 0 8px #000;
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  box-shadow: 0 0 10px #000 inset;
 }
+.action-btn {
+  width: 48px;
+  height: 48px;
+  background-color: #1a1a1a;
+  background-size: cover;
+  background-position: center;
+  border: 2px solid #444;
+  border-radius: 6px;
+  box-shadow: 0 0 6px #000;
+  cursor: pointer;
+  transition: transform 0.1s ease-in-out, border-color 0.2s;
+}
+
+.action-btn:hover {
+  transform: scale(1.1);
+  border-color: #ddd;
+  box-shadow: 0 0 8px #88f;
+}
+
 
 #inputBar {
   width: 100%;
@@ -173,4 +194,34 @@ button:hover {
   position: relative;
   display: block;
   margin: 0 auto;
+}
+
+/* === Tooltip Style === */
+.tooltip-box {
+  position: absolute;
+  background: rgba(34, 34, 34, 0.95);
+  color: #fff;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-family: monospace;
+  border: 1px solid #FFD700;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 9999;
+  box-shadow: 0 0 10px #000;
+}
+
+.tooltip-box .label {
+  color: #aaa;
+  margin-right: 4px;
+  font-weight: bold;
+}
+
+.tooltip-box .value {
+  color: #fff;
+}
+
+.tooltip-box .divider {
+  margin: 6px 0;
+  border-top: 1px solid #555;
 }
