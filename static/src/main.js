@@ -4,6 +4,8 @@ import { initCamera, centerViewport } from './ui/camera.js';
 import { TILE_WIDTH, TILE_HEIGHT } from './config/mapConfig.js';
 import { saveShard, loadShardFromFile, regenerateShard } from './utils/shardLoader.js';
 import { updateDevStatsPanel } from './utils/tileUtils.js';
+import { calculateViewportSize } from './ui/viewportUtils.js'
+
 
 let hoveredTile = null;
 let selectedTile = null;
@@ -46,25 +48,33 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // Show or hide dev panels if Devmode enabled
     if (settings.devMode) {
-      document.getElementById('leftDevPanel').style.display = 'block';
-      document.getElementById('devToolsPanel').style.display = 'block';
+      const statsPanel = document.getElementById('devStatsPanel');
+      const toolsPanel = document.getElementById('devToolsPanel');
+      if (statsPanel) statsPanel.style.display = 'block';
+      if (toolsPanel) toolsPanel.style.display = 'block';
       console.log('[DevMode] ✅ Dev panels enabled');
     } else {
-      document.getElementById('leftDevPanel').style.display = 'none';
-      document.getElementById('devToolsPanel').style.display = 'none';
+      const statsPanel = document.getElementById('devStatsPanel');
+      const toolsPanel = document.getElementById('devToolsPanel');
+      if (statsPanel) statsPanel.style.display = 'none';
+      if (toolsPanel) toolsPanel.style.display = 'none';
     }
+
 
 
     const wrapper = document.createElement('div');
     wrapper.id = 'canvasWrapper';
-    wrapper.style.width = `${50 * TILE_WIDTH}px`;
-    wrapper.style.height = `${50 * TILE_HEIGHT}px`;
+
+    const { cols, rows } = calculateViewportSize(TILE_WIDTH, TILE_HEIGHT);
+    wrapper.style.width = `${cols * TILE_WIDTH}px`;
+    wrapper.style.height = `${cols * TILE_HEIGHT}px`;
     wrapper.style.position = 'relative'; 
     
 
     const canvas = document.createElement('canvas');
-    canvas.width = 50 * TILE_WIDTH;
-    canvas.height = 50 * TILE_HEIGHT;
+    canvas.width = cols * TILE_WIDTH;
+    canvas.height = rows * TILE_HEIGHT;
+
     wrapper.appendChild(canvas);
 
     const viewportEl = document.getElementById('viewport');

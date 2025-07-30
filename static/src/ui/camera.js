@@ -114,3 +114,7 @@ export function centerViewport(viewportEl, canvas) {
     viewportEl.scrollLeft = (canvas.width * zoomLevel - viewportEl.clientWidth) / 2;
     viewportEl.scrollTop = (canvas.height * zoomLevel - viewportEl.clientHeight) / 2;
 }
+window.addEventListener('resize', () => {
+  // Optionally debounce with setTimeout if needed
+  location.reload(); // Simple for now — reload on resize
+});

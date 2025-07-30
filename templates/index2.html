@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>🧙 PROJECT SHARDBOUND (Dev Preview)</title>
+
+  <!-- Fantasy Vibe Fonts -->
+  <link 
+    href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=UnifrakturCook:wght@700&display=swap" 
+    rel="stylesheet" 
+  />
+
+  <!-- Your new styled CSS -->
+  <link rel="stylesheet" href="/static/styles-index2.css" />
+</head>>
+<body>
+  <!-- HEADER / BANNER -->
+  <header id="banner">
+    🧙‍♂️ PROJECT SHARDBOUND
+  </header>
+
+  <!-- MAIN GRID LAYOUT -->
+  <div id="mainLayout">
+    <!-- LEFT SIDEBAR -->
+    <aside id="leftPanel">
+      <div id="satchelPanel" class="panelBox collapsed">
+        <div class="panelHeader">
+          🎒 Satchel <span class="toggleIndicator">＋</span>
+        </div>
+        <div class="panelContent">
+          <button>🧪 Health Potion</button>
+          <button>🗝️ Ancient Key</button>
+          <button>📜 Scroll of Fire</button>
+        </div>
+      </div>
+
+      <div id="questPanel" class="panelBox collapsed">
+        <div class="panelHeader">
+          📖 Quest Log <span class="toggleIndicator">＋</span>
+        </div>
+        <div class="panelContent">
+          <ul>
+            <li>⛏️ Mine the Crystal Caves</li>
+            <li>🐍 Defeat the Basilisk</li>
+            <li>👑 Find the Lost Princess</li>
+          </ul>
+        </div>
+      </div>
+
+      <div id="infoPanel" class="panelBox collapsed">
+        <div class="panelHeader">
+          ℹ️ Info Panel <span class="toggleIndicator">＋</span>
+        </div>
+        <div class="panelContent">
+          <p>Click a tile in the map to see its details here.</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CENTER PANEL: VIEWPORT + ACTIONS + INPUT -->
+    <div id="centerPanel">
+      <div id="viewportContainer">
+        <div id="zoomOverlay"></div>
+        <canvas id="viewport"></canvas>
+      </div>
+      <div id="actionBar">
+        <!-- Example action buttons; you can swap to your icons -->
+        <div class="action-btn" title="Slash">⚔️</div>
+        <div class="action-btn" title="Fireball">🔥</div>
+        <div class="action-btn" title="Ice Lance">❄️</div>
+      </div>
+      <div id="inputBar">
+        <input type="text" placeholder="Say something brave, foolish hero…" />
+      </div>
+    </div>
+
+    <!-- RIGHT SIDEBAR -->
+    <aside id="rightPanel">
+      <div id="menuPanel" class="panelBox">
+        <h3>📜 Guild Hall</h3>
+        <p>📚 Wiki of Lore</p>
+        <p>💬 Town Square</p>
+        <p>📢 Herald’s Announcements</p>
+      </div>
+
+      <div id="devStatsPanel" class="panelBox">
+        <h3>📊 Dev Stats</h3>
+        <pre id="statsContent">Click a tile…</pre>
+      </div>
+
+      <div id="devToolsPanel" class="panelBox">
+        <h3>🛠 Dev Tools</h3>
+        <button id="toggleBrush">🖌️ Shard Editor</button>
+        <div id="biomeEditorPanel" class="nested-dev-panel" style="display:none;">
+          <label for="biomeSelect">Biome:</label>
+          <select id="biomeSelect">
+            <option value="grass">Grass</option>
+            <option value="forest">Forest</option>
+            <option value="water">Water</option>
+            <option value="mountain">Mountain</option>
+          </select>
+          <p style="font-size:12px">Click a tile to paint</p>
+        </div>
+        <hr />
+        <button id="saveShard">💾 Save Shard</button>
+        <input type="file" id="loadShardInput" accept=".json" style="display:none;" />
+        <button id="loadShardBtn">📂 Load Shard</button>
+        <button id="regenWorld">🔁 Regenerate Shard</button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- MODULE ENTRYPOINT -->
+  <script type="module" src="/static/src/main2.js"></script>
+</body>
+</html>

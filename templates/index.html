@@ -1,60 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Project Shardbound</title>
+  <meta charset="UTF-8" />
+  <title>🧙 PROJECT SHARDBOUND</title>
   <link rel="stylesheet" href="/static/styles.css" />
-  <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap" rel="stylesheet">
+  <!-- Fantasy Vibes Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=UnifrakturCook:wght@700&display=swap" rel="stylesheet" />
 </head>
 <body>
   <div id="gameUI">
-    <div id="banner">🧙 Project Shardbound: Rise of the Ember Crown</div>
+    <div id="banner">🧙‍♂️ PROJECT SHARDBOUND: Rise of the Ember Crown 🔥</div>
 
     <div id="mainLayout">
       <!-- Left Sidebar -->
       <div id="leftBar">
-        <!-- optional game UI panels -->
+        <div id="backpack" class="panelBox">
+          <h3>🎒 Satchel</h3>
+          <button>🧪 Health Potion</button>
+          <button>🗝️ Ancient Key</button>
+          <button>📜 Scroll of Fire</button>
+        </div>
+        <div id="journal" class="panelBox">
+          <h3>📖 Quest Log</h3>
+          <p>⛏️ Mine the Crystal Caves</p>
+          <p>🐍 Defeat the Basilisk</p>
+          <p>👑 Find the Lost Princess</p>
+        </div>
       </div>
 
       <!-- Center Panel -->
-      <div id="centerPanel">
-        <div id="centerFlex">
-          
-          <!-- Left Dev Panel -->
-          <div id="leftDevPanel" class="dev-box" style="display: none;">
-            <div id="devStatsPanel">
-              <h4>📊 Dev Stats</h4>
-              <div id="statsContent">Click a tile to view details.</div>
-            </div>
-          </div>
-
-          <!-- Viewport Wrapper -->
-          <div id="viewportWrapper">
-            <div id="viewport"></div>
-          </div>
-
-          <!-- Right Dev Panel -->
-          <div id="devToolsPanel" class="dev-box" style="display: none;">
-            <h4>🛠️ Dev Tools</h4>
-            <button id="toggleBrush">🖌️ Shard Editor</button>
-            <div id="biomeEditorPanel" class="nested-dev-panel" style="display: none;">
-              <label for="biomeSelect">Biome:</label>
-              <select id="biomeSelect">
-                <option value="grass">Grass</option>
-                <option value="forest">Forest</option>
-                <option value="water">Water</option>
-                <option value="mountain">Mountain</option>
-              </select>
-              <p style="font-size: 12px;">Click a tile to paint</p>
-            </div>
-            <button id="exploreTile">▶ Explore</button>
-            <hr>
-            <button id="saveShard">💾 Save Shard</button>
-            <input type="file" id="loadShardInput" accept=".json" style="display: none;" />
-            <button id="loadShardBtn">📂 Load Shard</button>
-            <button id="regenWorld">🌀 Regenerate Shard</button>
-          </div>
-
+      <div id="centerFlex">
+        <!-- Left Dev Panel (Stats) -->
+        
+        <!-- Viewport -->
+        <div id="viewportWrapper">
+          <div id="viewport"></div>
         </div>
 
         <!-- Action Bar -->
@@ -68,12 +48,51 @@
         <div id="inputBar">
           <input type="text" placeholder="Say something brave, foolish hero..." />
         </div>
-      </div>
+
+        <!-- Right Dev Tools Panel -->
+        
 
       <!-- Right Sidebar -->
       <div id="rightBar">
-        <!-- optional content -->
+        <div id="menuPanel" class="panelBox">
+          <h3>📜 Guild Hall</h3>
+          <p>📚 Wiki of Lore</p>
+          <p>💬 Town Square</p>
+          <p>📢 Herald’s Announcements</p>
+        </div>
+
+        <div id="devStatsPanel" class="dev-box">
+          <h4>📊 Dev Stats</h4>
+          <div id="statsContent">Click a tile to view details.</div>
+        </div>
+
+        <div id="devToolsPanel" class="dev-box">
+          <h4>🛠️ Dev Tools</h4>
+          <button id="toggleBrush" title="Toggle Brush Mode">🖌️ Shard Editor</button>
+
+          <div id="biomeEditorPanel" class="nested-dev-panel" style="display: none;">
+            <label for="biomeSelect">Biome:</label>
+            <select id="biomeSelect">
+              <option value="grass">Grass</option>
+              <option value="forest">Forest</option>
+              <option value="water">Water</option>
+              <option value="mountain">Mountain</option>
+            </select>
+            <p style="font-size: 12px; margin-top: 6px;">Click a tile to paint</p>
+          </div>
+
+          <hr />
+          <button id="saveShard">💾 Save Shard</button>
+          <input type="file" id="loadShardInput" accept=".json" style="display: none;" />
+          <button id="loadShardBtn">📂 Load Shard</button>
+          <button id="regenWorld">Regenerate Shard</button>
+        </div>
       </div>
+
+      
+
+      </div>
+      
     </div>
   </div>
 
