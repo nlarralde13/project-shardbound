@@ -5,7 +5,6 @@ import { TILE_WIDTH, TILE_HEIGHT }                     from './config/mapConfig.
 import { saveShard, loadShardFromFile, regenerateShard } from './utils/shardLoader.js';
 import { updateDevStatsPanel }                         from './utils/tileUtils.js';
 import { calculateViewportSize }                       from './ui/viewportUtils.js';
-import { makePanelToggle }                             from './ui/uiUtils.js';
 
 let hoveredTile = null;
 let selectedTile = null;
@@ -20,99 +19,103 @@ async function loadShard() {
   return res.json();
 }
 
-// Compute which tile is under the mouse in isometric coords
-function getTileUnderMouse(mouseX, mouseY, tileW, tileH, originX, originY, shard) {
-  const dx = mouseX - originX;
-  const dy = mouseY - originY;
-  const isoX = Math.floor((dx / (tileW/2) + dy / (tileH/2)) / 2);
-  const isoY = Math.floor((dy / (tileH/2) - dx / (tileW/2)) / 2);
-  if (isoX>=0 && isoX<shard.width && isoY>=0 && isoY<shard.height) {
-    return { ...shard.tiles[isoY][isoX], x:isoX, y:isoY };
-  }
+function getTileUnderMouse(mx, my, w, h, ox, oy, shard) {
+  const dx = mx - ox, dy = my - oy;
+  const isoX = Math.floor((dx/(w/2) + dy/(h/2))/2);
+  const isoY = Math.floor((dy/(h/2) - dx/(w/2))/2);
+  if (isoX >= 0 && isoX < shard.width && isoY >= 0 && isoY < shard.height)
+    return { ...shard.tiles[isoY][isoX], x: isoX, y: isoY };
   return null;
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
-  // 1) Panel toggles
-  ['satchelPanel','questPanel','infoPanel'].forEach(makePanelToggle);
 
-  // 2) Load settings & show/hide dev panels
+  // 1) wire up your manual panel-toggles
+  document.querySelectorAll('.panel-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const pane = document.getElementById(btn.dataset.target);
+      const open = pane.style.display === 'block';
+      pane.style.display = open ? 'none' : 'block';
+      btn.querySelector('span').textContent = open ? '＋' : '–';
+    });
+  });
+
+  // 2) devMode on/off
   const settings = await loadSettings();
   const devStats = document.getElementById('devStatsPanel');
   const devTools = document.getElementById('devToolsPanel');
-  if (settings.devMode) {
-    devStats.style.display = 'block';
-    devTools.style.display = 'block';
-  } else {
-    devStats.style.display = 'none';
-    devTools.style.display = 'none';
-  }
+  devStats.style.display = settings.devMode ? 'block' : 'none';
+  devTools.style.display = settings.devMode ? 'block' : 'none';
 
-  // 3) Setup canvas size & container
+  // 3) size & insert canvas
   const { cols, rows } = calculateViewportSize(TILE_WIDTH, TILE_HEIGHT);
   const canvas = document.getElementById('viewport');
   canvas.width  = cols * TILE_WIDTH;
   canvas.height = rows * TILE_HEIGHT;
   const ctx = canvas.getContext('2d');
 
-  // 4) Load shard data & initial render
+  // 4) load & draw
   const shard = await loadShard();
   renderShard(ctx, shard);
 
-  // 5) DevTools hooks
-  document.getElementById('saveShard').addEventListener('click', () => saveShard(shard));
-  document.getElementById('loadShardBtn').addEventListener('click', () => 
-    document.getElementById('loadShardInput').click()
-  );
-  document.getElementById('loadShardInput').addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    loadShardFromFile(file, newShard => {
-      Object.assign(shard, newShard);
-      renderShard(ctx, shard);
-    });
-  });
-  document.getElementById('regenWorld').addEventListener('click', () =>
-    regenerateShard(settings, newShard => {
-      Object.assign(shard, newShard);
-      renderShard(ctx, shard);
-    })
-  );
+  // 5) dev-tools buttons
+  document.getElementById('saveShard').onclick = () => saveShard(shard);
+  document.getElementById('loadShardBtn').onclick = () =>
+    document.getElementById('loadShardInput').click();
+  document.getElementById('loadShardInput').onchange = e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    loadShardFromFile(f, newS => { Object.assign(shard, newS); renderShard(ctx, shard); });
+  };
+  document.getElementById('regenWorld').onclick = () =>
+    regenerateShard(settings, newS => { Object.assign(shard, newS); renderShard(ctx, shard); });
 
-  // 6) Brush toggle
-  let brushMode = false;
-  document.getElementById('toggleBrush').addEventListener('click', () => {
-    brushMode = !brushMode;
-    document.getElementById('biomeEditorPanel').style.display = brushMode ? 'block' : 'none';
-  });
+  // 6) brush toggle
+  let brush = false;
+  document.getElementById('toggleBrush').onclick = () => {
+    brush = !brush;
+    document.getElementById('biomeEditorPanel').style.display = brush ? 'block' : 'none';
+  };
 
-  // 7) Camera & zoom
-  centerViewport(document.getElementById('viewportContainer'), canvas);
+  // 7) camera + centering
   initCamera(canvas, ctx, shard, renderShard, 'zoomOverlay');
+  centerViewport(document.getElementById('viewportWrapper'), canvas);
 
-  // 8) Tooltip
+  // 8) tooltip
   const tooltip = createTooltip();
-  const originX = canvas.width/2;
-  const originY = 40;
+  const ox = canvas.width/2, oy = 40;
 
-  // 9) Canvas click = select/toggle brush or tile info
   canvas.addEventListener('click', e => {
-    const rect = canvas.getBoundingClientRect();
+    const r = canvas.getBoundingClientRect();
     const tile = getTileUnderMouse(
-      e.clientX - rect.left,
-      e.clientY - rect.top,
+      e.clientX - r.left,
+      e.clientY - r.top,
       TILE_WIDTH, TILE_HEIGHT,
-      originX, originY, shard
+      ox, oy, shard
     );
     if (!tile) return;
-
-    if (brushMode) {
-      const biome = document.getElementById('biomeSelect').value;
-      tile.biome = biome;
+    if (brush) {
+      tile.biome = document.getElementById('biomeSelect').value;
     }
     selectedTile = tile;
     updateDevStatsPanel(tile);
     renderShard(ctx, shard, selectedTile);
   });
   canvas.addEventListener('mouseleave', () => hideTooltip(tooltip));
+
+  // 9) chat
+  const hist = document.getElementById('chatHistory');
+  const input = document.getElementById('chatInput');
+  // pre-fill 3 blank lines
+  for (let i=0;i<3;i++) hist.appendChild(document.createElement('div'));
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && input.value.trim()) {
+      const div = document.createElement('div');
+      div.textContent = input.value.trim();
+      hist.appendChild(div);
+      hist.scrollTop = hist.scrollHeight;
+      input.value = '';
+    }
+  });
+
 });

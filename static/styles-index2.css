@@ -1,209 +1,140 @@
-/* ==============================
-   Base Reset & Global Styles
-   ============================== */
+/* =========================
+   Global & Reset
+   ========================= */
 * {
   box-sizing: border-box;
-  margin: 0; padding: 0;
 }
 body {
+  margin: 0;
   font-family: 'MedievalSharp', cursive;
-  background: #080502 url('/static/textures/parchment-bg.jpg') center/cover;
-  color: #f8e6c1;
-  overflow-x: hidden;
-}
-
-/* ==============================
-   Banner / Header
-   ============================== */
-#banner {
-  font-family: 'UnifrakturCook', cursive;
-  background: linear-gradient(90deg, #5a1a01, #2f0500);
-  color: #f8d57e;
-  text-align: center;
-  padding: 16px;
-  font-size: 1.5rem;
-  text-shadow: 2px 2px 0 #000;
-  border-bottom: 4px solid #a8733e;
-}
-
-/* ==============================
-   Main Layout (Grid)
-   ============================== */
-#mainLayout {
-  display: grid;
-  grid-template-columns: 220px 1fr 220px;
-  gap: 20px;
-  padding: 20px;
-  height: calc(100vh - 80px);
-}
-
-/* ==============================
-   PanelBox Base
-   ============================== */
-.panelBox {
-  font-family: 'MedievalSharp', cursive;
-  background: #3e260e url('/static/textures/leather-pattern.png') repeat;
-  border: 3px solid #a8733e;
-  border-radius: 8px;
-  box-shadow: inset 0 0 10px #0008, 0 4px 6px rgba(0,0,0,0.5);
-  width: 100%;
+  background: url('/static/textures/parchment-bg.jpg') top left / cover no-repeat #111;
+  color: #eee;
   overflow: hidden;
 }
 
-/* ==============================
-   Panel Header
-   ============================== */
-.panelHeader {
-  background: #552e10;
+/* =========================
+   Layout
+   ========================= */
+#banner {
+  background: #420000;
   color: #f8d57e;
-  padding: 10px 14px;
-  font-size: 1.1rem;
-  cursor: pointer;
+  text-align: center;
+  padding: 12px;
+  font-size: 1.5rem;
+  border-bottom: 3px solid #220000;
+}
+
+#mainLayout {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  text-shadow: 1px 1px 0 #000;
-}
-.panelHeader:hover {
-  background: #663d14;
+  height: calc(100vh - 60px);
+  overflow: scroll;
 }
 
-/* ==============================
-   Toggle Indicator
-   ============================== */
-.toggleIndicator {
-  color: #f8d57e;
-  font-size: 1.2rem;
-  transition: transform .2s ease;
-}
-.panelBox.expanded .toggleIndicator {
-  transform: rotate(45deg);
-}
-
-/* ==============================
-   Panel Content
-   ============================== */
-.panelContent {
-  display: none;
-  padding: 12px 16px;
-  border-top: 2px solid #a8733e;
-}
-.panelBox.expanded .panelContent {
-  display: block;
-}
-
-/* ==============================
-   Buttons & Lists Styling
-   ============================== */
-.panelContent button,
-.panelContent .action-btn {
-  background: linear-gradient(to bottom, #b87333, #6e260e);
-  color: #fff0c1;
-  border: 2px solid #3a1e03;
-  border-radius: 6px;
-  padding: 8px;
-  margin: 6px 0;
-  font-family: 'MedievalSharp', cursive;
-  cursor: pointer;
-  box-shadow: 0 2px 4px #0008;
-  transition: background .2s ease, transform .1s ease;
-}
-.panelContent button:hover,
-.panelContent .action-btn:hover {
-  background: linear-gradient(to bottom, #d87c4a, #8b3a14);
-  transform: scale(1.05);
-}
-
-.panelContent ul {
-  list-style: none;
-  padding-left: 0;
-}
-.panelContent li {
-  padding: 4px 0;
-  border-bottom: 1px dotted #a8733e;
-}
-
-/* ==============================
-   Viewport & Center Panel
-   ============================== */
-#centerPanel {
+/* sidebars */
+#leftBar, #rightBar {
+  width: 200px;
+  padding: 10px;
+  background: rgba(44, 26, 21, 0.9);
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background: rgba(0,0,0,0.4);
-  border: 2px solid #333;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: inset 0 0 10px #0008;
+  overflow-y: auto;
 }
 
-#viewportContainer {
-  position: relative;
-  background: #111 url('/static/textures/galaxy-bg.jpg') center/cover;
+/* center */
+#centerPanel {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px;
+  gap: 8px;
+  overflow: hidden;
 }
 
-#viewport {
+/* =========================
+   Viewport
+   ========================= */
+#viewportWrapper {
+  flex: 1;
   width: 100%;
-  height: 100%;
-  display: block;
+  max-width: 800px;
+  border: 2px solid #333;
+  background: url('/static/textures/galaxy-bg.jpg') center / cover no-repeat #000;
+  overflow: auto;
 }
 
-#zoomOverlay {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  background: rgba(0,0,0,0.6);
-  color: #f8d57e;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-family: monospace;
-  font-size: 0.9rem;
-  border: 1px solid #a8733e;
-}
-
-/* ==============================
-   Action & Input Bars
-   ============================== */
+/* =========================
+   Action Bar
+   ========================= */
 #actionBar {
   display: flex;
-  justify-content: center;
-  gap: 10px;
+  gap: 8px;
+  margin: 8px 0;
 }
-
-#inputBar {
+.action-btn {
+  flex: 1;
   padding: 8px;
-  background: #220f07;
-  border-top: 2px solid #a8733e;
-}
-#inputBar input {
-  width: 100%;
-  padding: 10px;
-  border-radius: 6px;
+  background: linear-gradient(to bottom, #b87333, #6e260e);
   border: 2px solid #402312;
-  background: #1a0f07;
-  color: #ffeccc;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.action-btn:hover {
+  background: linear-gradient(to bottom, #ffc200, #8b3a14);
+}
+
+/* =========================
+   Chat
+   ========================= */
+#chatContainer {
+  width: 100%;
+  max-width: 800px;
+}
+#chatHistory {
+  height: 4.5em; /* approx. 3 lines */
+  padding: 6px;
+  background: rgba(17,17,17,0.9);
+  border: 1px solid #333;
+  border-radius: 4px;
+  overflow-y: auto;
   font-family: monospace;
+  font-size: 0.9rem;
+}
+#chatInput {
+  width: 100%;
+  padding: 8px;
+  margin-top: 4px;
+  background: rgba(34,17,17,0.9);
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 1rem;
 }
 
-/* ==============================
-   Right Panel Overrides
-   ============================== */
-#rightPanel .panelBox {
-  margin-bottom: 16px;
+/* =========================
+   Collapsible Panels
+   ========================= */
+.panel-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px;
+  background: #442a1a;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #f8d57e;
+  font-size: 1rem;
+  cursor: pointer;
 }
-
-/* ==============================
-   Responsive
-   ============================== */
-@media (max-width: 1024px) {
-  #mainLayout {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto;
-    gap: 12px;
-  }
-  aside#leftPanel,
-  aside#rightPanel {
-    display: none;
-  }
+.panelContent {
+  display: none;
+  padding: 6px;
+  background: rgba(32,16,8,0.95);
+  border: 1px solid #6e260e;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: #eee;
 }
