@@ -2,6 +2,8 @@ import { renderShard } from './shards/renderShard.js';
 import { createTooltip, updateTooltip, hideTooltip } from './ui/tooltip.js';
 import { initCamera, centerViewport } from './ui/camera.js';
 import { TILE_WIDTH, TILE_HEIGHT } from './config/mapConfig.js';
+import { saveShard, loadShardFromFile, regenerateShard } from './utils/shardLoader.js';
+
 
 let hoveredTile = null;
 
@@ -36,7 +38,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log("[Settings] Loaded:", settings);
 
     if (settings.devMode) {
-        document.getElementById('devToolsPanel').style.display = 'block';
+        const devTools = document.getElementById('devToolsPanel');
+        const devStats = document.getElementById('devStatsPanel');
+        if (devTools) devTools.style.display = 'block';
+        if (devStats) devStats.style.display = 'block';
         console.log("[DevMode] Dev tools enabled");
     }
 
@@ -62,9 +67,48 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     const ctx = canvas.getContext('2d');
     const shard = await loadShard();
-    console.log("[main.js] 🧩 About to render shard:", shard);
+    //console.log("[main.js] 🧩 About to render shard:", shard);
     renderShard(ctx, shard);
-    console.log("[main.js] ✅ renderShard() was called");
+    //console.log("[main.js] ✅ renderShard() was called");
+
+
+    // === Dev Tools Button Hooks ===
+    if (settings.devMode) {
+      // Save shard to file
+      document.getElementById('saveShard').addEventListener('click', () => {
+        saveShard(shard);
+      });
+
+      // Load shard from uploaded file
+      document.getElementById('loadShardBtn').addEventListener('click', () => {
+        document.getElementById('loadShardInput').click();
+      });
+
+      document.getElementById('loadShardInput').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        loadShardFromFile(file, (newShard) => {
+          shard.tiles = newShard.tiles;
+          shard.width = newShard.width;
+          shard.height = newShard.height;
+          hoveredTile = null;
+          renderShard(ctx, shard);
+        });
+      });
+
+      // Regenerate default shard
+      document.getElementById('regenWorld').addEventListener('click', () => {
+        regenerateShard(settings, (newShard) => {
+          shard.tiles = newShard.tiles;
+          shard.width = newShard.width;
+          shard.height = newShard.height;
+          hoveredTile = null;
+          renderShard(ctx, shard);
+        });
+      });
+    }
+
 
     
 
@@ -85,7 +129,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       const mouseY = e.clientY - bounds.top;
       const tile = getTileUnderMouse(mouseX, mouseY, TILE_WIDTH, TILE_HEIGHT, originX, originY, shard);
 
-      console.log("[main.js] 🎯 Calling updateTooltip with:", tile); // ✅ NOW it's safe
+      //console.log("[main.js] 🎯 Calling updateTooltip with:", tile); // ✅ NOW it's safe
 
       if (!tile || (hoveredTile && tile.x === hoveredTile.x && tile.y === hoveredTile.y)) {
         return; // no change

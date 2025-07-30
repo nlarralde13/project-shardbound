@@ -68,24 +68,24 @@ body {
 }
 
 #viewportWrapper {
-  flex-grow: 1;
-  width: 100%;
   display: flex;
+  flex-direction: row;
   justify-content: center;
-  align-items: center;
-  background: #000;
-  border: 1px solid #555;
-  margin-bottom: 4px;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 12px;
 }
 
+
 #viewport {
+  position: relative;
+  background-color: #000;
+  overflow: scroll;
+  border: 2px solid #333;
+  box-shadow: 0 0 10px #000 inset;
   width: 640px;
   height: 480px;
-  background: #000;
-  border: 2px solid #333;
-  box-shadow: 0 0 12px #000 inset;
-  position: relative;
-  overflow: auto;
+  flex-shrink: 0;
 }
 
 /* === Tooltip Canvas etc. === */
@@ -225,3 +225,17 @@ button:hover {
   margin: 6px 0;
   border-top: 1px solid #555;
 }
+
+.dev-box {
+  display:none;
+  width: 180px;
+  background: rgba(30, 15, 5, 0.95);
+  color: #ffeccc;
+  border: 2px solid #6e260e;
+  border-radius: 8px;
+  padding: 10px;
+  font-family: monospace;
+  font-size: 14px;
+  box-shadow: 0 0 10px #000 inset;
+}
+

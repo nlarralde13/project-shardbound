@@ -31,9 +31,24 @@
       <!-- Center Panel -->
       <div id="centerPanel">
         <div id="viewportWrapper">
-          <div id="viewport">
-            <!-- Your canvas will render here -->
+          <div id="viewportWrapper">
+          <div id="devStatsPanel" class="dev-box">📊 Dev Stats</div>
+          <div id="viewport"><!-- canvasWrapper will be inserted here --></div>
+          <div id="devToolsPanel" class="dev-box">
+            <h4>🛠️ Dev Tools</h4>
+            <button id="toggleBrush">Toggle Brush</button>
+            <hr>
+            <button id="saveShard">💾 Save Shard</button>
+            <input type="file" id="loadShardInput" accept=".json" style="display: none;" />
+            <button id="loadShardBtn">📂 Load Shard</button>
+
+            <button id="regenWorld">Regenerate Shard</button>
           </div>
+        </div>
+
+
+
+         
         </div>
         <div id="actionBar">
           <div id="actionBar">
