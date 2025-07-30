@@ -1,0 +1,30 @@
+body {
+  background-color: #111;
+  color: white;
+  font-family: monospace;
+  margin: 0;
+  overflow: hidden;
+}
+#main-wrapper {
+  display: flex;
+  flex-direction: row;
+  height: calc(100vh - 40px);
+}
+#top-bar, #bottom-bar {
+  text-align: center;
+  height: 20px;
+}
+#left-bar, #right-bar {
+  width: 150px;
+  background-color: #333;
+  padding: 4px;
+}
+#viewport {
+  position: relative;
+  flex-grow: 1;
+  overflow: scroll;
+  background-color: #000;
+}
+canvas {
+  image-rendering: pixelated;
+}

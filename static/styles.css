@@ -1,0 +1,227 @@
+/* === Global Reset & Theme === */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'MedievalSharp', cursive;
+  color: #f5f5f5;
+  
+  background-color: #111; /* fallback */
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* === Root Layout === */
+#gameUI {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+#banner {
+  font-family: 'UnifrakturCook', cursive;
+  font-size: 28px;
+  background: linear-gradient(to right, #440000, #220000);
+  color: #f8d57e;
+  text-shadow: 2px 2px 0 #000;
+  border-bottom: 3px solid #550000;
+  padding: 10px;
+  text-align: center;
+}
+
+/* === Main 3-column Layout === */
+#mainLayout {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+}
+
+/* === Left & Right Panels === */
+#leftBar, #rightBar {
+  width: 200px;
+  background: #111;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-color: #444;
+}
+
+#leftBar {
+  border-right: 2px solid #333;
+}
+
+#rightBar {
+  border-left: 2px solid #333;
+}
+
+/* === Center Panel & Content === */
+#centerPanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 8px;
+  gap: 6px;
+  overflow: hidden;
+}
+
+#viewportWrapper {
+  flex-grow: 1;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #000;
+  border: 1px solid #555;
+  margin-bottom: 4px;
+}
+
+#viewport {
+  width: 640px;
+  height: 480px;
+  background: #000;
+  border: 2px solid #333;
+  box-shadow: 0 0 12px #000 inset;
+  position: relative;
+  overflow: auto;
+}
+
+/* === Tooltip Canvas etc. === */
+canvas {
+  image-rendering: pixelated;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+/* === Action & Input Bars === */
+#actionBar {
+  background: rgba(10, 10, 10, 0.85);
+  border: 2px solid #333;
+  border-radius: 8px;
+  padding: 8px;
+  width: fit-content;
+  max-width: 640px;
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  box-shadow: 0 0 10px #000 inset;
+}
+.action-btn {
+  width: 48px;
+  height: 48px;
+  background-color: #1a1a1a;
+  background-size: cover;
+  background-position: center;
+  border: 2px solid #444;
+  border-radius: 6px;
+  box-shadow: 0 0 6px #000;
+  cursor: pointer;
+  transition: transform 0.1s ease-in-out, border-color 0.2s;
+}
+
+.action-btn:hover {
+  transform: scale(1.1);
+  border-color: #ddd;
+  box-shadow: 0 0 8px #88f;
+}
+
+
+#inputBar {
+  width: 100%;
+  max-width: 640px;
+  background: #222;
+  border-radius: 4px;
+  padding: 6px;
+}
+
+#inputBar input {
+  width: 100%;
+  padding: 10px;
+  font-size: 16px;
+  background: #1a0f07;
+  color: #ffeccc;
+  border: 2px solid #402312;
+  border-radius: 6px;
+  box-shadow: inset 0 0 6px #000;
+}
+
+/* === Panel Styling (Backpack, Journal, Menu) === */
+.panelBox {
+  background: rgba(32, 16, 8, 0.95);
+  border: 2px solid #6e260e;
+  border-radius: 10px;
+  padding: 10px;
+  box-shadow: inset 0 0 10px #000;
+}
+
+.panelBox h3 {
+  margin-top: 0;
+  font-size: 20px;
+  color: #ffce84;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.panelBox p {
+  font-size: 14px;
+  margin: 6px 0;
+}
+
+/* === Buttons === */
+button {
+  display: block;
+  width: 100%;
+  background: linear-gradient(to bottom, #b87333, #6e260e);
+  color: #fff0c1;
+  font-size: 16px;
+  font-family: 'MedievalSharp', cursive;
+  margin: 4px 0;
+  padding: 8px;
+  border: 2px solid #3a1e03;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px #000;
+  text-align: left;
+}
+
+button:hover {
+  background: linear-gradient(to bottom, #d87c4a, #8b3a14);
+  color: #fff;
+}
+#canvasWrapper {
+  position: relative;
+  display: block;
+  margin: 0 auto;
+}
+
+/* === Tooltip Style === */
+.tooltip-box {
+  position: absolute;
+  background: rgba(34, 34, 34, 0.95);
+  color: #fff;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-family: monospace;
+  border: 1px solid #FFD700;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 9999;
+  box-shadow: 0 0 10px #000;
+}
+
+.tooltip-box .label {
+  color: #aaa;
+  margin-right: 4px;
+  font-weight: bold;
+}
+
+.tooltip-box .value {
+  color: #fff;
+}
+
+.tooltip-box .divider {
+  margin: 6px 0;
+  border-top: 1px solid #555;
+}
