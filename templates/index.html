@@ -36,7 +36,19 @@
           <div id="viewport"><!-- canvasWrapper will be inserted here --></div>
           <div id="devToolsPanel" class="dev-box">
             <h4>🛠️ Dev Tools</h4>
-            <button id="toggleBrush">Toggle Brush</button>
+            <button id="toggleBrush" title="Toggle Brush Mode">🖌️ Brush Tool</button>
+
+            <div id="biomeEditorPanel" class="nested-dev-panel" style="display: none;">
+              <label for="biomeSelect">Biome:</label>
+              <select id="biomeSelect">
+                <option value="grass">Grass</option>
+                <option value="forest">Forest</option>
+                <option value="water">Water</option>
+                <option value="mountain">Mountain</option>
+              </select>
+              <p style="font-size: 12px; margin-top: 6px;">Click a tile to paint</p>
+            </div>
+
             <hr>
             <button id="saveShard">💾 Save Shard</button>
             <input type="file" id="loadShardInput" accept=".json" style="display: none;" />

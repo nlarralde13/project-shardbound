@@ -20,7 +20,7 @@ export function renderShard(ctx, shardData, hoveredTile = null) {
 
   lastHovered = hoveredTile ? { x: hoveredTile.x, y: hoveredTile.y } : { x: -1, y: -1 };
 
-  console.log("[renderShard] 🖼️ Rendering", shardData.width + "×" + shardData.height);
+  //console.log("[renderShard] 🖼️ Rendering", shardData.width + "×" + shardData.height);
 
   const biomeColors = {
     grass: "#4CAF50",

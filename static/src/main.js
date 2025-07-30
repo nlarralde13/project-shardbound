@@ -109,6 +109,15 @@ window.addEventListener('DOMContentLoaded', async () => {
       });
     }
 
+    let brushMode = false;
+
+    document.getElementById('toggleBrush').addEventListener('click', () => {
+      brushMode = !brushMode;
+      document.getElementById('biomeEditorPanel').style.display = brushMode ? 'block' : 'none';
+      console.log(`[Brush] Brush mode is now ${brushMode ? 'ON' : 'OFF'}`);
+    });
+
+
 
     
 
@@ -139,6 +148,23 @@ window.addEventListener('DOMContentLoaded', async () => {
       updateTooltip(tooltip, tile, e.pageX, e.pageY, settings.devMode);
       renderShard(ctx, shard, hoveredTile);
     });
+
+    canvas.addEventListener('click', (e) => {
+    if (!brushMode) return;
+
+    const bounds = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - bounds.left;
+    const mouseY = e.clientY - bounds.top;
+    const tile = getTileUnderMouse(mouseX, mouseY, TILE_WIDTH, TILE_HEIGHT, originX, originY, shard);
+    if (!tile) return;
+
+    const selectedBiome = document.getElementById('biomeSelect').value;
+    tile.biome = selectedBiome;
+
+    console.log(`[Brush] Painted tile (${tile.x}, ${tile.y}) as ${selectedBiome}`);
+    renderShard(ctx, shard, tile);
+  });
+
 
 
     canvas.addEventListener('mouseleave', () => {

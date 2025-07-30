@@ -239,3 +239,11 @@ button:hover {
   box-shadow: 0 0 10px #000 inset;
 }
 
+.nested-dev-panel {
+  margin-top: 10px;
+  padding: 8px;
+  border-top: 1px solid #444;
+  font-size: 14px;
+  background: rgba(20, 10, 5, 0.9);
+  border-radius: 6px;
+}
