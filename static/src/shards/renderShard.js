@@ -1,8 +1,10 @@
+import { TILE_WIDTH, TILE_HEIGHT } from '../config/mapConfig.js';
+
+
+
 //rendershard.js
 export async function renderShard(ctx, shardData) {
     console.log("[renderShard] Starting render with:", shardData.width, "×", shardData.height);
-    const tileWidth = 64;
-    const tileHeight = 32;
 
     const biomeColors = {
         grass: "#4CAF50",
@@ -23,16 +25,16 @@ export async function renderShard(ctx, shardData) {
         for (let x = 0; x < shardData.width; x++) {
             const tile = shardData.tiles[y][x];
             const biome = tile.biome;
-            const screenX = originX + (x - y) * (tileWidth / 2);
-            const screenY = originY + (x + y) * (tileHeight / 2);
+            const screenX = originX + (x - y) * (TILE_WIDTH / 2);
+            const screenY = originY + (x + y) * (TILE_HEIGHT / 2);
 
             // Shadow
             ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
             ctx.beginPath();
-            ctx.moveTo(screenX, screenY + tileHeight / 2);
-            ctx.lineTo(screenX + tileWidth / 2, screenY + tileHeight);
-            ctx.lineTo(screenX, screenY + tileHeight * 1.5);
-            ctx.lineTo(screenX - tileWidth / 2, screenY + tileHeight);
+            ctx.moveTo(screenX, screenY + TILE_HEIGHT / 2);
+            ctx.lineTo(screenX + TILE_WIDTH / 2, screenY + TILE_HEIGHT);
+            ctx.lineTo(screenX, screenY + TILE_HEIGHT * 1.5);
+            ctx.lineTo(screenX - TILE_WIDTH / 2, screenY + TILE_HEIGHT);
             ctx.closePath();
             ctx.fill();
 
@@ -40,9 +42,9 @@ export async function renderShard(ctx, shardData) {
             ctx.fillStyle = biomeColors[biome] || "#555";
             ctx.beginPath();
             ctx.moveTo(screenX, screenY);
-            ctx.lineTo(screenX + tileWidth / 2, screenY + tileHeight / 2);
-            ctx.lineTo(screenX, screenY + tileHeight);
-            ctx.lineTo(screenX - tileWidth / 2, screenY + tileHeight / 2);
+            ctx.lineTo(screenX + TILE_WIDTH / 2, screenY + TILE_HEIGHT / 2);
+            ctx.lineTo(screenX, screenY + TILE_HEIGHT);
+            ctx.lineTo(screenX - TILE_WIDTH / 2, screenY + TILE_HEIGHT / 2);
             ctx.closePath();
             ctx.fill();
         }

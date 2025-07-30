@@ -1,6 +1,7 @@
 import { renderShard } from './shards/renderShard.js';
 import { createTooltip, updateTooltip, hideTooltip } from './ui/tooltip.js';
 import { initCamera, centerViewport } from './ui/camera.js';
+import { TILE_WIDTH, TILE_HEIGHT } from './config/mapConfig.js';
 
 
 
@@ -15,11 +16,11 @@ async function loadShard() {
 }
 
 //GET HOVER INFO AND DISPLAY UNDER MOUSE
-function getTileUnderMouse(mouseX, mouseY, tileWidth, tileHeight, originX, originY, shard) {
+function getTileUnderMouse(mouseX, mouseY, TILE_WIDTH, TILE_HEIGHT, originX, originY, shard) {
     let dx = mouseX - originX;
     let dy = mouseY - originY;
-    let isoX = Math.floor((dx / (tileWidth / 2) + dy / (tileHeight / 2)) / 2);
-    let isoY = Math.floor((dy / (tileHeight / 2) - dx / (tileWidth / 2)) / 2);
+    let isoX = Math.floor((dx / (TILE_WIDTH / 2) + dy / (TILE_HEIGHT / 2)) / 2);
+    let isoY = Math.floor((dy / (TILE_HEIGHT / 2) - dx / (TILE_WIDTH / 2)) / 2);  
     if (isoX >= 0 && isoX < shard.width && isoY >= 0 && isoY < shard.height) {
         let tile = shard.tiles[isoY][isoX];
         return { ...tile, x: isoX, y: isoY };
@@ -37,17 +38,15 @@ window.addEventListener('DOMContentLoaded', async () => {
         console.log("[DevMode] Dev tools enabled");
     }
 
-    const tileWidth = 64;
-    const tileHeight = 32;
-
     const wrapper = document.createElement('div');
     wrapper.id = 'canvasWrapper';
-    wrapper.style.width = `${50 * tileWidth}px`;
-    wrapper.style.height = `${50 * tileHeight}px`;
+    wrapper.style.width = `${50 * TILE_WIDTH}px`;
+    wrapper.style.height = `${50 * TILE_HEIGHT}px`;
+    
 
     const canvas = document.createElement('canvas');
-    canvas.width = 50 * tileWidth;
-    canvas.height = 50 * tileHeight;
+    canvas.width = 50 * TILE_WIDTH;
+    canvas.height = 50 * TILE_HEIGHT;
     wrapper.appendChild(canvas);
 
     const viewportEl = document.getElementById('viewport');
@@ -78,7 +77,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         const bounds = canvas.getBoundingClientRect();
         const mouseX = e.clientX - bounds.left;
         const mouseY = e.clientY - bounds.top;
-        const tile = getTileUnderMouse(mouseX, mouseY, tileWidth, tileHeight, originX, originY, shard);
+        const tile = getTileUnderMouse(mouseX, mouseY, TILE_WIDTH, TILE_HEIGHT, originX, originY, shard);
 
         console.log("Hovered tile:", tile);  // Check tile contents
         console.log("DevMode:", settings.devMode);
