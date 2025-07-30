@@ -16,6 +16,11 @@ async function loadSettings() {
     return res.json();
 }
 
+const leftDevPanel = document.getElementById('leftDevPanel');
+const rightDevPanel = document.getElementById('rightDevPanel');
+
+
+
 async function loadShard() {
     const res = await fetch('/static/public/shards/shard_0_0.json');
     return res.json();
@@ -39,13 +44,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     const settings = await loadSettings();
     console.log("[Settings] Loaded:", settings);
 
+    // Show or hide dev panels if Devmode enabled
     if (settings.devMode) {
-        const devTools = document.getElementById('devToolsPanel');
-        const devStats = document.getElementById('devStatsPanel');
-        if (devTools) devTools.style.display = 'block';
-        if (devStats) devStats.style.display = 'block';
-        console.log("[DevMode] Dev tools enabled");
+      document.getElementById('leftDevPanel').style.display = 'block';
+      document.getElementById('devToolsPanel').style.display = 'block';
+      console.log('[DevMode] ✅ Dev panels enabled');
+    } else {
+      document.getElementById('leftDevPanel').style.display = 'none';
+      document.getElementById('devToolsPanel').style.display = 'none';
     }
+
 
     const wrapper = document.createElement('div');
     wrapper.id = 'canvasWrapper';
@@ -142,27 +150,19 @@ window.addEventListener('DOMContentLoaded', async () => {
       const tile = getTileUnderMouse(mouseX, mouseY, TILE_WIDTH, TILE_HEIGHT, originX, originY, shard);
       if (!tile) return;
 
+      if (brushMode) {
+        const selectedBiome = document.getElementById('biomeSelect').value;
+        tile.biome = selectedBiome;
+        console.log(`[Brush] Painted tile (${tile.x}, ${tile.y}) as ${selectedBiome}`);
+      }
+
       selectedTile = tile;
-      updateDevStatsPanel(tile);
+      console.log('running update dev stats panel')
+      updateDevStatsPanel(tile, renderShard, ctx, shard);
+
+
       renderShard(ctx, shard, selectedTile);
     });
-
-
-    canvas.addEventListener('click', (e) => {
-    if (!brushMode) return;
-
-    const bounds = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - bounds.left;
-    const mouseY = e.clientY - bounds.top;
-    const tile = getTileUnderMouse(mouseX, mouseY, TILE_WIDTH, TILE_HEIGHT, originX, originY, shard);
-    if (!tile) return;
-
-    const selectedBiome = document.getElementById('biomeSelect').value;
-    tile.biome = selectedBiome;
-
-    console.log(`[Brush] Painted tile (${tile.x}, ${tile.y}) as ${selectedBiome}`);
-    renderShard(ctx, shard, tile);
-  });
 
 
 

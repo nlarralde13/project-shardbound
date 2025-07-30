@@ -23,10 +23,28 @@ export function getTileUnderMouse(mouseX, mouseY, canvas, tileWidth, tileHeight,
 
 
 export function updateDevStatsPanel(tile) {
-    const statsBox = document.getElementById('statsContent');
-    if (!statsBox) return;
-
+  const statsBox = document.getElementById('statsContent');
+  if (statsBox) {
     statsBox.innerHTML = `<pre>${JSON.stringify(tile, null, 2)}</pre>`;
   }
+
+  const actionsBox = document.getElementById('tileActions');
+  if (actionsBox) {
+    actionsBox.innerHTML = `
+      <button id="exploreTile">▶ Explore</button>
+      <button id="editTile">🛠 Edit Room</button>
+    `;
+
+    document.getElementById('exploreTile').addEventListener('click', () => {
+      console.log("[Action] ▶ Explore triggered for tile:", tile);
+    });
+
+    document.getElementById('editTile').addEventListener('click', () => {
+      console.log("[Action] 🛠 Edit Room triggered for tile:", tile);
+    });
+  }
+}
+
+
 
 
