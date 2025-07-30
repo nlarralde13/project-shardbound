@@ -247,3 +247,15 @@ button:hover {
   background: rgba(20, 10, 5, 0.9);
   border-radius: 6px;
 }
+
+#statsContent {
+  font-family: monospace;
+  font-size: 12px;
+  background: #111;
+  color: #eee;
+  padding: 6px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+}

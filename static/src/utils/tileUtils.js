@@ -1,7 +1,7 @@
 
 // /src/utils/tileUtils.js
 
-import { zoomLevel } from '../ui/camera.js';
+//import { zoomLevel } from '../ui/camera.js';
 
 export function getTileUnderMouse(mouseX, mouseY, canvas, tileWidth, tileHeight, originX, originY, shard) {
     const scrollLeft = canvas.parentElement.scrollLeft;
@@ -20,3 +20,13 @@ export function getTileUnderMouse(mouseX, mouseY, canvas, tileWidth, tileHeight,
 
     return null;
 }
+
+
+export function updateDevStatsPanel(tile) {
+    const statsBox = document.getElementById('statsContent');
+    if (!statsBox) return;
+
+    statsBox.innerHTML = `<pre>${JSON.stringify(tile, null, 2)}</pre>`;
+  }
+
+

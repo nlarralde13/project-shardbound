@@ -3,9 +3,11 @@ import { createTooltip, updateTooltip, hideTooltip } from './ui/tooltip.js';
 import { initCamera, centerViewport } from './ui/camera.js';
 import { TILE_WIDTH, TILE_HEIGHT } from './config/mapConfig.js';
 import { saveShard, loadShardFromFile, regenerateShard } from './utils/shardLoader.js';
-
+import { updateDevStatsPanel } from './utils/tileUtils.js';
 
 let hoveredTile = null;
+let selectedTile = null;
+
 
 
 
@@ -132,22 +134,19 @@ window.addEventListener('DOMContentLoaded', async () => {
     const originX = canvas.width / 2;
     const originY = 40;
 
-    canvas.addEventListener('mousemove', (e) => {
+    canvas.addEventListener('click', (e) => {
       const bounds = canvas.getBoundingClientRect();
       const mouseX = e.clientX - bounds.left;
       const mouseY = e.clientY - bounds.top;
+
       const tile = getTileUnderMouse(mouseX, mouseY, TILE_WIDTH, TILE_HEIGHT, originX, originY, shard);
+      if (!tile) return;
 
-      //console.log("[main.js] 🎯 Calling updateTooltip with:", tile); // ✅ NOW it's safe
-
-      if (!tile || (hoveredTile && tile.x === hoveredTile.x && tile.y === hoveredTile.y)) {
-        return; // no change
-      }
-
-      hoveredTile = tile;
-      updateTooltip(tooltip, tile, e.pageX, e.pageY, settings.devMode);
-      renderShard(ctx, shard, hoveredTile);
+      selectedTile = tile;
+      updateDevStatsPanel(tile);
+      renderShard(ctx, shard, selectedTile);
     });
+
 
     canvas.addEventListener('click', (e) => {
     if (!brushMode) return;
@@ -170,6 +169,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     canvas.addEventListener('mouseleave', () => {
         hideTooltip(tooltip);
     });
+
+  
   
 
 });

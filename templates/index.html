@@ -32,11 +32,17 @@
       <div id="centerPanel">
         <div id="viewportWrapper">
           <div id="viewportWrapper">
-          <div id="devStatsPanel" class="dev-box">📊 Dev Stats</div>
-          <div id="viewport"><!-- canvasWrapper will be inserted here --></div>
+
+          <div id="devStatsPanel" class="dev-box">
+            <h4>📊 Dev Stats</h4>
+            <div id="statsContent">Click a tile to view details.</div>
+          </div>
+
+          <div id="viewport"></div>
+
           <div id="devToolsPanel" class="dev-box">
             <h4>🛠️ Dev Tools</h4>
-            <button id="toggleBrush" title="Toggle Brush Mode">🖌️ Brush Tool</button>
+            <button id="toggleBrush" title="Toggle Brush Mode">🖌️ Shard Editor</button>
 
             <div id="biomeEditorPanel" class="nested-dev-panel" style="display: none;">
               <label for="biomeSelect">Biome:</label>
