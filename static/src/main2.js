@@ -1,36 +1,49 @@
-// /static/src/main2.js
+// main2.js
+// ───────────────────────────────────────────────────────────
+// Entrypoint for index2.html: panels, canvas, shard,
+// getTileUnderMouse, highlight, zoom, chat, action-buttons.
+// ───────────────────────────────────────────────────────────
 
 import { renderShard } from './shards/renderShard.js';
 import { initCamera, applyZoom, getZoomLevel } from './ui/camera.js';
-import { getTileUnderMouse, calculateViewportSize } from './ui/viewportUtils.js';
+import { calculateViewportSize, getTileUnderMouse } from './ui/viewportUtils.js';
 import { togglePanel } from './ui/uiUtils.js';
 import { TILE_WIDTH, TILE_HEIGHT } from './config/mapConfig.js';
 import { saveShard, loadShardFromFile, regenerateShard } from './utils/shardLoader.js';
 import { updateDevStatsPanel } from './utils/tileUtils.js';
+import { initChat, sendMessage } from './ui/chat.js';
+
 
 window.addEventListener('DOMContentLoaded', async () => {
   console.log('[main2] DOM ready');
 
-  // 1) load settings
+  // 1️⃣  Load settings
   const settings = await fetch('/static/src/settings.json').then(r => r.json());
   console.log('[main2] settings =', settings);
 
-  // 2) panel-toggle wiring
+  // 2️⃣  Wire up panel toggles (buttons have .panel-toggle + data-target)
   document.querySelectorAll('.panel-toggle').forEach(btn => {
-    const target = btn.dataset.target;
+    // ensure each has a <span class="toggle-icon"> inside
+    if (!btn.querySelector('.toggle-icon')) {
+      const icon = document.createElement('span');
+      icon.className = 'toggle-icon';
+      icon.textContent = '+';
+      btn.appendChild(icon);
+    }
+    const targetId = btn.dataset.target;
     btn.addEventListener('click', () => {
-      console.log(`[main2] togglePanel ➡ ${target}`);
-      togglePanel(target);
+      console.log(`[main2] panel-toggle click → ${targetId}`);
+      togglePanel(targetId);
     });
   });
 
-  // 3) viewport sizing
+  // 3️⃣  Compute how many tiles fit
   const { cols, rows } = calculateViewportSize(TILE_WIDTH, TILE_HEIGHT);
-  console.log(`[main2] viewport cols=${cols}, rows=${rows}`);
+  console.log(`[main2] viewportSize cols=${cols}, rows=${rows}`);
 
-  // 4) setup wrapper & canvas
+  // 4️⃣  Grab the wrapper & canvas
   const wrapper = document.getElementById('viewportWrapper');
-  wrapper.style.width = `${cols * TILE_WIDTH}px`;
+  wrapper.style.width  = `${cols * TILE_WIDTH}px`;
   wrapper.style.height = `${rows * TILE_HEIGHT}px`;
   wrapper.style.position = 'relative';
 
@@ -40,18 +53,18 @@ window.addEventListener('DOMContentLoaded', async () => {
   const ctx = canvas.getContext('2d');
   console.log('[main2] canvas initialized');
 
-  // 5) compute origin for isometric math (must match renderShard)
+  // 5️⃣  Set iso‐origin
   const originX = canvas.width / 2;
-  const originY = 40; // same hard‐coded offset used in renderShard
+  const originY = 40;
   console.log(`[main2] originX=${originX}, originY=${originY}`);
 
-  // 6) load & render shard
+  // 6️⃣  Load & draw shard
   const shard = await fetch('/static/public/shards/shard_0_0.json').then(r => r.json());
   console.log('[main2] shard loaded', shard);
   renderShard(ctx, shard);
   console.log('[main2] initial renderShard()');
 
-  // 7) dev‐tools: save, load, regen
+  // 7️⃣  Dev-tools: Save / Load / Regenerate
   document.getElementById('saveShard').onclick = () => {
     console.log('[main2] saveShard clicked');
     saveShard(shard);
@@ -62,12 +75,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
   document.getElementById('loadShardInput').onchange = e => {
     const file = e.target.files[0];
-    console.log('[main2] loadShardInput changed', file);
+    console.log('[main2] loadShardInput changed →', file);
     if (!file) return;
     loadShardFromFile(file, newShard => {
       Object.assign(shard, newShard);
       renderShard(ctx, shard);
-      console.log('[main2] shard reloaded');
+      console.log('[main2] shard reloaded from file');
     });
   };
   document.getElementById('regenWorld').onclick = () => {
@@ -79,10 +92,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   };
 
-  // 8) zoom controls
+  // 8️⃣  Zoom controls + overlay
   initCamera(canvas, ctx, shard, renderShard, 'zoomLevel');
-  const zl = document.getElementById('zoomLevel');
-  if (zl) zl.textContent = `${Math.round(getZoomLevel()*100)}%`;
+  document.getElementById('zoomLevel').textContent = `${Math.round(getZoomLevel()*100)}%`;
   document.getElementById('zoomInBtn').onclick = () => {
     console.log('[main2] zoomInBtn clicked');
     applyZoom(ctx, canvas, shard, renderShard, 'zoomLevel');
@@ -92,52 +104,42 @@ window.addEventListener('DOMContentLoaded', async () => {
     applyZoom(ctx, canvas, shard, renderShard, 'zoomLevel');
   };
 
-  // 9) click → pick & highlight a tile
+  // 9️⃣  Click to select & highlight tile
   canvas.addEventListener('click', e => {
-    console.log('[main2] canvas click', e.clientX, e.clientY);
-    const tile = getTileUnderMouse(e, canvas, TILE_WIDTH, TILE_HEIGHT, originX, originY, shard);
+    console.log('[main2] canvas click event');
+    const rect = canvas.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+    const tile = getTileUnderMouse(
+      clickX, clickY,
+      TILE_WIDTH, TILE_HEIGHT,
+      originX, originY,
+      shard,
+      wrapper
+    );
     if (!tile) {
       console.log('[main2] no tile under click');
       return;
     }
-    console.log('[main2] tile selected', tile);
+    console.log('[main2] tile selected →', tile);
     updateDevStatsPanel(tile);
     renderShard(ctx, shard, tile);
-    console.log('[main2] shard re-rendered with highlight');
+    console.log('[main2] re-renderShard with highlight');
   });
 
-  // 10) action‐bar → chat
-  const PLAYER = 'Player1';
+  // 10) Initialize chat:
+  initChat('#chatHistory', '#chatInput');
+
+  // 11) Wire up your action buttons:
   document.querySelectorAll('.action-btn').forEach(btn => {
-    btn.onclick = () => {
-      const action = btn.title;
-      console.log(`[main2] actionBtn clicked: ${action}`);
-      const hist = document.getElementById('chatHistory');
-      const now  = new Date();
-      const hh   = String(now.getHours()).padStart(2,'0');
-      const mm   = String(now.getMinutes()).padStart(2,'0');
-      const line = document.createElement('div');
-      line.textContent = `${hh}:${mm} ${PLAYER} used ${action}`;
-      hist.appendChild(line);
-      hist.scrollTop = hist.scrollHeight;
-    };
-  });
+    btn.addEventListener('click', () => {
+      // Prefer data-action, then title, then the visible text
+      const action = btn.dataset.action
+                  || btn.title
+                  || btn.textContent.trim();
 
-  // 11) chat input
-  const hist = document.getElementById('chatHistory');
-  const input = document.getElementById('chatInput');
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && input.value.trim()) {
-      console.log('[main2] chat Enter:', input.value);
-      const now = new Date();
-      const hh  = String(now.getHours()).padStart(2,'0');
-      const mm  = String(now.getMinutes()).padStart(2,'0');
-      const line = document.createElement('div');
-      line.textContent = `${hh}:${mm} ${PLAYER}: ${input.value.trim()}`;
-      hist.appendChild(line);
-      hist.scrollTop = hist.scrollHeight;
-      input.value = '';
-      e.preventDefault();
-    }
+      console.log(`[main2] actionBtn clicked → ${action}`);
+      sendMessage(`Player1 used ${action}`);
+    });
   });
 });

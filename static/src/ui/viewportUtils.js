@@ -1,56 +1,56 @@
-// /static/src/ui/viewportUtils.js
+// ================================================
+// viewportUtils.js (updated)
+// ================================================
+
+import { getZoomLevel } from './camera.js';
 
 /**
- * Given a click or move event on the canvas, convert that to an (x,y) tile in the shard.
- *
- * @param {MouseEvent} e         the click/move event
- * @param {HTMLCanvasElement} canvas
+ * Calculates how many columns/rows fit in the viewport wrapper.
  * @param {number} tileWidth
  * @param {number} tileHeight
- * @param {number} originX       screen-space X of the isometric origin
- * @param {number} originY       screen-space Y of the isometric origin
- * @param {object} shard         the loaded shard JSON { width, height, tiles[][] }
- * @returns { { x:number, y:number } & tileData | null }
- */
-export function getTileUnderMouse(e, canvas, tileWidth, tileHeight, originX, originY, shard) {
-  // find the scroll container (we wrap <canvas> in #viewportWrapper)
-  const wrapper =
-    document.getElementById('canvasWrapper') ||
-    document.getElementById('viewportWrapper') ||
-    canvas.parentElement ||
-    canvas;
-  const scrollLeft = wrapper.scrollLeft || 0;
-  const scrollTop  = wrapper.scrollTop  || 0;
-
-  // mouse pos relative to canvas, plus scroll offset
-  const bounds = canvas.getBoundingClientRect();
-  const mouseX = e.clientX - bounds.left + scrollLeft;
-  const mouseY = e.clientY - bounds.top  + scrollTop;
-
-  // translate into isometric grid coords
-  const dx = mouseX - originX;
-  const dy = mouseY - originY;
-  const isoX = Math.floor((dx / (tileWidth/2) + dy / (tileHeight/2)) / 2);
-  const isoY = Math.floor((dy / (tileHeight/2) - dx / (tileWidth/2)) / 2);
-
-  if (isoX >= 0 && isoX < shard.width && isoY >= 0 && isoY < shard.height) {
-    return { ...shard.tiles[isoY][isoX], x: isoX, y: isoY };
-  }
-  return null;
-}
-
-/**
- * Calculate how many columns & rows of tiles fit into the visible viewport.
- * (You can keep your existing implementation here.)
+ * @returns {{cols:number,rows:number}}
  */
 export function calculateViewportSize(tileWidth, tileHeight) {
-  // your existing logic...
-  // e.g.:
   const wrapper = document.getElementById('viewportWrapper');
   const w = wrapper.clientWidth;
   const h = wrapper.clientHeight;
-  return {
-    cols: Math.ceil(w / tileWidth) + 1,
-    rows: Math.ceil(h / tileHeight) + 1
-  };
+  const cols = Math.floor(w / tileWidth);
+  const rows = Math.floor(h / tileHeight);
+  return { cols, rows };
+}
+
+/**
+ * Determines which tile is under the given mouse position,
+ * accounting for scroll and zoom.
+ * @param {number} mouseX - x within canvas
+ * @param {number} mouseY - y within canvas
+ * @param {number} tileW
+ * @param {number} tileH
+ * @param {number} originX
+ * @param {number} originY
+ * @param {object} shard - shard data
+ * @param {HTMLElement} wrapper - scrolling container
+ */
+export function getTileUnderMouse(
+  mouseX, mouseY,
+  tileW, tileH,
+  originX, originY,
+  shard,
+  wrapper
+) {
+  const scrollLeft = wrapper.scrollLeft;
+  const scrollTop = wrapper.scrollTop;
+  const zoom = getZoomLevel();
+
+  // Convert screen coords to world coords
+  const dx = (mouseX + scrollLeft - originX) / zoom;
+  const dy = (mouseY + scrollTop - originY) / zoom;
+
+  const x = Math.floor((dx / (tileW/2) + dy / (tileH/2)) / 2);
+  const y = Math.floor((dy / (tileH/2) - dx / (tileW/2)) / 2);
+
+  if (x < 0 || x >= shard.width || y < 0 || y >= shard.height) {
+    return null;
+  }
+  return { ...shard.tiles[y][x], x, y };
 }

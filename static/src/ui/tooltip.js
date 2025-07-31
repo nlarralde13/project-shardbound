@@ -1,36 +1,39 @@
-export function createTooltip() {
-    const tooltip = document.createElement('div');
-    tooltip.id = 'tileTooltip';
-    tooltip.className = 'tooltip-box';
-    tooltip.style.display = 'none';
-    document.body.appendChild(tooltip);
-    return tooltip;
-}
+/**
+ * Computes which tile (if any) is under the given mouse coords.
+ *
+ * @param {number} mouseX  x relative to canvas client area
+ * @param {number} mouseY  y relative to canvas client area
+ * @param {number} tileW   tile width
+ * @param {number} tileH   tile height
+ * @param {number} originX same originX you passed to renderShard
+ * @param {number} originY same originY you passed to renderShard
+ * @param {object} shard   the shard data (with width/height/tiles[])
+ * @param {HTMLCanvasElement} canvas  the canvas element itself
+ */
+export function getTileUnderMouse(
+  mouseX, mouseY,
+  tileW, tileH,
+  originX, originY,
+  shard, canvas
+) {
+  // find the real scroll container (the one styled overflow: scroll)
+  const scrollContainer = canvas.closest('#viewport');
+  const scrollLeft = scrollContainer?.scrollLeft  ?? 0;
+  const scrollTop  = scrollContainer?.scrollTop   ?? 0;
+  const zoom       = window.currentZoom || 1;
 
-export function updateTooltip(tooltip, tileData, screenX, screenY, devMode = false) {
-    tooltip.style.left = screenX + 12 + 'px';
-    tooltip.style.top = screenY + 12 + 'px';
+  // undo scroll + zoom + origin
+  const dx = (mouseX + scrollLeft - originX) / zoom;
+  const dy = (mouseY + scrollTop  - originY) / zoom;
 
-    let html = `<div><strong>(${tileData.x}, ${tileData.y})</strong></div>`;
-    html += `<div><span class="label">Biome:</span> <span class="value">${tileData.biome}</span></div>`;
+  const x = Math.floor((dx / (tileW/2) + dy / (tileH/2)) / 2);
+  const y = Math.floor((dy / (tileH/2) - dx / (tileW/2)) / 2);
 
-    if (devMode) {
-        html += `<div class="divider"></div>`;
-        if (tileData.resources?.length) {
-            html += `<div><span class="label">Resources:</span> <span class="value">${tileData.resources.join(', ')}</span></div>`;
-        }
-        if (tileData.encounter) {
-            html += `<div><span class="label">Encounter:</span> <span class="value">${tileData.encounter}</span></div>`;
-        }
-        if (tileData.tags?.length) {
-            html += `<div><span class="label">Tags:</span> <span class="value">${tileData.tags.join(', ')}</span></div>`;
-        }
-    }
+  console.log(`[tooltip] calc iso coords → (${x},${y}) after scroll (${scrollLeft},${scrollTop})`);
 
-    tooltip.innerHTML = html;
-    tooltip.style.display = 'block';
-}
-
-export function hideTooltip(tooltip) {
-    tooltip.style.display = 'none';
+  if (x >= 0 && x < shard.width && y >= 0 && y < shard.height) {
+    return { ...shard.tiles[y][x], x, y };
+  } else {
+    return null;
+  }
 }
