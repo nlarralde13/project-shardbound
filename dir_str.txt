@@ -1,0 +1,194 @@
+Folder PATH listing
+Volume serial number is 9832-EB22
+C:.
++---public
+¦   +---shards
++---server
+¦   +---models
+¦   +---routes
+¦   +---utils
++---src
+¦   +---combat
+¦   +---crafting
+¦   +---items
+¦   +---players
+¦   +---rooms
+¦   +---shards
+¦   +---ui
+¦   +---utils
++---static
+¦   +---css
+¦   +---public
+¦   ¦   +---shards
+¦   +---src
+¦   ¦   +---combat
+¦   ¦   +---config
+¦   ¦   +---crafting
+¦   ¦   +---items
+¦   ¦   +---players
+¦   ¦   +---rooms
+¦   ¦   +---shards
+¦   ¦   +---ui
+¦   ¦   +---utils
+¦   +---textures
++---templates
++---venv
+    +---Include
+    +---Lib
+    ¦   +---site-packages
+    ¦       +---blinker
+    ¦       ¦   +---__pycache__
+    ¦       +---blinker-1.9.0.dist-info
+    ¦       +---click
+    ¦       ¦   +---__pycache__
+    ¦       +---click-8.2.1.dist-info
+    ¦       ¦   +---licenses
+    ¦       +---colorama
+    ¦       ¦   +---tests
+    ¦       ¦   ¦   +---__pycache__
+    ¦       ¦   +---__pycache__
+    ¦       +---colorama-0.4.6.dist-info
+    ¦       ¦   +---licenses
+    ¦       +---flask
+    ¦       ¦   +---json
+    ¦       ¦   ¦   +---__pycache__
+    ¦       ¦   +---sansio
+    ¦       ¦   ¦   +---__pycache__
+    ¦       ¦   +---__pycache__
+    ¦       +---flask-3.1.1.dist-info
+    ¦       ¦   +---licenses
+    ¦       +---itsdangerous
+    ¦       ¦   +---__pycache__
+    ¦       +---itsdangerous-2.2.0.dist-info
+    ¦       +---jinja2
+    ¦       ¦   +---__pycache__
+    ¦       +---jinja2-3.1.6.dist-info
+    ¦       ¦   +---licenses
+    ¦       +---markupsafe
+    ¦       ¦   +---__pycache__
+    ¦       +---MarkupSafe-3.0.2.dist-info
+    ¦       +---pip
+    ¦       ¦   +---_internal
+    ¦       ¦   ¦   +---cli
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---commands
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---distributions
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---index
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---locations
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---metadata
+    ¦       ¦   ¦   ¦   +---importlib
+    ¦       ¦   ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---models
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---network
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---operations
+    ¦       ¦   ¦   ¦   +---build
+    ¦       ¦   ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   ¦   +---install
+    ¦       ¦   ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---req
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---resolution
+    ¦       ¦   ¦   ¦   +---legacy
+    ¦       ¦   ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   ¦   +---resolvelib
+    ¦       ¦   ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---utils
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---vcs
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---__pycache__
+    ¦       ¦   +---_vendor
+    ¦       ¦   ¦   +---cachecontrol
+    ¦       ¦   ¦   ¦   +---caches
+    ¦       ¦   ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---certifi
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---dependency_groups
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---distlib
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---distro
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---idna
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---msgpack
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---packaging
+    ¦       ¦   ¦   ¦   +---licenses
+    ¦       ¦   ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---pkg_resources
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---platformdirs
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---pygments
+    ¦       ¦   ¦   ¦   +---filters
+    ¦       ¦   ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   ¦   +---formatters
+    ¦       ¦   ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   ¦   +---lexers
+    ¦       ¦   ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   ¦   +---styles
+    ¦       ¦   ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---pyproject_hooks
+    ¦       ¦   ¦   ¦   +---_in_process
+    ¦       ¦   ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---requests
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---resolvelib
+    ¦       ¦   ¦   ¦   +---resolvers
+    ¦       ¦   ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---rich
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---tomli
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---tomli_w
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---truststore
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---urllib3
+    ¦       ¦   ¦   ¦   +---contrib
+    ¦       ¦   ¦   ¦   ¦   +---_securetransport
+    ¦       ¦   ¦   ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   ¦   +---packages
+    ¦       ¦   ¦   ¦   ¦   +---backports
+    ¦       ¦   ¦   ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   ¦   +---util
+    ¦       ¦   ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   ¦   +---__pycache__
+    ¦       ¦   ¦   +---__pycache__
+    ¦       ¦   +---__pycache__
+    ¦       +---pip-25.1.1.dist-info
+    ¦       ¦   +---licenses
+    ¦       +---werkzeug
+    ¦       ¦   +---datastructures
+    ¦       ¦   ¦   +---__pycache__
+    ¦       ¦   +---debug
+    ¦       ¦   ¦   +---shared
+    ¦       ¦   ¦   +---__pycache__
+    ¦       ¦   +---middleware
+    ¦       ¦   ¦   +---__pycache__
+    ¦       ¦   +---routing
+    ¦       ¦   ¦   +---__pycache__
+    ¦       ¦   +---sansio
+    ¦       ¦   ¦   +---__pycache__
+    ¦       ¦   +---wrappers
+    ¦       ¦   ¦   +---__pycache__
+    ¦       ¦   +---__pycache__
+    ¦       +---werkzeug-3.1.3.dist-info
+    +---Scripts

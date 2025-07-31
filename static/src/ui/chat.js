@@ -64,3 +64,5 @@ export function sendMessage(text) {
   hist.scrollTop = hist.scrollHeight;
   console.log('[chat] Sent message →', text);
 }
+
+window.sendChatMessage = sendMessage;

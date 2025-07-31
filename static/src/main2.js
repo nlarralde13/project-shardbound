@@ -5,14 +5,17 @@
 // ───────────────────────────────────────────────────────────
 
 import { renderShard } from './shards/renderShard.js';
-import { initCamera, applyZoom, getZoomLevel } from './ui/camera.js';
-import { calculateViewportSize, getTileUnderMouse } from './ui/viewportUtils.js';
+import { setupZoomControls, applyZoom, getZoomLevel } from './ui/camera.js';
+import { calculateViewportSize } from './ui/viewportUtils.js';
 import { togglePanel } from './ui/uiUtils.js';
 import { TILE_WIDTH, TILE_HEIGHT } from './config/mapConfig.js';
 import { saveShard, loadShardFromFile, regenerateShard } from './utils/shardLoader.js';
-import { updateDevStatsPanel } from './utils/tileUtils.js';
 import { initChat, sendMessage } from './ui/chat.js';
+import { getTileUnderMouse } from './ui/tooltip.js';
 
+const PLAYER = 'Player1';
+const canvas  = document.getElementById('viewport');
+const wrapper = document.getElementById('viewportWrapper');
 
 window.addEventListener('DOMContentLoaded', async () => {
   console.log('[main2] DOM ready');
@@ -42,104 +45,109 @@ window.addEventListener('DOMContentLoaded', async () => {
   console.log(`[main2] viewportSize cols=${cols}, rows=${rows}`);
 
   // 4️⃣  Grab the wrapper & canvas
-  const wrapper = document.getElementById('viewportWrapper');
-  wrapper.style.width  = `${cols * TILE_WIDTH}px`;
-  wrapper.style.height = `${rows * TILE_HEIGHT}px`;
-  wrapper.style.position = 'relative';
 
-  const canvas = document.getElementById('viewport');
-  canvas.width  = cols * TILE_WIDTH;
-  canvas.height = rows * TILE_HEIGHT;
+  const shardData = await fetch('/static/public/shards/shard_0_0.json').then(r => r.json());
+
+    // after shardData loads:
+  canvas.width  = shardData.width  * TILE_WIDTH;
+  canvas.height = shardData.height * TILE_HEIGHT + TILE_HEIGHT;
+  // center scroll:
+  wrapper.scrollLeft = (canvas.width - wrapper.clientWidth)/2;
+  wrapper.scrollTop  = (canvas.height - wrapper.clientHeight)/2;
+  
   const ctx = canvas.getContext('2d');
   console.log('[main2] canvas initialized');
 
   // 5️⃣  Set iso‐origin
-  const originX = canvas.width / 2;
-  const originY = 40;
+  const originX = (shardData.width * TILE_WIDTH)/2;
+  const originY = TILE_HEIGHT/2;
   console.log(`[main2] originX=${originX}, originY=${originY}`);
 
   // 6️⃣  Load & draw shard
-  const shard = await fetch('/static/public/shards/shard_0_0.json').then(r => r.json());
-  console.log('[main2] shard loaded', shard);
-  renderShard(ctx, shard);
+  
+  renderShard(ctx, shardData);
   console.log('[main2] initial renderShard()');
 
-  // 7️⃣  Dev-tools: Save / Load / Regenerate
+  // 7️⃣  Initialize camera/zoom controls
+  setupZoomControls();
+  console.log('[main2] zoom ready @', getZoomLevel());
+
+  // 8️⃣  Dev-tools: Save / Load / Regenerate
   document.getElementById('saveShard').onclick = () => {
     console.log('[main2] saveShard clicked');
-    saveShard(shard);
+    saveShard(shardData);
   };
-  document.getElementById('loadShardBtn').onclick = () => {
-    console.log('[main2] loadShardBtn clicked');
+  document.getElementById('loadShardBtn').onclick = () =>
     document.getElementById('loadShardInput').click();
-  };
   document.getElementById('loadShardInput').onchange = e => {
-    const file = e.target.files[0];
-    console.log('[main2] loadShardInput changed →', file);
-    if (!file) return;
-    loadShardFromFile(file, newShard => {
+    const f = e.target.files[0];
+    if (!f) return;
+    console.log('[main2] loading shard from file');
+    loadShardFromFile(f, newShard => {
       Object.assign(shard, newShard);
       renderShard(ctx, shard);
-      console.log('[main2] shard reloaded from file');
     });
   };
   document.getElementById('regenWorld').onclick = () => {
-    console.log('[main2] regenWorld clicked');
+    console.log('[main2] regenerate shard clicked');
     regenerateShard(settings, newShard => {
       Object.assign(shard, newShard);
       renderShard(ctx, shard);
-      console.log('[main2] shard regenerated');
     });
   };
 
-  // 8️⃣  Zoom controls + overlay
-  initCamera(canvas, ctx, shard, renderShard, 'zoomLevel');
-  document.getElementById('zoomLevel').textContent = `${Math.round(getZoomLevel()*100)}%`;
-  document.getElementById('zoomInBtn').onclick = () => {
-    console.log('[main2] zoomInBtn clicked');
-    applyZoom(ctx, canvas, shard, renderShard, 'zoomLevel');
-  };
-  document.getElementById('zoomOutBtn').onclick = () => {
-    console.log('[main2] zoomOutBtn clicked');
-    applyZoom(ctx, canvas, shard, renderShard, 'zoomLevel');
-  };
+  // 9️⃣  Initialize chat
+  initChat('#chatHistory', '#chatInput');
+  console.log('[main2] chat initialized');
 
-  // 9️⃣  Click to select & highlight tile
-  canvas.addEventListener('click', e => {
-    console.log('[main2] canvas click event');
-    const rect = canvas.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
-    const tile = getTileUnderMouse(
-      clickX, clickY,
-      TILE_WIDTH, TILE_HEIGHT,
-      originX, originY,
-      shard,
-      wrapper
-    );
-    if (!tile) {
-      console.log('[main2] no tile under click');
-      return;
-    }
-    console.log('[main2] tile selected →', tile);
-    updateDevStatsPanel(tile);
-    renderShard(ctx, shard, tile);
-    console.log('[main2] re-renderShard with highlight');
+  // 🔟  Action buttons → send to chat
+  document.querySelectorAll('.action-btn').forEach(btn => {
+    btn.onclick = () => {
+      const action = btn.dataset.action || btn.title;
+      console.log(`[main2] actionBtn clicked → ${action}`);
+      sendMessage(`${PLAYER} used ${action}`);
+    };
   });
 
-  // 10) Initialize chat:
-  initChat('#chatHistory', '#chatInput');
+  // 1️⃣1️⃣  Tile click → info panel + highlight
+  canvas.addEventListener('click', e => {
+  // 1) raw on‐screen coords
+  const rect    = canvas.getBoundingClientRect();
+  const rawX    = e.clientX - rect.left;
+  const rawY    = e.clientY - rect.top;
 
-  // 11) Wire up your action buttons:
-  document.querySelectorAll('.action-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      // Prefer data-action, then title, then the visible text
-      const action = btn.dataset.action
-                  || btn.title
-                  || btn.textContent.trim();
+  // 2) undo CSS zoom
+  const scale   = getZoomLevel();
+  const unX     = rawX / scale;
+  const unY     = rawY / scale;
 
-      console.log(`[main2] actionBtn clicked → ${action}`);
-      sendMessage(`Player1 used ${action}`);
-    });
+  // 3) add scroll offsets
+  const mouseX  = unX + wrapper.scrollLeft;
+  const mouseY  = unY + wrapper.scrollTop;
+
+  // 4) correct signature: shard before wrapper
+  const tile = getTileUnderMouse(
+    mouseX,mouseY,
+    TILE_WIDTH,TILE_HEIGHT,
+    originX,originY,
+    shardData,      
+    wrapper     
+  );
+  if (!tile) return;
+
+  console.log('[main2] tile clicked ▶', tile);
+
+  // 5) update the stats panel
+  const infoPre = document.getElementById('statsContent');
+  if (infoPre) {
+    infoPre.textContent = JSON.stringify(tile, null, 2);
+  }
+
+  // 6) re-render with highlight
+  renderShard(ctx, shardData, tile);
+
+  // 7) ensure the panel is open
+  togglePanel('infoPanel');
   });
 });
+

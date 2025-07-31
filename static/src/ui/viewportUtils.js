@@ -31,26 +31,4 @@ export function calculateViewportSize(tileWidth, tileHeight) {
  * @param {object} shard - shard data
  * @param {HTMLElement} wrapper - scrolling container
  */
-export function getTileUnderMouse(
-  mouseX, mouseY,
-  tileW, tileH,
-  originX, originY,
-  shard,
-  wrapper
-) {
-  const scrollLeft = wrapper.scrollLeft;
-  const scrollTop = wrapper.scrollTop;
-  const zoom = getZoomLevel();
 
-  // Convert screen coords to world coords
-  const dx = (mouseX + scrollLeft - originX) / zoom;
-  const dy = (mouseY + scrollTop - originY) / zoom;
-
-  const x = Math.floor((dx / (tileW/2) + dy / (tileH/2)) / 2);
-  const y = Math.floor((dy / (tileH/2) - dx / (tileW/2)) / 2);
-
-  if (x < 0 || x >= shard.width || y < 0 || y >= shard.height) {
-    return null;
-  }
-  return { ...shard.tiles[y][x], x, y };
-}

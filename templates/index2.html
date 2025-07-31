@@ -2,25 +2,26 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>🧙 PROJECT SHARDBOUND v0.2</title>
+  <title>🧙 PROJECT SHARDBOUND</title>
   <link rel="stylesheet" href="/static/styles-index2.css" />
+  <!-- Fantasy Vibes Fonts -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=UnifrakturCook:wght@700&display=swap"
+    rel="stylesheet"
+  />
 </head>
 <body>
   <div id="gameUI">
-
-    <!-- BANNER -->
+    <!-- === Top Banner + Zoom Controls === -->
     <header id="banner">
-      🧙‍♂️ PROJECT SHARDBOUND: Rise of the Ember Crown 🔥
+      🧙 PROJECT SHARDBOUND
     </header>
 
-    <!-- MAIN LAYOUT: left sidebar, center viewport, right sidebar -->
     <div id="mainLayout">
-
-      <!-- LEFT SIDEBAR: panel toggles + content panels -->
+      <!-- === Left Sidebar === -->
       <aside id="leftBar">
-        <button class="panel-toggle" data-target="satchelPanel">🎒 Satchel</button>
-        <div id="satchelPanel" class="panel panel-hidden">
-          <!-- your satchel content goes here -->
+        <button id="satchelBtn"     class="panelToggle-btn">👜 Satchel</button>
+        <div id="satchelPanel" class="panelBox">
           <ul>
             <li>🧪 Health Potion</li>
             <li>🗝️ Ancient Key</li>
@@ -28,8 +29,8 @@
           </ul>
         </div>
 
-        <button class="panel-toggle" data-target="questLogPanel">📖 Quest Log</button>
-        <div id="questLogPanel" class="panel panel-hidden">
+        <button id="questLogBtn"    class="panelToggle-btn">📖 Quest Log</button>
+        <div id="questLogPanel" class="panelBox">
           <ul>
             <li>⛏️ Mine the Crystal Caves</li>
             <li>🐍 Defeat the Basilisk</li>
@@ -37,39 +38,37 @@
           </ul>
         </div>
 
-        <button class="panel-toggle" data-target="infoPanel">ℹ️ Info Panel</button>
-        <div id="infoPanel" class="panel panel-hidden">
-          <!-- dynamic info about hovered/selected tile -->
-          <pre id="statsContent">Click a tile to view details.</pre>
+        <button id="infoPanelBtn"   class="panelToggle-btn">ℹ️ Info Panel</button>
+        <div id="infoPanel" class="panelBox">
+          <pre id="statsContent">Click a tile to view details…</pre>
         </div>
       </aside>
 
-      <!-- CENTER: viewport + action bar + chat -->
+      <!-- === Center Panel === -->
       <section id="centerPanel">
-        <div id="zoomControls">
-          <button id="zoomOutBtn">−</button>
-          <span id="zoomLevel">100%</span>
-          <button id="zoomInBtn">＋</button>
-        </div>
         <div id="viewportWrapper">
           <canvas id="viewport"></canvas>
+          <div id="zoomControls" class="zoom-controls">
+            <button id="zoomIn">+</button>
+            <button id="zoomOut">–</button>
+          </div>
         </div>
 
         <div id="actionBar">
-          <button class="action-btn" data-action="Slash">⚔️ Slash</button>
-          <button class="action-btn" data-action="Fireball">🔥 Fireball</button>
-          <button class="action-btn" data-action="Shield Up">🛡️ Shield Up</button>
+          <button class="action-btn" title="Slash">🗡️ Slash</button>
+          <button class="action-btn" title="Fireball">🔥 Fireball</button>
+          <button class="action-btn" title="Shield Up">🛡️ Shield Up</button>
         </div>
 
-        <div id="chatContainer">
+        <div id="chatWrapper">
           <div id="chatHistory"></div>
-          <textarea id="chatInput" placeholder="Type &amp; press Enter..."></textarea>
+          <textarea id="chatInput" placeholder="Type & press Enter…"></textarea>
         </div>
       </section>
 
-      <!-- RIGHT SIDEBAR: guild / dev panels -->
+      <!-- === Right Sidebar === -->
       <aside id="rightBar">
-        <div id="guildHallPanel" class="panel">
+        <div class="panelBox">
           <h3>📜 Guild Hall</h3>
           <ul>
             <li>📚 Wiki of Lore</li>
@@ -78,21 +77,18 @@
           </ul>
         </div>
 
-        <div id="devToolsPanel" class="panel">
-          <h3>🛠️ Dev Tools</h3>
-          <button id="toggleBrush">🖌️ Shard Editor</button>
+        <div id="devToolsPanel" class="dev-box">
+          <h4>🛠️ Dev Tools</h4>
+          <button id="shardEditorBtn">🖌️ Shard Editor</button>
           <button id="saveShard">💾 Save Shard</button>
           <button id="loadShardBtn">📂 Load Shard</button>
-          <input type="file" id="loadShardInput" accept=".json" style="display:none" />
-          <button id="regenWorld">🔄 Regenerate</button>
+          <button id="regenWorld">🌀 Regenerate Shard</button>
+          <input type="file" id="loadShardInput" accept=".json" style="display:none;" />
         </div>
       </aside>
-
     </div>
-
   </div>
 
-  <!-- your main2 script -->
   <script type="module" src="/static/src/main2.js"></script>
 </body>
 </html>

@@ -1,120 +1,101 @@
-let zoomLevel = 1.0;
-const zoomSteps = [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3];
-let currentZoomIndex = 0;
-let lastZoomTime = 0;
-let zoomKeyActive = false;
+// camera.js
+// Manages zoom and pan behavior for the shard canvas
 
+// Configuration for zoom levels
+const ZOOM_STEP = 0.1;
+const MIN_ZOOM = 0.3;
+const MAX_ZOOM = 3.0;
+let currentZoom = 1.0;
 
 /**
- * Initializes zoom key controls and overlays.
+ * applyZoom
+ * Applies CSS transform to the canvas to scale its content.
+ * @param {number} zoomLevel - The new zoom level to apply.
  */
-export function initCamera(canvas, ctx, shard, renderFn, overlayElId = null) {
-    document.addEventListener('keydown', (e) => {
-    const now = Date.now();
-    
-    //if (now - lastZoomTime < 500) return;  // 0.5 second cooldown
+export function applyZoom(zoomLevel) {
+  // Clamp zoom level between MIN_ZOOM and MAX_ZOOM
+  currentZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomLevel));
 
-    if (e.key === '+' || e.key === '=') {
-        if (currentZoomIndex > 0) {
-            currentZoomIndex--;
-            zoomLevel = zoomSteps[currentZoomIndex];
-            lastZoomTime = now;
-            applyZoom(ctx, canvas, shard, renderFn, overlayElId);
-        }
-    } else if (e.key === '-') {
-        if (currentZoomIndex < zoomSteps.length - 1) {
-            currentZoomIndex++;
-            zoomLevel = zoomSteps[currentZoomIndex];
-            lastZoomTime = now;
-            applyZoom(ctx, canvas, shard, renderFn, overlayElId);
-        }
-    }
+  const canvas = document.getElementById('viewport');
+  if (!canvas) return;
 
-    //Enable Z for mapZoom
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'z' || e.key === 'Z') zoomKeyActive = true;
-    });
+  // Apply scaling transform to canvas
+  canvas.style.transform = `scale(${currentZoom})`;
+  canvas.style.transformOrigin = 'top left';
 
-    document.addEventListener('keyup', (e) => {
-        if (e.key === 'z' || e.key === 'Z') zoomKeyActive = false;
-    });
-
-
-    //SCROLL WHEEL ZOOM
-    const zoomTarget = canvas.parentElement || canvas;
-
-    zoomTarget.addEventListener('wheel', (e) => {
-    const now = Date.now();
-    if (now - lastZoomTime < 500) return;
-    if (!zoomKeyActive) return;  // ✅ Require Z key to be held
-
-    if (e.deltaY < 0) {
-        if (currentZoomIndex > 0) {
-            currentZoomIndex--;
-            zoomLevel = zoomSteps[currentZoomIndex];
-            lastZoomTime = now;
-            applyZoom(ctx, canvas, shard, renderFn, overlayElId);
-        }
-    } else {
-        if (currentZoomIndex < zoomSteps.length - 1) {
-            currentZoomIndex++;
-            zoomLevel = zoomSteps[currentZoomIndex];
-            lastZoomTime = now;
-            applyZoom(ctx, canvas, shard, renderFn, overlayElId);
-        }
-    }
-
-    e.preventDefault();
-}, { passive: false });
-
-
-});
-
+  // Update the zoom display overlay
+  updateZoomDisplay();
 }
 
 /**
- * Applies the current zoom level and re-renders the shard.
- */
-export function applyZoom(ctx, canvas, shard, renderFn, overlayElId = null) {
-    ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset zoom
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
-
-    ctx.setTransform(zoomLevel, 0, 0, zoomLevel, 0, 0); // Apply new zoom
-    renderFn(ctx, shard); // Redraw
-
-    // Adjust canvas wrapper size for centering
-    const wrapper = document.getElementById('canvasWrapper');
-    if (wrapper) {
-        wrapper.style.width = canvas.width * zoomLevel + 'px';
-        wrapper.style.height = canvas.height * zoomLevel + 'px';
-        wrapper.style.margin = '0 auto';
-        wrapper.style.display = 'block';
-    }
-
-    // Update zoom overlay
-    if (overlayElId) {
-        const overlay = document.getElementById(overlayElId);
-        if (overlay) {
-            overlay.textContent = Math.round(zoomLevel * 100) + '%';
-        }
-    }
-}
-
-/**
- * Returns the current zoom level (for external access).
+ * getZoomLevel
+ * Returns the current zoom level.
+ * @returns {number}
  */
 export function getZoomLevel() {
-    return zoomLevel;
+  return currentZoom;
 }
 
 /**
- * Centers the #viewport on the canvas based on current zoom level.
+ * updateZoomDisplay
+ * Updates the on-screen zoom percentage indicator.
  */
-export function centerViewport(viewportEl, canvas) {
-    viewportEl.scrollLeft = (canvas.width * zoomLevel - viewportEl.clientWidth) / 2;
-    viewportEl.scrollTop = (canvas.height * zoomLevel - viewportEl.clientHeight) / 2;
+function updateZoomDisplay() {
+  const zoomDisplay = document.getElementById('zoomDisplay');
+  if (zoomDisplay) {
+    const percent = Math.round(currentZoom * 100);
+    zoomDisplay.textContent = `Zoom: ${percent}%`;
+  }
 }
-window.addEventListener('resize', () => {
-  // Optionally debounce with setTimeout if needed
-  location.reload(); // Simple for now — reload on resize
-});
+
+/**
+ * setupZoomControls
+ * Attaches event listeners to zoom in/out buttons and mouse wheel.
+ */
+export function setupZoomControls() {
+  const btnZoomIn = document.getElementById('zoomIn');
+  const btnZoomOut = document.getElementById('zoomOut');
+  const wrapper = document.getElementById('viewportWrapper');
+
+  if (btnZoomIn) {
+    // Button zoom in
+    btnZoomIn.addEventListener('click', () => {
+      applyZoom(currentZoom + ZOOM_STEP);
+    });
+  }
+
+  if (btnZoomOut) {
+    // Button zoom out
+    btnZoomOut.addEventListener('click', () => {
+      applyZoom(currentZoom - ZOOM_STEP);
+    });
+  }
+
+  /*if (wrapper) {
+    // Mouse wheel zoom (Ctrl + wheel or just wheel)
+    wrapper.addEventListener('wheel', e => {
+        const pivotX = e.offsetX;
+        const pivotY = e.offsetY;
+        
+        const canvas = document.getElementById('viewport');
+        const delta = e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
+        canvas.style.transformOrigin = `${pivotX}px ${pivotY}px`;
+        applyZoom(currentZoom + delta);
+    });
+  } */
+}
+
+/**
+ * initCamera
+ * Initializes camera controls (pan, zoom display, etc.).
+ * Call this once on application start (after DOM is loaded).
+ */
+export function initCamera() {
+  // Ensure elements exist after DOM load
+  setupZoomControls();
+
+  // Initial display update
+  updateZoomDisplay();
+}
+
+// Note: Pan (click-drag) can be added here in future as needed

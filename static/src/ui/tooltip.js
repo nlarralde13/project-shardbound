@@ -1,6 +1,10 @@
+import { getZoomLevel } from './camera.js';
+
+
 /**
  * Computes which tile (if any) is under the given mouse coords.
  *
+ * 
  * @param {number} mouseX  x relative to canvas client area
  * @param {number} mouseY  y relative to canvas client area
  * @param {number} tileW   tile width
@@ -12,28 +16,26 @@
  */
 export function getTileUnderMouse(
   mouseX, mouseY,
-  tileW, tileH,
+  TILE_WIDTH,TILE_HEIGHT,
   originX, originY,
-  shard, canvas
-) {
-  // find the real scroll container (the one styled overflow: scroll)
-  const scrollContainer = canvas.closest('#viewport');
-  const scrollLeft = scrollContainer?.scrollLeft  ?? 0;
-  const scrollTop  = scrollContainer?.scrollTop   ?? 0;
-  const zoom       = window.currentZoom || 1;
+  shardData,
+  wrapper
+ ) 
+ 
+ {
+  const scrollLeft = wrapper.scrollLeft;
+  const scrollTop = wrapper.scrollTop;
+  const zoom = getZoomLevel();
 
-  // undo scroll + zoom + origin
+  // Convert screen coords to world coords
   const dx = (mouseX + scrollLeft - originX) / zoom;
-  const dy = (mouseY + scrollTop  - originY) / zoom;
+  const dy = (mouseY + scrollTop - originY) / zoom;
 
-  const x = Math.floor((dx / (tileW/2) + dy / (tileH/2)) / 2);
-  const y = Math.floor((dy / (tileH/2) - dx / (tileW/2)) / 2);
+  const x = Math.floor((dx / (TILE_WIDTH/2) + dy / (TILE_HEIGHT/2)) / 2);
+  const y = Math.floor((dy / (TILE_HEIGHT/2) - dx / (TILE_WIDTH/2)) / 2);
 
-  console.log(`[tooltip] calc iso coords → (${x},${y}) after scroll (${scrollLeft},${scrollTop})`);
-
-  if (x >= 0 && x < shard.width && y >= 0 && y < shard.height) {
-    return { ...shard.tiles[y][x], x, y };
-  } else {
+  if (x < 0 || x >= shardData.width || y < 0 || y >= shardData.height) {
     return null;
   }
+  return { ...shardData.tiles[y][x], x, y };
 }
