@@ -2,104 +2,97 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-
-  <title>🧙 PROJECT SHARDBOUND (Dev Preview)</title>
-
-  <!-- Fantasy Vibe Fonts -->
-  <link
-    href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=UnifrakturCook:wght@700&display=swap"
-    rel="stylesheet"
-  />
-
-  <!-- Your new styled CSS -->
+  <title>🧙 PROJECT SHARDBOUND v0.2</title>
   <link rel="stylesheet" href="/static/styles-index2.css" />
 </head>
 <body>
-  <!-- HEADER / BANNER -->
-  <header id="banner">
-    🧙‍♂️ PROJECT SHARDBOUND: Rise of the Ember Crown 🔥
-  </header>
-
-  <!-- MAIN GRID LAYOUT -->
   <div id="gameUI">
+
+    <!-- BANNER -->
+    <header id="banner">
+      🧙‍♂️ PROJECT SHARDBOUND: Rise of the Ember Crown 🔥
+    </header>
+
+    <!-- MAIN LAYOUT: left sidebar, center viewport, right sidebar -->
     <div id="mainLayout">
 
-      <!-- LEFT SIDEBAR -->
+      <!-- LEFT SIDEBAR: panel toggles + content panels -->
       <aside id="leftBar">
-        <button class="panel-toggle" data-target="satchelPanel">
-          🎒 Satchel <span>＋</span>
-        </button>
-        <div id="satchelPanel" class="panelContent">
-          …items…
-        </div>
-
-        <button class="panel-toggle" data-target="questPanel">
-          📖 Quest Log <span>＋</span>
-        </button>
-        <div id="questPanel" class="panelContent">
-          …quests…
-        </div>
-
-        <button class="panel-toggle" data-target="infoPanel">
-          ℹ️ Info Panel <span>＋</span>
-        </button>
-        <div id="infoPanel" class="panelContent">
-          …info…
-        </div>
-      </aside>
-
-      <!-- CENTER PANEL -->
-      <section id="centerPanel">
-        <!-- VIEWPORT WRAPPER -->
-        <div id="viewportWrapper">
-          <!-- <canvas> now lives here -->
-          <canvas id="viewport"></canvas>
-        </div>
-
-        <!-- ACTION BAR -->
-        <div id="actionBar">
-          <button class="action-btn" title="Slash">⚔️</button>
-          <button class="action-btn" title="Fireball">🔥</button>
-          <button class="action-btn" title="Ice Lance">❄️</button>
-          <button class="action-btn" title="Shield">🛡️</button>
-        </div>
-
-        <!-- CHAT -->
-        <div id="chatContainer">
-          <div id="chatHistory"></div>
-          <input id="chatInput" type="text" placeholder="Say something brave, foolish hero..." />
-        </div>
-      </section>
-
-      <!-- RIGHT SIDEBAR -->
-      <aside id="rightBar">
-        <div class="panelBox">
-          <h3>📜 Guild Hall</h3>
+        <button class="panel-toggle" data-target="satchelPanel">🎒 Satchel</button>
+        <div id="satchelPanel" class="panel panel-hidden">
+          <!-- your satchel content goes here -->
           <ul>
-            <li>Wiki of Lore</li>
-            <li>Town Square</li>
-            <li>Herald’s Announcements</li>
+            <li>🧪 Health Potion</li>
+            <li>🗝️ Ancient Key</li>
+            <li>📜 Scroll of Fire</li>
           </ul>
         </div>
 
-        <div id="devStatsPanel" class="panelBox">
-          <h3>📊 Dev Stats</h3>
-          <pre id="statsContent">Click a tile to view details.</pre>
+        <button class="panel-toggle" data-target="questLogPanel">📖 Quest Log</button>
+        <div id="questLogPanel" class="panel panel-hidden">
+          <ul>
+            <li>⛏️ Mine the Crystal Caves</li>
+            <li>🐍 Defeat the Basilisk</li>
+            <li>👑 Find the Lost Princess</li>
+          </ul>
         </div>
 
-        <div id="devToolsPanel" class="panelBox">
+        <button class="panel-toggle" data-target="infoPanel">ℹ️ Info Panel</button>
+        <div id="infoPanel" class="panel panel-hidden">
+          <!-- dynamic info about hovered/selected tile -->
+          <pre id="statsContent">Click a tile to view details.</pre>
+        </div>
+      </aside>
+
+      <!-- CENTER: viewport + action bar + chat -->
+      <section id="centerPanel">
+        <div id="zoomControls">
+          <button id="zoomOutBtn">−</button>
+          <span id="zoomLevel">100%</span>
+          <button id="zoomInBtn">＋</button>
+        </div>
+        <div id="viewportWrapper">
+          <canvas id="viewport"></canvas>
+        </div>
+
+        <div id="actionBar">
+          <button class="action-btn" data-action="Slash">⚔️ Slash</button>
+          <button class="action-btn" data-action="Fireball">🔥 Fireball</button>
+          <button class="action-btn" data-action="Shield Up">🛡️ Shield Up</button>
+        </div>
+
+        <div id="chatContainer">
+          <div id="chatHistory"></div>
+          <textarea id="chatInput" placeholder="Type &amp; press Enter..."></textarea>
+        </div>
+      </section>
+
+      <!-- RIGHT SIDEBAR: guild / dev panels -->
+      <aside id="rightBar">
+        <div id="guildHallPanel" class="panel">
+          <h3>📜 Guild Hall</h3>
+          <ul>
+            <li>📚 Wiki of Lore</li>
+            <li>💬 Town Square</li>
+            <li>📢 Herald’s Announcements</li>
+          </ul>
+        </div>
+
+        <div id="devToolsPanel" class="panel">
           <h3>🛠️ Dev Tools</h3>
           <button id="toggleBrush">🖌️ Shard Editor</button>
           <button id="saveShard">💾 Save Shard</button>
           <button id="loadShardBtn">📂 Load Shard</button>
-          <button id="regenWorld">🌀 Regenerate Shard</button>
+          <input type="file" id="loadShardInput" accept=".json" style="display:none" />
+          <button id="regenWorld">🔄 Regenerate</button>
         </div>
       </aside>
+
     </div>
+
   </div>
 
-  <!-- MODULE ENTRYPOINT -->
+  <!-- your main2 script -->
   <script type="module" src="/static/src/main2.js"></script>
 </body>
 </html>

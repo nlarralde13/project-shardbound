@@ -138,3 +138,29 @@ body {
   font-size: 0.9rem;
   color: #eee;
 }
+#zoomControls {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(0,0,0,0.5);
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: white;
+  font-family: monospace;
+}
+#zoomControls button {
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: 1px solid #ccc;
+  color: #ccc;
+  cursor: pointer;
+}
+#zoomControls span {
+  min-width: 40px;
+  text-align: center;
+}
+
