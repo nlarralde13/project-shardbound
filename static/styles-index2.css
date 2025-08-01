@@ -50,25 +50,25 @@ body {
   align-items: center;
   padding: 8px;
   gap: 8px;
-  overflow: hidden;
+  overflow: scroll;
 }
 
 /* =========================
    Viewport
    ========================= */
-  #viewport {
-    width: 1260px;
-    height: 720px;
+#viewportWrapper {
+  width: 900px;
+  height: 900px;
+  overflow: clip;
+  border: 2px solid #888;
+  background: #111;
+  position: relative;
+}
 
-  }
-  
-  #viewportWrapper {
-  flex: 1;
-  width: 1260px;
-  height: 720px;
-  border: 2px solid #333;
-  background: url('/static/textures/galaxy-bg.jpg') center / cover no-repeat #000;
-  overflow: scroll;
+#viewport {
+  display: block;
+  /* dynamically scaled or sized by JS */
+}
 
  .zoom-controls {
  position: absolute;
@@ -81,7 +81,7 @@ body {
   width: 32px; height: 32px;
   font-size: 18px;
 }
-}
+
 
 /* =========================
    Action Bar

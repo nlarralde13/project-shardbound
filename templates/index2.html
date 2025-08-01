@@ -20,25 +20,16 @@
     <div id="mainLayout">
       <!-- === Left Sidebar === -->
       <aside id="leftBar">
-        <button id="satchelBtn"     class="panelToggle-btn">👜 Satchel</button>
-        <div id="satchelPanel" class="panelBox">
-          <ul>
-            <li>🧪 Health Potion</li>
-            <li>🗝️ Ancient Key</li>
-            <li>📜 Scroll of Fire</li>
-          </ul>
-        </div>
-
-        <button id="questLogBtn"    class="panelToggle-btn">📖 Quest Log</button>
-        <div id="questLogPanel" class="panelBox">
-          <ul>
-            <li>⛏️ Mine the Crystal Caves</li>
-            <li>🐍 Defeat the Basilisk</li>
-            <li>👑 Find the Lost Princess</li>
-          </ul>
-        </div>
-
-        <button id="infoPanelBtn"   class="panelToggle-btn">ℹ️ Info Panel</button>
+        <button id="satchelBtn" class="panel-toggle" data-target="satchelPanel">
+          Satchel <span class="toggle-icon">+</span>
+        </button>
+        <button id="questLogBtn" class="panel-toggle" data-target="questLogPanel">
+        📜 Quests <span class="toggle-icon">+</span>
+        </button>
+        <button id="infoPanelBtn" class="panel-toggle" data-target="infoPanel">
+          ℹ️ Info Panel <span class="toggle-icon">+</span>
+        </button>
+        
         <div id="infoPanel" class="panelBox">
           <pre id="statsContent">Click a tile to view details…</pre>
         </div>
@@ -50,9 +41,9 @@
             <button id="zoomIn">+</button>
             <button id="zoomOut">–</button>
           </div>
-        <div id="viewportWrapper">
-          <canvas id="viewport"></canvas>
           
+        <div id="viewportWrapper">
+          <canvas id="viewport"></canvas>          
         </div>
 
         

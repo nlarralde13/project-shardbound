@@ -1,3 +1,4 @@
 {
-  "devMode": true
+  "devMode": true,
+  "useIsometric": true
 }

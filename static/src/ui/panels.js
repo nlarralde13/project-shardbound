@@ -1,73 +1,61 @@
-// panels.js
-import { renderShard } from '../shards/renderShard.js';      // adjust path if needed
-import { getState, setState } from '../utils/state.js';     // or wherever you keep your showGrid/selectedTile
+// static/src/ui/panels.js
+
+import { renderShard } from '../shards/renderShard.js';
+import { getState, setState } from '../utils/state.js';
 import { TILE_WIDTH, TILE_HEIGHT } from '../config/mapConfig.js';
-import { saveShard,
-    loadShardFromFile,
-    regenerateShard } from '../shards/shardLoader.js'
+import {
+  saveShard,
+  loadShardFromFile,
+  regenerateShard
+} from '../shards/shardLoader.js';
 
 /**
- * Wires the “Toggle Grid” button to flip the showGrid flag
- * and re-render using the shared state.
- *
- * @param {HTMLCanvasElement} canvas
- * @param {HTMLCanvasElement} wrapper
- * @param {object} shardData
- * @param {CanvasRenderingContext2D} ctx
+ * Shows or hides a panel and flips its toggle-icon.
  */
-
 export function togglePanel(targetId) {
-  console.log(`[uiUtils] togglePanel called for "${targetId}"`);
   const panel = document.getElementById(targetId);
   if (!panel) {
-    console.warn(`[uiUtils] No panel found with id="${targetId}"`);
+    console.warn(`No panel with id="${targetId}"`);
     return;
   }
-
   const wasVisible = panel.style.display === 'block';
   panel.style.display = wasVisible ? 'none' : 'block';
-  console.log(`[uiUtils] Panel "${targetId}" wasVisible=${wasVisible}, now display="${panel.style.display}"`);
 
-  // flip the toggle symbol on its button (if present)
-  const btn = document.querySelector(`button.panel-toggle[data-target="${targetId}"]`);
+  // Flip the icon on the corresponding button
+  const btn = document.querySelector(
+    `button.panel-toggle[data-target="${targetId}"]`
+  );
   if (!btn) {
-    console.warn(`[uiUtils] No toggle button found for panel "${targetId}"`);
+    console.warn(`No toggle button for panel "${targetId}"`);
     return;
   }
-
-  const symbol = btn.querySelector('span');
-  if (symbol) {
-    symbol.textContent = wasVisible ? '＋' : '–';
-    console.log(`[uiUtils] Button symbol flipped to "${symbol.textContent}"`);
-  } else {
-    console.warn(`[uiUtils] Button for "${targetId}" has no <span> to update symbol`);
-  }
+  const icon = btn.querySelector('.toggle-icon');
+  if (icon) icon.textContent = wasVisible ? '+' : '–';
 }
 
+/**
+ * Finds every .panel-toggle button, injects a + icon,
+ * and wires it to call togglePanel().
+ */
 export function initPanelToggles() {
-  document.querySelectorAll('.panel-toggle').forEach(btn => {
+  document.querySelectorAll('button.panel-toggle').forEach(btn => {
     if (!btn.querySelector('.toggle-icon')) {
-        const icon = document.createElement('span');
-        icon.className = 'toggle-icon';
-        icon.textContent = '+';
-        btn.appendChild(icon);
-        }
-
-    const targetId = btn.dataset.target;
-
-    btn.addEventListener('click', () => {
-      console.log(`[main2] panel-toggle click → ${targetId}`);
-      togglePanel(targetId);
-    });
-
-    
+      const ic = document.createElement('span');
+      ic.className   = 'toggle-icon';
+      ic.textContent = '+';
+      btn.appendChild(ic);
+    }
+    const target = btn.dataset.target;
+    btn.addEventListener('click', () => togglePanel(target));
   });
 }
 
-
+/**
+ * Wires Save / Load / Regenerate buttons.
+ * All re-renders use renderFn(ctx, shardData, selectedTile, originX, originY, showGrid, useIsometric).
+ */
 export function initDevTools({
   shardData,
-  onShardUpdated,
   settings,
   canvas,
   wrapper,
@@ -76,14 +64,13 @@ export function initDevTools({
   originX,
   originY
 }) {
-  // Save
-  document.getElementById('saveShard').onclick = () => {
+  // SAVE
+  document.getElementById('saveShard').onclick = () =>
     saveShard(shardData);
-  };
 
-  // Load
-  const loadBtn  = document.getElementById('loadShardBtn');
-  const fileIn   = document.getElementById('loadShardInput');
+  // LOAD
+  const loadBtn = document.getElementById('loadShardBtn');
+  const fileIn  = document.getElementById('loadShardInput');
   loadBtn.onclick = () => fileIn.click();
   fileIn.onchange = async e => {
     const file = e.target.files[0];
@@ -91,48 +78,51 @@ export function initDevTools({
     try {
       const newShard = await loadShardFromFile(file);
       Object.assign(shardData, newShard);
-      onShardUpdated(newShard);
-      renderFn(ctx, shardData, getState('selectedTile'), originX, originY, getState('showGrid'));
+      const sel   = getState('selectedTile');
+      const grid  = getState('showGrid');
+      const iso   = getState('useIsometric');
+      renderFn(ctx, shardData, sel, originX, originY, grid, iso);
     } catch (err) {
-      console.error('Failed to load shard from file', err);
+      console.error('Load failed:', err);
     }
   };
 
-  // Regenerate
+  // REGENERATE
   document.getElementById('regenWorld').onclick = async () => {
     try {
       const newShard = await regenerateShard(settings);
       Object.assign(shardData, newShard);
-      onShardUpdated(newShard);
-      renderFn(ctx, shardData, getState('selectedTile'), originX, originY, getState('showGrid'));
+      const sel   = getState('selectedTile');
+      const grid  = getState('showGrid');
+      const iso   = getState('useIsometric');
+      renderFn(ctx, shardData, sel, originX, originY, grid, iso);
     } catch (err) {
-      console.error('Shard regen failed', err);
+      console.error('Regenerate failed:', err);
     }
   };
 }
 
-
-export function initGridToggle(canvas, wrapper, shardData, ctx) {
+/**
+ * Wires the “Toggle Grid” button.
+ * On click, flips showGrid state and re-renders with current iso flag.
+ */
+export function initGridToggle(canvas, wrapper, shardData, ctx, originX, originY) {
   const btn = document.getElementById('toggleGridBtn');
   if (!btn) return;
 
   btn.addEventListener('click', () => {
-    // flip our global showGrid state
-    const newVal = !getState('showGrid');
-    setState('showGrid', newVal);
+    const grid = !getState('showGrid');
+    setState('showGrid', grid);
 
-    // compute same origins your main2 did
-    const originX = (shardData.width  * TILE_WIDTH) / 2;
-    const originY = TILE_HEIGHT / 2;
-
-    // re-draw with the new flag
+    const iso = getState('useIsometric');
     renderShard(
       ctx,
       shardData,
       getState('selectedTile'),
       originX,
       originY,
-      newVal
+      grid,
+      iso
     );
   });
 }
