@@ -56,6 +56,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   wrapper.scrollTop  = (canvas.height - wrapper.clientHeight)/2;
   
   const ctx = canvas.getContext('2d');
+  let selectedTile = null;
+  let showGrid = false;
   console.log('[main2] canvas initialized');
 
   // 5️⃣  Set iso‐origin
@@ -63,10 +65,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   const originY = TILE_HEIGHT/2;
   console.log(`[main2] originX=${originX}, originY=${originY}`);
 
-  // 6️⃣  Load & draw shard
-  
-  renderShard(ctx, shardData);
-  console.log('[main2] initial renderShard()');
+  // 6️⃣  Load & draw shard, passing in our precomputed origins
+  renderShard(ctx, shardData, null, originX, originY, showGrid);
+  console.log('rendering shard', shardData)
 
   // 7️⃣  Initialize camera/zoom controls
   setupZoomControls();
@@ -85,14 +86,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('[main2] loading shard from file');
     loadShardFromFile(f, newShard => {
       Object.assign(shard, newShard);
-      renderShard(ctx, shard);
+      renderShard(ctx, shardData,selectedTile, originX, originY, showGrid);
     });
   };
   document.getElementById('regenWorld').onclick = () => {
     console.log('[main2] regenerate shard clicked');
     regenerateShard(settings, newShard => {
       Object.assign(shard, newShard);
-      renderShard(ctx, shard);
+      renderShard(ctx, shardData,selectedTile, originX, originY, showGrid);
     });
   };
 
@@ -144,10 +145,21 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   // 6) re-render with highlight
-  renderShard(ctx, shardData, tile);
+  console.log("redrawing canvas")
+  renderShard(ctx, shardData, tile, originX, originY);
 
   // 7) ensure the panel is open
   togglePanel('infoPanel');
+
+  document.getElementById('toggleGridBtn').addEventListener('click', () => {
+    showGrid = !showGrid;
+    renderShard(ctx, shardData, selectedTile, originX, originY, showGrid);
+  });
+
+  
+
   });
 });
+
+
 

@@ -46,13 +46,16 @@
 
       <!-- === Center Panel === -->
       <section id="centerPanel">
-        <div id="viewportWrapper">
-          <canvas id="viewport"></canvas>
-          <div id="zoomControls" class="zoom-controls">
+        <div id="zoomControls" class="zoom-controls">
             <button id="zoomIn">+</button>
             <button id="zoomOut">–</button>
           </div>
+        <div id="viewportWrapper">
+          <canvas id="viewport"></canvas>
+          
         </div>
+
+        
 
         <div id="actionBar">
           <button class="action-btn" title="Slash">🗡️ Slash</button>
@@ -84,6 +87,8 @@
           <button id="loadShardBtn">📂 Load Shard</button>
           <button id="regenWorld">🌀 Regenerate Shard</button>
           <input type="file" id="loadShardInput" accept=".json" style="display:none;" />
+
+          <button id="toggleGridBtn">Toggle Grid</button>
         </div>
       </aside>
     </div>

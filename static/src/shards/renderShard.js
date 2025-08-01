@@ -1,39 +1,33 @@
 // renderShard.js
-// Manages full-canvas sizing and draws the isometric shard with dynamic centering & highlights
+// Draws the full isometric shard onto the canvas using externally provided sizing and origin
 
 import { TILE_WIDTH, TILE_HEIGHT } from '../config/mapConfig.js';
 
-let lastHovered = { x: -1, y: -1 };
-
 /**
  * renderShard
- * Resizes the canvas to fit the entire shard, centers the origin,
- * and draws all tiles plus optional highlight for the selected tile.
- * @param {CanvasRenderingContext2D} ctx   - 2D rendering context of the canvas
- * @param {Object} shardData               - shard object containing width, height, and tiles[y][x]
- * @param {Object|null} selectedTile       - { x, y } of the tile to outline, or null
+ * Renders an isometric grid of tiles and optional highlight, using provided origin values.
+ * Canvas sizing must be done once in main2.js before calling this function.
+ *
+ * @param {CanvasRenderingContext2D} ctx       - the 2D context of the <canvas>
+ * @param {Object} shardData                   - { width, height, tiles[y][x] }
+ * @param {Object|null} selectedTile           - { x, y } to outline, or null for none
+ * @param {number} originX                     - x-offset for centering grid
+ * @param {number} originY                     - y-offset for centering grid
  */
-export function renderShard(ctx, shardData, selectedTile = null) {
+export function renderShard(ctx, shardData, selectedTile = null, originX, originY, showGrid = false) {
   if (!shardData || !shardData.tiles) return;
-
-  // 1) Resize canvas to fit all tiles
+  
   const canvas = ctx.canvas;
   const cols = shardData.width;
   const rows = shardData.height;
-  canvas.width  = cols * TILE_WIDTH;
-  canvas.height = rows * TILE_HEIGHT + TILE_HEIGHT;
 
-  // 2) Compute origin so first tile is centered horizontally
-  const originX = canvas.width / 2;
-  const originY = TILE_HEIGHT / 2;
-
-  // 3) Clear & set background
+  // 1) Reset transforms and clear entire canvas
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = '#111';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // 4) Draw each tile
+  // 2) Define color mapping for biomes
   const biomeColors = {
     grass: '#4CAF50',
     forest: '#2E7D32',
@@ -41,38 +35,48 @@ export function renderShard(ctx, shardData, selectedTile = null) {
     mountain: '#9E9E9E'
   };
 
+  // 3) Draw every tile in isometric projection
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
       const tile = shardData.tiles[y][x];
-      const biome = tile.biome || 'grass';
-
-      // Compute isometric screen X/Y
       const screenX = originX + (x - y) * (TILE_WIDTH / 2);
       const screenY = originY + (x + y) * (TILE_HEIGHT / 2);
 
-      // Draw shadow under tile
+      // 3a) Shadow under tile
       ctx.fillStyle = 'rgba(0,0,0,0.2)';
       ctx.beginPath();
-      ctx.moveTo(screenX, screenY + TILE_HEIGHT/2);
-      ctx.lineTo(screenX + TILE_WIDTH/2, screenY + TILE_HEIGHT);
-      ctx.lineTo(screenX, screenY + TILE_HEIGHT*1.5);
-      ctx.lineTo(screenX - TILE_WIDTH/2, screenY + TILE_HEIGHT);
+      ctx.moveTo(screenX, screenY + TILE_HEIGHT / 2);
+      ctx.lineTo(screenX + TILE_WIDTH / 2, screenY + TILE_HEIGHT);
+      ctx.lineTo(screenX, screenY + TILE_HEIGHT * 1.5);
+      ctx.lineTo(screenX - TILE_WIDTH / 2, screenY + TILE_HEIGHT);
       ctx.closePath();
       ctx.fill();
 
-      // Draw tile shape
-      ctx.fillStyle = biomeColors[biome] || '#555';
+      // 3b) Tile surface
+      ctx.fillStyle = biomeColors[tile.biome] || '#555';
       ctx.beginPath();
       ctx.moveTo(screenX, screenY);
-      ctx.lineTo(screenX + TILE_WIDTH/2, screenY + TILE_HEIGHT/2);
+      ctx.lineTo(screenX + TILE_WIDTH / 2, screenY + TILE_HEIGHT / 2);
       ctx.lineTo(screenX, screenY + TILE_HEIGHT);
-      ctx.lineTo(screenX - TILE_WIDTH/2, screenY + TILE_HEIGHT/2);
+      ctx.lineTo(screenX - TILE_WIDTH / 2, screenY + TILE_HEIGHT / 2);
       ctx.closePath();
       ctx.fill();
-    }
-  }
 
-  // 5) Highlight selected tile if provided
+      if (showGrid) {
+        ctx.strokeStyle = 'rgba(255, 0, 0, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(screenX, screenY);
+        ctx.lineTo(screenX + TILE_WIDTH/2, screenY + TILE_HEIGHT/2);
+        ctx.lineTo(screenX, screenY + TILE_HEIGHT);
+        ctx.lineTo(screenX - TILE_WIDTH/2, screenY + TILE_HEIGHT/2);
+        ctx.closePath();
+        ctx.stroke();
+        }
+      }
+    }
+
+  // 4) Highlight selected tile if provided
   if (selectedTile) {
     const { x, y } = selectedTile;
     const sx = originX + (x - y) * (TILE_WIDTH / 2);
@@ -82,9 +86,9 @@ export function renderShard(ctx, shardData, selectedTile = null) {
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(sx, sy);
-    ctx.lineTo(sx + TILE_WIDTH/2, sy + TILE_HEIGHT/2);
+    ctx.lineTo(sx + TILE_WIDTH / 2, sy + TILE_HEIGHT / 2);
     ctx.lineTo(sx, sy + TILE_HEIGHT);
-    ctx.lineTo(sx - TILE_WIDTH/2, sy + TILE_HEIGHT/2);
+    ctx.lineTo(sx - TILE_WIDTH / 2, sy + TILE_HEIGHT / 2);
     ctx.closePath();
     ctx.stroke();
   }
