@@ -1,165 +1,51 @@
-// main2.js
-// ───────────────────────────────────────────────────────────
-// Entrypoint for index2.html: panels, canvas, shard,
-// getTileUnderMouse, highlight, zoom, chat, action-buttons.
-// ───────────────────────────────────────────────────────────
-
-import { renderShard } from './shards/renderShard.js';
-import { setupZoomControls, applyZoom, getZoomLevel } from './ui/camera.js';
-import { calculateViewportSize } from './ui/viewportUtils.js';
-import { togglePanel } from './ui/uiUtils.js';
+import { initGridToggle, initPanelToggles, initDevTools }       from './ui/panels.js';
+import { initCamera }           from './ui/camera.js';
+import { initTileClick }          from './ui/tooltip.js';
+import { initChat }  from './ui/chat.js';
+import { renderShard }            from './shards/renderShard.js';
+import { getState, setState }     from './utils/state.js';
 import { TILE_WIDTH, TILE_HEIGHT } from './config/mapConfig.js';
-import { saveShard, loadShardFromFile, regenerateShard } from './utils/shardLoader.js';
-import { initChat, sendMessage } from './ui/chat.js';
-import { getTileUnderMouse } from './ui/tooltip.js';
+import { initActionButtons } from './ui/actions.js';
+import { loadAndSizeShard } from './shards/shardLoader.js';
 
-const PLAYER = 'Player1';
-const canvas  = document.getElementById('viewport');
-const wrapper = document.getElementById('viewportWrapper');
+
 
 window.addEventListener('DOMContentLoaded', async () => {
-  console.log('[main2] DOM ready');
+  initPanelToggles();
 
-  // 1️⃣  Load settings
-  const settings = await fetch('/static/src/settings.json').then(r => r.json());
-  console.log('[main2] settings =', settings);
+  const canvas  = document.getElementById('viewport');
+  const wrapper = document.getElementById('viewportWrapper');
 
-  // 2️⃣  Wire up panel toggles (buttons have .panel-toggle + data-target)
-  document.querySelectorAll('.panel-toggle').forEach(btn => {
-    // ensure each has a <span class="toggle-icon"> inside
-    if (!btn.querySelector('.toggle-icon')) {
-      const icon = document.createElement('span');
-      icon.className = 'toggle-icon';
-      icon.textContent = '+';
-      btn.appendChild(icon);
-    }
-    const targetId = btn.dataset.target;
-    btn.addEventListener('click', () => {
-      console.log(`[main2] panel-toggle click → ${targetId}`);
-      togglePanel(targetId);
-    });
-  });
-
-  // 3️⃣  Compute how many tiles fit
-  const { cols, rows } = calculateViewportSize(TILE_WIDTH, TILE_HEIGHT);
-  console.log(`[main2] viewportSize cols=${cols}, rows=${rows}`);
-
-  // 4️⃣  Grab the wrapper & canvas
-
-  const shardData = await fetch('/static/public/shards/shard_0_0.json').then(r => r.json());
-
-    // after shardData loads:
-  canvas.width  = shardData.width  * TILE_WIDTH;
-  canvas.height = shardData.height * TILE_HEIGHT + TILE_HEIGHT;
-  // center scroll:
-  wrapper.scrollLeft = (canvas.width - wrapper.clientWidth)/2;
-  wrapper.scrollTop  = (canvas.height - wrapper.clientHeight)/2;
-  
-  const ctx = canvas.getContext('2d');
-  let selectedTile = null;
-  let showGrid = false;
-  console.log('[main2] canvas initialized');
-
-  // 5️⃣  Set iso‐origin
+  const { data: shardData, ctx } = await loadAndSizeShard(canvas, wrapper);
   const originX = (shardData.width * TILE_WIDTH)/2;
   const originY = TILE_HEIGHT/2;
-  console.log(`[main2] originX=${originX}, originY=${originY}`);
+  console.log('ORIGIN', originX, originY)
 
-  // 6️⃣  Load & draw shard, passing in our precomputed origins
-  renderShard(ctx, shardData, null, originX, originY, showGrid);
-  console.log('rendering shard', shardData)
+  renderShard(ctx, shardData, getState('selectedTile'), originX, originY, getState('showGrid'));
 
-  // 7️⃣  Initialize camera/zoom controls
-  setupZoomControls();
-  console.log('[main2] zoom ready @', getZoomLevel());
 
-  // 8️⃣  Dev-tools: Save / Load / Regenerate
-  document.getElementById('saveShard').onclick = () => {
-    console.log('[main2] saveShard clicked');
-    saveShard(shardData);
-  };
-  document.getElementById('loadShardBtn').onclick = () =>
-    document.getElementById('loadShardInput').click();
-  document.getElementById('loadShardInput').onchange = e => {
-    const f = e.target.files[0];
-    if (!f) return;
-    console.log('[main2] loading shard from file');
-    loadShardFromFile(f, newShard => {
-      Object.assign(shard, newShard);
-      renderShard(ctx, shardData,selectedTile, originX, originY, showGrid);
-    });
-  };
-  document.getElementById('regenWorld').onclick = () => {
-    console.log('[main2] regenerate shard clicked');
-    regenerateShard(settings, newShard => {
-      Object.assign(shard, newShard);
-      renderShard(ctx, shardData,selectedTile, originX, originY, showGrid);
-    });
-  };
+  //init dev tools
+  const settings = await fetch('/static/src/settings.json').then(r => r.json());
 
-  // 9️⃣  Initialize chat
+  initDevTools({
+    shardData,
+    onShardUpdated: newShard => {
+      // update any local references if you need to
+    },
+    settings,
+    canvas,
+    wrapper,
+    ctx,
+    renderFn: renderShard,
+    originX,
+    originY
+  });
+
+
+  initGridToggle(canvas,wrapper,shardData,ctx)
+  initCamera({ canvas, wrapper, ctx, shardData, originX, originY, getState, setState });
+  initTileClick({ canvas, wrapper, shardData, originX, originY, ctx });
+
   initChat('#chatHistory', '#chatInput');
-  console.log('[main2] chat initialized');
-
-  // 🔟  Action buttons → send to chat
-  document.querySelectorAll('.action-btn').forEach(btn => {
-    btn.onclick = () => {
-      const action = btn.dataset.action || btn.title;
-      console.log(`[main2] actionBtn clicked → ${action}`);
-      sendMessage(`${PLAYER} used ${action}`);
-    };
-  });
-
-  // 1️⃣1️⃣  Tile click → info panel + highlight
-  canvas.addEventListener('click', e => {
-  // 1) raw on‐screen coords
-  const rect    = canvas.getBoundingClientRect();
-  const rawX    = e.clientX - rect.left;
-  const rawY    = e.clientY - rect.top;
-
-  // 2) undo CSS zoom
-  const scale   = getZoomLevel();
-  const unX     = rawX / scale;
-  const unY     = rawY / scale;
-
-  // 3) add scroll offsets
-  const mouseX  = unX + wrapper.scrollLeft;
-  const mouseY  = unY + wrapper.scrollTop;
-
-  // 4) correct signature: shard before wrapper
-  const tile = getTileUnderMouse(
-    mouseX,mouseY,
-    TILE_WIDTH,TILE_HEIGHT,
-    originX,originY,
-    shardData,      
-    wrapper     
-  );
-  if (!tile) return;
-
-  console.log('[main2] tile clicked ▶', tile);
-
-  // 5) update the stats panel
-  const infoPre = document.getElementById('statsContent');
-  if (infoPre) {
-    infoPre.textContent = JSON.stringify(tile, null, 2);
-  }
-
-  // 6) re-render with highlight
-  console.log("redrawing canvas")
-  renderShard(ctx, shardData, tile, originX, originY);
-
-  // 7) ensure the panel is open
-  togglePanel('infoPanel');
-
-  document.getElementById('toggleGridBtn').addEventListener('click', () => {
-    showGrid = !showGrid;
-    renderShard(ctx, shardData, selectedTile, originX, originY, showGrid);
-  });
-
-  
-
-  });
+  initActionButtons('.action-btn', 'Lord Marticus');
 });
-
-
-

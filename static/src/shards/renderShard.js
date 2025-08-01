@@ -15,9 +15,12 @@ import { TILE_WIDTH, TILE_HEIGHT } from '../config/mapConfig.js';
  * @param {number} originY                     - y-offset for centering grid
  */
 export function renderShard(ctx, shardData, selectedTile = null, originX, originY, showGrid = false) {
-  if (!shardData || !shardData.tiles) return;
   
+
+  if (!shardData || !shardData.tiles) return;
+    
   const canvas = ctx.canvas;
+  console.log('canvas = ', canvas)
   const cols = shardData.width;
   const rows = shardData.height;
 
@@ -30,7 +33,7 @@ export function renderShard(ctx, shardData, selectedTile = null, originX, origin
   // 2) Define color mapping for biomes
   const biomeColors = {
     grass: '#4CAF50',
-    forest: '#2E7D32',
+    forest: '#7d372eff',
     water: '#2196F3',
     mountain: '#9E9E9E'
   };
@@ -38,9 +41,15 @@ export function renderShard(ctx, shardData, selectedTile = null, originX, origin
   // 3) Draw every tile in isometric projection
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
+      
       const tile = shardData.tiles[y][x];
-      const screenX = originX + (x - y) * (TILE_WIDTH / 2);
+      const screenX = originX + (x - y) * (TILE_WIDTH /2 );
       const screenY = originY + (x + y) * (TILE_HEIGHT / 2);
+
+      if (x===0 && y===0) {console.log('TILE[0,0] at', screenX, screenY);
+      }
+      
+      
 
       // 3a) Shadow under tile
       ctx.fillStyle = 'rgba(0,0,0,0.2)';
@@ -61,8 +70,9 @@ export function renderShard(ctx, shardData, selectedTile = null, originX, origin
       ctx.lineTo(screenX - TILE_WIDTH / 2, screenY + TILE_HEIGHT / 2);
       ctx.closePath();
       ctx.fill();
-
+      
       if (showGrid) {
+        console.log("show grid pressed")
         ctx.strokeStyle = 'rgba(255, 0, 0, 0.4)';
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -76,11 +86,16 @@ export function renderShard(ctx, shardData, selectedTile = null, originX, origin
       }
     }
 
+  //toggle grid overlay when drawing tiles - dev tool  
+  
+
   // 4) Highlight selected tile if provided
   if (selectedTile) {
     const { x, y } = selectedTile;
     const sx = originX + (x - y) * (TILE_WIDTH / 2);
     const sy = originY + (x + y) * (TILE_HEIGHT / 2);
+    console.log(`HIGHLIGHT at sx=${sx}, sy=${sy}`);
+
 
     ctx.strokeStyle = '#FFD700';
     ctx.lineWidth = 2;
