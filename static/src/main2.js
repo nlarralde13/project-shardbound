@@ -58,6 +58,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     originY
   });
 
+  
+
+
   initGridToggle(canvas, wrapper, shardData, ctx, originX, originY);
 
   initCamera({ canvas, wrapper, ctx, shardData, originX, originY, getState, setState });

@@ -57,12 +57,11 @@ body {
    Viewport
    ========================= */
 #viewportWrapper {
-  width: 900px;
-  height: 900px;
-  overflow: clip;
+  width: 480;
+  height: 360;
+  
   border: 2px solid #888;
   background: #111;
-  position: relative;
 }
 
 #viewport {

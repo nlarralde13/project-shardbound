@@ -8,6 +8,7 @@ import {
   loadShardFromFile,
   regenerateShard
 } from '../shards/shardLoader.js';
+import { generateRandomShard } from '../shards/rdmShardGen.js';
 
 /**
  * Shows or hides a panel and flips its toggle-icon.
@@ -88,19 +89,16 @@ export function initDevTools({
   };
 
   // REGENERATE
-  document.getElementById('regenWorld').onclick = async () => {
-    try {
-      const newShard = await regenerateShard(settings);
-      Object.assign(shardData, newShard);
-      const sel   = getState('selectedTile');
-      const grid  = getState('showGrid');
-      const iso   = getState('useIsometric');
-      renderFn(ctx, shardData, sel, originX, originY, grid, iso);
-    } catch (err) {
-      console.error('Regenerate failed:', err);
-    }
-  };
-}
+  document.getElementById('regenWorld').onclick = () => {
+    console.log('[main2] 🌀 Regenerating random shard...');
+    const newShard = generateRandomShard(settings);
+    Object.assign(shardData, newShard);
+
+    // clear any existing transform
+    renderShard(ctx, shardData);
+
+    };
+  }
 
 /**
  * Wires the “Toggle Grid” button.
