@@ -1,26 +1,25 @@
 // static/src/shards/shardLoader.js
 
+import { generateRandomShard } from './rdmShardGen.js';
 import { TILE_WIDTH, TILE_HEIGHT } from '../config/mapConfig.js';
 
 /**
- * Fetches the initial shard JSON, sizes the canvas to fit,
- * and centers the scroll on the wrapper.
- *
- * @param {HTMLCanvasElement} canvas - The drawing canvas
- * @param {HTMLElement} wrapper      - Scroll container
- * @returns {Promise<{data: Object, ctx: CanvasRenderingContext2D}>}
+ * Loads the initial shard JSON and sizes the canvas+wrapper.
+ * @param {HTMLCanvasElement} canvas
+ * @param {HTMLElement} wrapper
+ * @param {string} url Optional URL to fetch (defaults to shard_0_0.json)
  */
-export async function loadAndSizeShard(canvas, wrapper) {
-  const response = await fetch('/static/public/shards/shard_0_0.json');
-  if (!response.ok) throw new Error(`Failed to load shard: ${response.statusText}`);
-  const data = await response.json();
+export async function loadAndSizeShard(canvas, wrapper, url = '/static/public/shards/shard_0_0.json') {
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`Failed to load shard: ${resp.statusText}`);
+  const data = await resp.json();
 
-  // Size the canvas to fit the entire shard
+  // size canvas
   canvas.width  = data.width  * TILE_WIDTH;
   canvas.height = data.height * TILE_HEIGHT + TILE_HEIGHT;
 
-  // Center initial scroll position
-  wrapper.scrollLeft = (canvas.width - wrapper.clientWidth) / 2;
+  // center scroll
+  wrapper.scrollLeft = (canvas.width  - wrapper.clientWidth)  / 2;
   wrapper.scrollTop  = (canvas.height - wrapper.clientHeight) / 2;
 
   const ctx = canvas.getContext('2d');
@@ -28,25 +27,26 @@ export async function loadAndSizeShard(canvas, wrapper) {
 }
 
 /**
- * Saves the given shard data as a JSON file download.
- *
- * @param {Object} shardData - The shard object to serialize
+ * Save the given shard data as a JSON file download.
+ * @param {Object} shardData
+ * @param {string} filename Optional filename (defaults to shard.json)
  */
-export function saveShard(shardData) {
-  const blob = new Blob([JSON.stringify(shardData, null, 2)], { type: 'application/json' });
+export function saveShard(shardData, filename = 'shard.json') {
+  const blob = new Blob([JSON.stringify(shardData, null, 2)], {
+    type: 'application/json'
+  });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
-  a.download = 'shard.json';
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
 }
 
 /**
- * Reads a file input and parses it as shard JSON.
- *
- * @param {File} file - The uploaded JSON file
- * @returns {Promise<Object>} Resolves with the parsed shard object
+ * Parse a user-provided JSON file into a shard object.
+ * @param {File} file
+ * @returns {Promise<Object>}
  */
 export function loadShardFromFile(file) {
   return new Promise((resolve, reject) => {
@@ -65,21 +65,13 @@ export function loadShardFromFile(file) {
 }
 
 /**
- * Requests a regenerated shard from the backend using provided settings.
- *
- * @param {Object} settings - Configuration for regeneration
+ * Generate a brand-new random shard entirely on the client,
+ * using your rdmShardGen logic.
+ * @param {Object} settings
  * @returns {Promise<Object>} Resolves with the new shard object
  */
 export function regenerateShard(settings) {
-  return fetch('/api/regenerate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(settings)
-  })
-  .then(response => {
-    if (!response.ok) {
-      throw new Error(`Regeneration failed: ${response.statusText}`);
-    }
-    return response.json();
-  });
+  // If you later move to a server API, you can switch this out.
+  // For now we just call the random generator directly.
+  return Promise.resolve(generateRandomShard(settings));
 }

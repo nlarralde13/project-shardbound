@@ -1,14 +1,14 @@
 // static/src/ui/panels.js
 
-import { renderShard } from '../shards/renderShard.js';
-import { getState, setState } from '../utils/state.js';
+import { renderShard }            from '../shards/renderShard.js';
+import { getState, setState }     from '../utils/state.js';
 import { TILE_WIDTH, TILE_HEIGHT } from '../config/mapConfig.js';
 import {
   saveShard,
   loadShardFromFile,
-  regenerateShard
+  regenerateShard   // ← now comes from shardLoader
 } from '../shards/shardLoader.js';
-import { generateRandomShard } from '../shards/rdmShardGen.js';
+import { playerState }            from '../players/playerState.js';
 
 /**
  * Shows or hides a panel and flips its toggle-icon.
@@ -22,21 +22,17 @@ export function togglePanel(targetId) {
   const wasVisible = panel.style.display === 'block';
   panel.style.display = wasVisible ? 'none' : 'block';
 
-  // Flip the icon on the corresponding button
   const btn = document.querySelector(
     `button.panel-toggle[data-target="${targetId}"]`
   );
-  if (!btn) {
-    console.warn(`No toggle button for panel "${targetId}"`);
-    return;
+  if (btn) {
+    const icon = btn.querySelector('.toggle-icon');
+    if (icon) icon.textContent = wasVisible ? '+' : '–';
   }
-  const icon = btn.querySelector('.toggle-icon');
-  if (icon) icon.textContent = wasVisible ? '+' : '–';
 }
 
 /**
- * Finds every .panel-toggle button, injects a + icon,
- * and wires it to call togglePanel().
+ * Injects a + icon into each .panel-toggle button and wires toggling.
  */
 export function initPanelToggles() {
   document.querySelectorAll('button.panel-toggle').forEach(btn => {
@@ -52,24 +48,37 @@ export function initPanelToggles() {
 }
 
 /**
- * Wires Save / Load / Regenerate buttons.
- * All re-renders use renderFn(ctx, shardData, selectedTile, originX, originY, showGrid, useIsometric).
+ * Wires Save / Load / Regenerate shard buttons, plus "Select World".
+ * Expects a renderFn that matches renderShard(ctx, shardData, selectedTile, originX, originY, showGrid, useIso).
  */
 export function initDevTools({
   shardData,
   settings,
-  canvas,
-  wrapper,
+  wrapper,    // scroll container
   ctx,
   renderFn,
   originX,
   originY
 }) {
-  // SAVE
-  document.getElementById('saveShard').onclick = () =>
-    saveShard(shardData);
+  // full redraw helper
+  function fullRedraw() {
+    // reset any stray transforms
+    ctx.resetTransform?.() || ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-  // LOAD
+    const sel  = getState('selectedTile');
+    const grid = getState('showGrid');
+    const iso  = getState('useIsometric');
+
+    renderFn(ctx, shardData, sel, originX, originY, grid, iso);
+    playerState.draw(ctx, originX, originY);
+  }
+
+  // ——— SAVE ———
+  document.getElementById('saveShard').onclick = () => {
+    saveShard(shardData);
+  };
+
+  // ——— LOAD ———
   const loadBtn = document.getElementById('loadShardBtn');
   const fileIn  = document.getElementById('loadShardInput');
   loadBtn.onclick = () => fileIn.click();
@@ -79,48 +88,69 @@ export function initDevTools({
     try {
       const newShard = await loadShardFromFile(file);
       Object.assign(shardData, newShard);
-      const sel   = getState('selectedTile');
-      const grid  = getState('showGrid');
-      const iso   = getState('useIsometric');
-      renderFn(ctx, shardData, sel, originX, originY, grid, iso);
+      wrapper.scrollLeft = wrapper.scrollTop = 0;
+      requestAnimationFrame(fullRedraw);
     } catch (err) {
-      console.error('Load failed:', err);
+      console.error('[panels] Load failed:', err);
+    }
+    // reset input so same file can be re-selected
+    e.target.value = '';
+  };
+
+  // ——— REGENERATE ———
+  document.getElementById('regenWorld').onclick = async () => {
+    console.log('[panels] 🌀 Regenerating shard via API...');
+    try {
+      const newShard = await regenerateShard(settings);
+      Object.assign(shardData, newShard);
+      wrapper.scrollLeft = wrapper.scrollTop = 0;
+      requestAnimationFrame(fullRedraw);
+    } catch (err) {
+      console.error('[panels] Regenerate failed:', err);
     }
   };
 
-  // REGENERATE
-  document.getElementById('regenWorld').onclick = () => {
-    console.log('[main2] 🌀 Regenerating random shard...');
-    const newShard = generateRandomShard(settings);
-    Object.assign(shardData, newShard);
-
-    // clear any existing transform
-    renderShard(ctx, shardData);
-
+  // ——— SELECT WORLD DROPDOWN ———
+  const worldSelect = document.getElementById('worldSelect');
+  if (worldSelect) {
+    worldSelect.onchange = async e => {
+      const filename = e.target.value;
+      if (!filename) return;
+      try {
+        const res = await fetch(`/static/public/shards/${filename}`);
+        if (!res.ok) throw new Error(`Failed to load ${filename}`);
+        const selected = await res.json();
+        Object.assign(shardData, selected);
+        wrapper.scrollLeft = wrapper.scrollTop = 0;
+        requestAnimationFrame(fullRedraw);
+      } catch (err) {
+        console.error('[panels] Select World failed:', err);
+      }
     };
   }
+}
 
 /**
  * Wires the “Toggle Grid” button.
- * On click, flips showGrid state and re-renders with current iso flag.
  */
-export function initGridToggle(canvas, wrapper, shardData, ctx, originX, originY) {
+export function initGridToggle({
+  ctx,
+  wrapper,
+  shardData,
+  originX,
+  originY
+}) {
   const btn = document.getElementById('toggleGridBtn');
   if (!btn) return;
 
   btn.addEventListener('click', () => {
-    const grid = !getState('showGrid');
-    setState('showGrid', grid);
-
-    const iso = getState('useIsometric');
-    renderShard(
-      ctx,
-      shardData,
-      getState('selectedTile'),
-      originX,
-      originY,
-      grid,
-      iso
-    );
+    setState('showGrid', !getState('showGrid'));
+    requestAnimationFrame(() => {
+      const sel  = getState('selectedTile');
+      const grid = getState('showGrid');
+      const iso  = getState('useIsometric');
+      renderShard(ctx, shardData, sel, originX, originY, grid, iso);
+      playerState.draw(ctx, originX, originY);
+    });
   });
 }
