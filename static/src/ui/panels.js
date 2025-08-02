@@ -56,7 +56,7 @@ export function initDevTools({
   settings,
   wrapper,    // scroll container
   ctx,
-  renderFn,
+  redraw,
   originX,
   originY
 }) {
@@ -69,7 +69,7 @@ export function initDevTools({
     const grid = getState('showGrid');
     const iso  = getState('useIsometric');
 
-    renderFn(ctx, shardData, sel, originX, originY, grid, iso);
+    redraw();
     playerState.draw(ctx, originX, originY);
   }
 
@@ -134,11 +134,13 @@ export function initDevTools({
  * Wires the “Toggle Grid” button.
  */
 export function initGridToggle({
-  ctx,
-  wrapper,
-  shardData,
-  originX,
-  originY
+    shardData,
+    settings,
+    wrapper,
+    ctx,
+    redraw,
+    originX,
+    originY
 }) {
   const btn = document.getElementById('toggleGridBtn');
   if (!btn) return;

@@ -34,15 +34,17 @@ window.addEventListener('DOMContentLoaded', async () => {
   const originY = TILE_HEIGHT / 2;
 
   //define redraw function
-  function redraw() {
-  // reset transform
-  ctx.resetTransform?.() || ctx.setTransform(1,0,0,1,0,0);
-  // draw map with all current flags
-  const sel   = getState('selectedTile');
-  const grid  = getState('showGrid');
-  renderFn(ctx, shardData, sel, originX, originY, grid);
-  // draw the player token on top
-  playerState.draw(ctx, originX, originY);
+  function redraw(selectedTile = null) {
+    // reset transform
+    ctx.resetTransform?.() || ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+    // draw map with current flags
+    const showGrid = getState('showGrid');
+    const useIso   = getState('useIsometric');
+    renderShard(ctx, shardData, selectedTile, originX, originY, showGrid, useIso);
+
+    // draw player token
+    playerState.draw(ctx, originX, originY);
   }
 
   // 4️⃣ Define a dynamic render function that always picks up latest flags
@@ -52,14 +54,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   // 5️⃣ Initial draw
-  renderFn(
-    ctx,
-    shardData,
-    getState('selectedTile'),
-    originX,
-    originY,
-    getState('showGrid')
-  );
+  redraw(getState('selectedTile'));
   
   //init player state
   await playerState.init({
@@ -88,19 +83,22 @@ window.addEventListener('DOMContentLoaded', async () => {
     canvas,
     wrapper,
     ctx,
-    renderFn,
+    redraw,
     originX,
     originY
   });
 
-
-
-
-  initGridToggle(canvas, wrapper, shardData, ctx, originX, originY);
+  initGridToggle({
+    shardData,
+    ctx,
+    redraw, 
+    originX,
+    originY
+  });
 
   initCamera({ canvas, wrapper, ctx, shardData, originX, originY, getState, setState });
 
-  initTileClick({ canvas, wrapper, shardData, originX, originY, ctx, renderFn });
+  initTileClick({ canvas, wrapper, shardData, originX, originY, ctx, redraw });
 
   initChat('#chatHistory', '#chatInput');
 

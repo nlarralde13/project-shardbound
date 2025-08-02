@@ -11,7 +11,7 @@ import { TILE_WIDTH, TILE_HEIGHT, ORTHO_TILE_SIZE } from '../config/mapConfig.js
 /**
  * Attaches click listener for tile selection.
  */
-export function initTileClick({ canvas, wrapper, shardData, originX, originY, ctx, renderFn }) {
+export function initTileClick({ canvas, wrapper, shardData, originX, originY, ctx, redraw }) {
   canvas.addEventListener('click', e => {
     const rect = canvas.getBoundingClientRect();
     const scale = getZoomLevel();
@@ -33,7 +33,7 @@ export function initTileClick({ canvas, wrapper, shardData, originX, originY, ct
     document.getElementById('statsContent').textContent = JSON.stringify(tile, null, 2);
 
     // Redraw map + highlight
-    renderFn(ctx, shardData, tile, originX, originY, getState('showGrid'));
+    redraw();
     const { x: hx, y: hy } = useIso
       ? isoToScreen(tx, ty, originX, originY)
       : orthoToScreen(tx, ty);
