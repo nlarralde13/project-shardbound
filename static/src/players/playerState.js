@@ -114,6 +114,9 @@ export const playerState = {
 
     ctx.drawImage(img, screenX, screenY, TILE_WIDTH, TILE_HEIGHT);
   },
+  getPosition() {
+    return { x: this.x, y: this.y };
+  },
 
   // Placeholder for future player-related state
   inventory: [],

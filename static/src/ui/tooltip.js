@@ -7,6 +7,7 @@ import { togglePanel }  from './panels.js';
 import { isoToScreen, orthoToScreen, screenToIso, screenToOrtho } from '../utils/gridUtils.js';
 import { getState, setState } from '../utils/state.js';
 import { TILE_WIDTH, TILE_HEIGHT, ORTHO_TILE_SIZE } from '../config/mapConfig.js';
+import { screenToWorld } from './camera.js';
 
 /**
  * Attaches click listener for tile selection.

@@ -31,6 +31,7 @@ body {
   overflow: auto; 
 }
 
+
 /* sidebars */
 #leftBar, #rightBar {
   width: 200px;
@@ -46,29 +47,131 @@ body {
 #centerPanel {
   flex: 1;
   display: flex;
-  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  padding: 8px;
-  gap: 8px;
-  overflow: scroll;
+  padding: 12px;
+  overflow: hidden;
+}
+#mapViewer {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  max-width: 1000px;
+  height: 100%;
+  max-height: 90vh;
+  margin: auto;
+  position: relative;
+  background: #111;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 0 12px #000;
 }
 
-/* =========================
-   Viewport
-   ========================= */
 #viewportWrapper {
-  width: 480;
-  height: 360;
-  
-  border: 2px solid #888;
-  background: #111;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
 }
 
 #viewport {
   display: block;
-  /* dynamically scaled or sized by JS */
+  transform-origin: center center;
 }
 
+
+
+/* Compass overlay */
+#compassOverlay {
+  position: relative;
+  top: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 8px;
+  border-radius: 8px;
+  z-index: 10;
+  pointer-events: auto; /* click-through enabled */
+}
+
+/* Lower area (chat + action buttons) */
+#lowerOverlay {
+  position: absolute;
+  bottom: 20px;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 0 16px;
+  z-index: 10;
+  pointer-events: none; /* enables passthrough unless opt-in below */
+}
+
+/* Individual sections */
+.overlay-panel {
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 8px;
+  padding: 10px;
+  color: white;
+}
+
+/* Chat window */
+#chatOverlay {
+  width: 50%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+/* Action bars */
+#actionBar {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+}
+#actionLeft, #actionRight {
+  width: 20%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+
+.action-btn {
+  width: 40px;
+  height: 40px;
+  font-size: 16px;
+  background: linear-gradient(to bottom, #b87333, #6e260e);
+  border: 1px solid #555;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  flex: 1;
+  padding: 8px;
+}
+
+.action-btn:hover {
+  background: linear-gradient(to bottom, #ffc200, #8b3a14);
+}
+
+
+
+
+.ui-overlay {
+  position: absolute;
+  z-index: 10;
+  pointer-events: none; /* ✅ lets clicks pass through to canvas */
+}
+
+.ui-overlay .clickable {
+  pointer-events: auto; /* 🔄 opt-in: this allows button clicks if needed */
+}
  .zoom-controls {
  position: absolute;
  top: 8px;
@@ -85,24 +188,6 @@ body {
 /* =========================
    Action Bar
    ========================= */
-#actionBar {
-  display: flex;
-  gap: 8px;
-  margin: 8px 0;
-}
-.action-btn {
-  flex: 1;
-  padding: 8px;
-  background: linear-gradient(to bottom, #b87333, #6e260e);
-  border: 2px solid #402312;
-  border-radius: 4px;
-  color: #fff;
-  font-size: 1rem;
-  cursor: pointer;
-}
-.action-btn:hover {
-  background: linear-gradient(to bottom, #ffc200, #8b3a14);
-}
 
 /* =========================
    Chat

@@ -15,6 +15,15 @@
     <!-- === Top Banner + Zoom Controls === -->
     <header id="banner">
       🧙 PROJECT SHARDBOUND
+      <span id="zoomControls">
+        <!-- Renamed to match camera.js selectors -->
+        <button id="zoomOut" title="Zoom Out">➖</button>
+        <button id="zoomIn"  title="Zoom In">➕</button>
+      </span>
+      <!-- New element for displaying current zoom level -->
+      <div id="zoomDisplay" style="display:inline-block; margin-left:12px;">
+        100%
+      </div>
     </header>
 
     <div id="mainLayout">
@@ -37,28 +46,30 @@
 
       <!-- === Center Panel === -->
       <section id="centerPanel">
-        <div id="zoomControls" class="zoom-controls">
-            <button id="zoomIn">+</button>
-            <button id="zoomOut">–</button>
+
+        <div id="mapViewer">
+          <!-- Wrapping canvas for alignment and scaling -->
+          <div id="viewportWrapper">
+            <canvas id="viewport"></canvas>
           </div>
-          
-        <div id="viewportWrapper">
-          <canvas id="viewport"></canvas>          
+
+          <!-- NESW Compass Overlay -->
+          <div id="compassOverlay" class="ui-overlay solid-box"></div>
+
+          <!-- Action + Chat Overlays -->
+          <div id="lowerOverlay" class="ui-overlay">
+            <div id="actionLeft" class="overlay-panel"></div>
+            <div id="chatOverlay" class="overlay-panel">
+              <div id="chatHistory"></div>
+              <textarea id="chatInput" placeholder="Type..."></textarea>
+            </div>
+            <div id="actionRight" class="overlay-panel"></div>
+          </div>
         </div>
 
-        
+</section>
 
-        <div id="actionBar">
-          <button class="action-btn" title="Slash">🗡️ Slash</button>
-          <button class="action-btn" title="Fireball">🔥 Fireball</button>
-          <button class="action-btn" title="Shield Up">🛡️ Shield Up</button>
-        </div>
 
-        <div id="chatWrapper">
-          <div id="chatHistory"></div>
-          <textarea id="chatInput" placeholder="Type & press Enter…"></textarea>
-        </div>
-      </section>
 
       <!-- === Right Sidebar === -->
       <aside id="rightBar">
@@ -93,6 +104,6 @@
     </div>
   </div>
 
-  <script type="module" src="/static/src/main2.js"></script>
+  <script type="module" src="/static/src/main.js"></script>
 </body>
 </html>

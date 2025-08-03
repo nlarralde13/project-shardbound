@@ -1,5 +1,5 @@
-export const SHARD_WIDTH = 50;
-export const SHARD_HEIGHT = 50;
+export const SHARD_WIDTH = 10
+export const SHARD_HEIGHT = 10
 export const TILE_WIDTH = 32;
 export const TILE_HEIGHT = 16;
 export const ORTHO_TILE_SIZE = 16;
