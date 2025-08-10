@@ -75,3 +75,10 @@ export function regenerateShard(settings) {
   // For now we just call the random generator directly.
   return Promise.resolve(generateRandomShard(settings));
 }
+
+export function getShardCanvasSize(width, height, tileW, tileH) {
+  return {
+    width: (width + height) * (tileW / 2),
+    height: (width + height) * (tileH / 2),
+  };
+}

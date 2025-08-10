@@ -4,74 +4,59 @@
   <meta charset="UTF-8" />
   <title>🧙 PROJECT SHARDBOUND</title>
   <link rel="stylesheet" href="/static/styles-index2.css" />
-  <!-- Fantasy Vibes Fonts -->
-  <link
-    href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=UnifrakturCook:wght@700&display=swap"
-    rel="stylesheet"
-  />
+  <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=UnifrakturCook:wght@700&display=swap" rel="stylesheet" />
 </head>
 <body>
   <div id="gameUI">
-    <!-- === Top Banner + Zoom Controls === -->
     <header id="banner">
-      🧙 PROJECT SHARDBOUND
-      <span id="zoomControls">
-        <!-- Renamed to match camera.js selectors -->
-        <button id="zoomOut" title="Zoom Out">➖</button>
-        <button id="zoomIn"  title="Zoom In">➕</button>
-      </span>
-      <!-- New element for displaying current zoom level -->
-      <div id="zoomDisplay" style="display:inline-block; margin-left:12px;">
-        100%
-      </div>
-    </header>
+  🧙 PROJECT SHARDBOUND
+  <span id="zoomControls">
+    <button id="zoomOutBtn" title="Zoom Out">➖</button>
+    <button id="zoomInBtn"  title="Zoom In">➕</button>
+  </span>
+  <span id="zoomOverlay"></span>
+</header>
 
     <div id="mainLayout">
-      <!-- === Left Sidebar === -->
       <aside id="leftBar">
-        <button id="satchelBtn" class="panel-toggle" data-target="satchelPanel">
-          Satchel <span class="toggle-icon">+</span>
-        </button>
-        <button id="questLogBtn" class="panel-toggle" data-target="questLogPanel">
-        📜 Quests <span class="toggle-icon">+</span>
-        </button>
-        <button id="infoPanelBtn" class="panel-toggle" data-target="infoPanel">
-          ℹ️ Info Panel <span class="toggle-icon">+</span>
-        </button>
-        
+        <button class="panel-toggle" data-target="infoPanel">ℹ️ Info <span class="toggle-icon">+</span></button>
         <div id="infoPanel" class="panelBox">
           <pre id="statsContent">Click a tile to view details…</pre>
+          <div id="tileActions"></div>
         </div>
+
+        <button id="loadShardBtn">📂 Load Shard</button>
+        <input type="file" id="loadShardInput" accept=".json" style="display:none;" />
+        <button id="saveShard">💾 Save Shard</button>
+        <button id="regenWorld">🌀 Regenerate Shard</button>
       </aside>
 
-      <!-- === Center Panel === -->
       <section id="centerPanel">
-
         <div id="mapViewer">
-          <!-- Wrapping canvas for alignment and scaling -->
+          <!-- HUD: Map toggle -->
+          <button id="mapToggleBtn" title="Open Map" class="vp-mapbtn">🗺️ Map</button>
+
           <div id="viewportWrapper">
             <canvas id="viewport"></canvas>
           </div>
 
-          <!-- NESW Compass Overlay -->
-          <div id="compassOverlay" class="ui-overlay solid-box"></div>
-
-          <!-- Action + Chat Overlays -->
-          <div id="lowerOverlay" class="ui-overlay">
-            <div id="actionLeft" class="overlay-panel"></div>
-            <div id="chatOverlay" class="overlay-panel">
-              <div id="chatHistory"></div>
-              <textarea id="chatInput" placeholder="Type..."></textarea>
-            </div>
-            <div id="actionRight" class="overlay-panel"></div>
-          </div>
+          <!-- Console (text) view goes here on login -->
+          <div id="consoleView" class="console-box" aria-live="polite"></div>
+          
         </div>
 
-</section>
+        <div id="actionBar">
+          <button class="action-btn" title="Slash"     data-action="Slash">🗡️</button>
+          <button class="action-btn" title="Fireball"  data-action="Fireball">🔥</button>
+          <button class="action-btn" title="Shield Up" data-action="Shield Up">🛡️</button>
+        </div>
 
+        <div id="chatContainer">
+          <div id="chatHistory"></div>
+          <textarea id="chatInput" placeholder="Type & press Enter…"></textarea>
+        </div>
+      </section>
 
-
-      <!-- === Right Sidebar === -->
       <aside id="rightBar">
         <div class="panelBox">
           <h3>📜 Guild Hall</h3>
@@ -80,25 +65,6 @@
             <li>💬 Town Square</li>
             <li>📢 Herald’s Announcements</li>
           </ul>
-        </div>
-
-        <div id="devToolsPanel" class="dev-box">
-          <h4>🛠️ Dev Tools</h4>
-          <button id="shardEditorBtn">🖌️ Shard Editor</button>
-          <button id="saveShard">💾 Save Shard</button>
-          <button id="loadShardBtn">📂 Load Shard</button>
-          <button id="regenWorld">🌀 Regenerate Shard</button>
-          <input type="file" id="loadShardInput" accept=".json" style="display:none;" />
-
-          <button id="toggleGridBtn">Toggle Grid</button>
-
-          <label for="worldSelect" style="color:#ffeccc; margin-top:10px;">🌍 Select World</label>
-          <select id="worldSelect" style="width: 100%; font-family: monospace; margin-bottom: 6px;">
-            <option value="">-- Choose a template --</option>
-            <option value="template_forest.json">🌲 Forest Realm</option>
-            <option value="template_desert.json">🏜 Desert Kingdom</option>
-            <option value="template_islands.json">🏝 Island Chain</option>
-          </select>
         </div>
       </aside>
     </div>

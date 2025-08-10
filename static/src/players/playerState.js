@@ -134,4 +134,5 @@ export const playerState = {
     // TODO: implement combat logic
     this.redrawFn();
   }
+  
 };

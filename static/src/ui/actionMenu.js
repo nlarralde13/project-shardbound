@@ -2,7 +2,7 @@
 // Handles DevTools “action” buttons and routes them into chat
 
 import { sendMessage } from './chat.js'; // adjust path as needed
-import { generateMiniShard } from '../slices/generateMiniShard.js';
+import { generateMiniShard } from '../shards/generateMiniShard.js';
 import { getState } from '../utils/state.js';
 
 /**
