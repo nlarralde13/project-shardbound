@@ -1,17 +1,5 @@
 // static/src/utils/mapUtils.js
-// ────────────────────────────────────────────────────────────────
-// Master map math utilities (ISO + ORTHO) for Shardbound.
-// Combines former gridUtils + tileUtils and adds centralized
-// origin/fit calculations so every module stays in sync.
-//
-// Exports:
-//  • isoToScreen, orthoToScreen
-//  • screenToIso, screenToOrtho
-//  • getTileUnderMouseIso, getTileUnderMouseOrtho
-//  • fitIsoTransform, fitOrthoTileSize
-//  • computeIsoOrigin
-//  • updateDevStatsPanel (migrated from tileUtils)
-// ────────────────────────────────────────────────────────────────
+// Master map math utilities (ISO + ORTHO). Steady-state sizing & robust fit.
 
 import {
   TILE_WIDTH,
@@ -20,11 +8,10 @@ import {
 } from '../config/mapConfig.js';
 import { getZoomLevel } from '../ui/camera.js';
 
-/* ==============================================================
+/* ============================================================== *
  *  Core coordinate transforms
  * ============================================================== */
 
-/** Iso tile(x,y) → screen coords */
 export function isoToScreen(x, y, originX, originY, tileW = TILE_WIDTH, tileH = TILE_HEIGHT) {
   return {
     x: originX + (x - y) * (tileW / 2),
@@ -32,15 +19,10 @@ export function isoToScreen(x, y, originX, originY, tileW = TILE_WIDTH, tileH = 
   };
 }
 
-/** Square/orthographic tile(x,y) → screen coords */
 export function orthoToScreen(x, y, tileSize = BASE_ORTHO_SIZE) {
   return { x: x * tileSize, y: y * tileSize };
 }
 
-/**
- * Screen → iso tile indices (integer grid).
- * Accounts for scroll and optional zoom+origin.
- */
 export function screenToIso(
   mouseX,
   mouseY,
@@ -63,10 +45,6 @@ export function screenToIso(
   };
 }
 
-/**
- * Screen → ortho tile indices (integer grid).
- * Accounts for scroll and optional zoom.
- */
 export function screenToOrtho(mouseX, mouseY, scrollX = 0, scrollY = 0, tileSize = BASE_ORTHO_SIZE, zoom = 1) {
   return {
     tx: Math.floor((mouseX + scrollX) / (tileSize * zoom)),
@@ -74,21 +52,10 @@ export function screenToOrtho(mouseX, mouseY, scrollX = 0, scrollY = 0, tileSize
   };
 }
 
-/* ==============================================================
+/* ============================================================== *
  *  Unified hit-testing helpers
  * ============================================================== */
 
-/**
- * Get the iso tile under the mouse.
- * Automatically reads scroll from the canvas wrapper and zoom from camera.
- *
- * @param {number} mouseX  – clientX relative to the canvas box
- * @param {number} mouseY  – clientY relative to the canvas box
- * @param {HTMLCanvasElement} canvas
- * @param {{width:number,height:number,tiles:any[][]}} shard
- * @param {{originX:number,originY:number}} origin
- * @returns {{x:number,y:number, ...tile}|null}
- */
 export function getTileUnderMouseIso(mouseX, mouseY, canvas, shard, origin, tileW = TILE_WIDTH, tileH = TILE_HEIGHT) {
   if (!canvas || !shard) return null;
 
@@ -113,9 +80,6 @@ export function getTileUnderMouseIso(mouseX, mouseY, canvas, shard, origin, tile
   return { ...shard.tiles[ty][tx], x: tx, y: ty };
 }
 
-/**
- * Get the ortho tile under the mouse.
- */
 export function getTileUnderMouseOrtho(mouseX, mouseY, canvas, shard, tileSize = BASE_ORTHO_SIZE) {
   if (!canvas || !shard) return null;
 
@@ -129,54 +93,44 @@ export function getTileUnderMouseOrtho(mouseX, mouseY, canvas, shard, tileSize =
   return { ...shard.tiles[ty][tx], x: tx, y: ty };
 }
 
-/* ==============================================================
- *  Fitting / origin calculations (single source of truth)
+/* ============================================================== *
+ *  Fitting / origin calculations (robust)
  * ============================================================== */
 
-/**
- * Compute a uniform scale and an isometric origin so the entire shard fits
- * in the given wrapper. This keeps everyone using the same origin/scale.
- *
- * @returns {{scale:number, originX:number, originY:number, mapW:number, mapH:number}}
- */
 export function fitIsoTransform(wrapperW, wrapperH, shardW, shardH, tileW = TILE_WIDTH, tileH = TILE_HEIGHT) {
-  // unscaled iso map pixel bounds (diamond’s bounding box)
+  // Guard against 0×0 (e.g., wrapper hidden). Fall back to viewport size.
+  const w = Math.max(1, Number(wrapperW) || 0) || window.innerWidth  || 1;
+  const h = Math.max(1, Number(wrapperH) || 0) || window.innerHeight || 1;
+
   const mapW = (shardW + shardH) * (tileW / 2);
   const mapH = (shardW + shardH) * (tileH / 2);
 
-  // best uniform scale to fit inside wrapper
-  const scale = Math.min(wrapperW / mapW, wrapperH / mapH);
+  const scale = Math.min(w / mapW, h / mapH);
 
-  // center horizontally; start near the top with a small padding
-  const originX = wrapperW / 2;
-  const originY = Math.max(0, (wrapperH - mapH * scale) * 0.1); // 10% top padding
+  // Center horizontally; a bit of top padding to keep diamond in view
+  const originX = w / 2;
+  const originY = Math.max(0, (h - mapH * scale) * 0.1);
 
   return { scale, originX, originY, mapW, mapH };
 }
 
-/**
- * Orthographic fit: tile size so the whole shard fills the wrapper.
- */
 export function fitOrthoTileSize(wrapperW, wrapperH, shardW, shardH) {
-  const sizeX = wrapperW / shardW;
-  const sizeY = wrapperH / shardH;
+  const w = Math.max(1, Number(wrapperW) || 0) || window.innerWidth  || 1;
+  const h = Math.max(1, Number(wrapperH) || 0) || window.innerHeight || 1;
+  const sizeX = w / shardW;
+  const sizeY = h / shardH;
   return Math.floor(Math.min(sizeX, sizeY));
 }
 
-/**
- * Simple helper to (re)compute an iso origin when canvas or wrapper changes.
- * Keeps origin logic consistent across modules.
- */
 export function computeIsoOrigin(canvasWidth, canvasHeight) {
-  // horizontally centered; reasonable top anchor
   return {
-    originX: canvasWidth / 2,
+    originX: Math.max(1, canvasWidth) / 2,
     originY: 40,
   };
 }
 
-/* ==============================================================
- *  Dev helpers (migrated from tileUtils)
+/* ============================================================== *
+ *  Dev helpers
  * ============================================================== */
 
 export function updateDevStatsPanel(tile) {
@@ -197,7 +151,7 @@ export function updateDevStatsPanel(tile) {
 
     explore?.addEventListener('click', () => {
       console.log('[Action] ▶ Explore triggered for tile:', tile);
-      // TODO: hook to generateMiniShard / shardLoader
+      // hook generateMiniShard / shardLoader as needed
     });
 
     edit?.addEventListener('click', () => {
@@ -207,34 +161,7 @@ export function updateDevStatsPanel(tile) {
   }
 }
 
-/* ==============================================================
- *  Notes for integration
- * ==============================================================
- * 1) Replace duplications:
- *    - Remove getTileUnderMouse from tooltip.js/viewportUtils.js
- *      and import { getTileUnderMouseIso } from './utils/mapUtils.js'
- *
- * 2) Centralize origin/fit:
- *    - On init or resize:
- *        const wrapper = document.getElementById('viewportWrapper');
- *        const { scale, originX, originY } = fitIsoTransform(
- *          wrapper.clientWidth, wrapper.clientHeight, shard.width, shard.height
- *        );
- *        ctx.setTransform(scale, 0, 0, scale, 0, 0);
- *        const origin = { originX, originY };
- *
- * 3) Click/hover hit test:
- *    canvas.addEventListener('mousemove', (e) => {
- *      const rect = canvas.getBoundingClientRect();
- *      const tile = getTileUnderMouseIso(
- *        e.clientX - rect.left,
- *        e.clientY - rect.top,
- *        canvas,
- *        shard,
- *        origin
- *      );
- *      // re-render with hover highlight if desired
- *    });
- *
- * 4) Keep TILE_WIDTH/HEIGHT changes and zoom logic in one place.
+/* Notes:
+ * 1) Always unhide #viewportWrapper before calling sizing/fit functions.
+ * 2) These helpers now tolerate 0×0 inputs but visible measurements are best.
  */

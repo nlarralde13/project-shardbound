@@ -25,6 +25,19 @@ export function mountViewportHUD(wrapperSel = '#viewportWrapper') {
     wrapper.appendChild(mapBtn);
   }
 
+  // ✅ guard against double-binding
+  if (!mapBtn.dataset.bound) {
+    mapBtn.addEventListener('click', () => {
+      const { getViewportState, goConsole, goWorld, goRegion, goMiniShard } = require('../state/viewportState.js');
+      const { current } = getViewportState();
+      if (current === 'console') goWorld();
+      else if (current === 'world') goConsole();
+      else if (current === 'region') goWorld();
+      else if (current === 'minishard') goRegion({ fromMiniShard: true });
+    });
+    mapBtn.dataset.bound = '1';
+  }
+
   // Action row (bottom)
   let actionRow = wrapper.querySelector('.vp-actions');
   if (!actionRow) {
