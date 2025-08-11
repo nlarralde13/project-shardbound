@@ -1,6 +1,6 @@
 // ui/mapView.js
 // A self-contained map "actor": mount → (pause/resume) → unmount.
-// Owns the canvas, hover/select, fit/origin, and zoom hookup.
+// Owns the canvas, hover/select, fit/origin, zoom hookup, and drag-pan.
 
 import { renderShard } from '../shards/renderShard.js';
 import {
@@ -16,6 +16,8 @@ const TILE_HEIGHT = 16;
 
 let wrapper, canvas, ctx;
 let shard = null;
+
+// ✅ Keep a single, long-lived origin object (don’t replace the reference)
 let origin = { originX: 0, originY: 0 };
 
 let hoverTile = null;
@@ -25,9 +27,64 @@ let mounted = false;
 let ready = false;
 let paused = true;
 
+// — event bookkeeping —
 let handlers = [];
-const add = (el, type, fn) => { el.addEventListener(type, fn); handlers.push([el, type, fn]); };
-const removeAll = () => { for (const [el, type, fn] of handlers) el.removeEventListener(type, fn); handlers = []; };
+const add = (el, type, fn, opts) => { el.addEventListener(type, fn, opts); handlers.push([el, type, fn, opts]); };
+const removeAll = () => { for (const [el, type, fn, opts] of handlers) el.removeEventListener(type, fn, opts); handlers = []; };
+
+// 🖱️ drag-pan state
+let isDragging = false;
+let dragStartX = 0, dragStartY = 0;
+let dragStartOriginX = 0, dragStartOriginY = 0;
+let dragMoved = 0;
+
+// Pointer-driven drag that mutates `origin` in place
+function wireDragPan() {
+  const onDown = (e) => {
+    if (paused) return;
+    isDragging = true;
+    dragMoved = 0;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    dragStartOriginX = origin.originX;
+    dragStartOriginY = origin.originY;
+    canvas.classList.add('grabbing');
+    canvas.setPointerCapture?.(e.pointerId);
+  };
+
+  const onMove = (e) => {
+    if (!isDragging || paused) return;
+    const scale = (typeof getZoomLevel === 'function' ? getZoomLevel() : 1) || 1;
+    const dx = (e.clientX - dragStartX) / scale;
+    const dy = (e.clientY - dragStartY) / scale;
+
+    origin.originX = dragStartOriginX + dx;
+    origin.originY = dragStartOriginY + dy;
+
+    dragMoved = Math.max(dragMoved, Math.abs(dx) + Math.abs(dy));
+    redraw();
+  };
+
+  const onUp = (e) => {
+    isDragging = false;
+    canvas.classList.remove('grabbing');
+    canvas.releasePointerCapture?.(e.pointerId);
+  };
+
+  // Prevent “click” selecting a tile right after a drag
+  const suppressClickIfDragged = (e) => {
+    if (dragMoved > 4) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  };
+
+  add(canvas, 'pointerdown', onDown);
+  add(canvas, 'pointermove', onMove);
+  add(canvas, 'pointerup', onUp);
+  add(canvas, 'pointercancel', onUp);
+  add(canvas, 'click', suppressClickIfDragged, true); // capture phase to pre-empt tile click
+}
 
 function shimZoomIdsForCamera() {
   // camera.js expects #zoomIn / #zoomOut / #zoomDisplay
@@ -57,7 +114,11 @@ function fitCanvas() {
   );
   canvas.width  = Math.ceil(fit.mapW || wrapper.clientWidth);
   canvas.height = Math.ceil(fit.mapH || wrapper.clientHeight);
-  origin = computeIsoOrigin(canvas.width, canvas.height);
+
+  // ✅ Don’t replace `origin`; mutate it so all readers keep the same reference
+  const o = computeIsoOrigin(canvas.width, canvas.height);
+  origin.originX = o.originX;
+  origin.originY = o.originY;
 }
 
 function redraw() {
@@ -67,7 +128,7 @@ function redraw() {
 
 function wireInteractions() {
   add(canvas, 'mousemove', (e) => {
-    if (paused || !shard) return;
+    if (paused || !shard || isDragging) return; // ignore hover while dragging
     const rect = canvas.getBoundingClientRect();
     const t = getTileUnderMouseIso(
       e.clientX - rect.left,
@@ -86,6 +147,7 @@ function wireInteractions() {
 
   add(canvas, 'click', (e) => {
     if (paused || !shard) return;
+    if (dragMoved > 4) return; // already suppressed in capture, belt & suspenders
     const rect = canvas.getBoundingClientRect();
     const t = getTileUnderMouseIso(
       e.clientX - rect.left,
@@ -122,6 +184,7 @@ export async function mountMap(rootSelector = '#mapViewer', { autoload = true } 
   if (!wrapper) {
     wrapper = document.createElement('div');
     wrapper.id = 'viewportWrapper';
+    // tip: your CSS can set display:flex here; JS just toggles block/none
     host.appendChild(wrapper);
   }
 
@@ -143,12 +206,14 @@ export async function mountMap(rootSelector = '#mapViewer', { autoload = true } 
   fitCanvas();
   redraw();
 
-  // Hook zoom controls (shim IDs to what camera.js expects)
+  // Zoom controls
   shimZoomIdsForCamera();
-  setupZoomControls();            // reads #zoomIn/#zoomOut/#zoomDisplay
+  setupZoomControls();
   console.log('[mapView] zoom @', Math.round((getZoomLevel?.() || 1) * 100) + '%');
 
+  // Inputs
   wireInteractions();
+  wireDragPan();           // 🆕 grab-to-pan
 
   mounted = true;
   ready = !!shard;
@@ -176,6 +241,7 @@ export function resumeMap() {
   if (!paused) return;
   paused = false;
   wireInteractions();
+  wireDragPan();
   redraw();
 }
 
