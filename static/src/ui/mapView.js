@@ -1,261 +1,282 @@
 // ui/mapView.js
-// A self-contained map "actor": mount → (pause/resume) → unmount.
-// Owns the canvas, hover/select, fit/origin, zoom hookup, and drag-pan.
+// Map canvas + view context manager (shard | slice | room)
 
 import { renderShard } from '../shards/renderShard.js';
-import {
-  fitIsoTransform,
-  computeIsoOrigin,
-  getTileUnderMouseIso,
-  updateDevStatsPanel
-} from '../utils/mapUtils.js';
-import { setupZoomControls, getZoomLevel } from './camera.js';
+import { TILE_WIDTH, TILE_HEIGHT } from '../config/mapConfig.js';
+import { getTileUnderMouseIso, updateDevStatsPanel } from '../utils/mapUtils.js';
+import { getZoomLevel, setupZoomControls, bindCameraTargets } from '../ui/camera.js';
 
-const TILE_WIDTH = 32;   // align with your config
-const TILE_HEIGHT = 16;
+const now = () => {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}.${String(d.getMilliseconds()).padStart(3,'0')}`;
+};
+const L = (...a) => console.log(`[${now()}][mapView]`, ...a);
 
-let wrapper, canvas, ctx;
-let shard = null;
+/* ──────────────────────────────
+ * Module state
+ * ────────────────────────────── */
+let wrapper = null;        // #viewportWrapper
+let canvas  = null;        // #viewport
+let ctx     = null;
 
-// ✅ Keep a single, long-lived origin object (don’t replace the reference)
-let origin = { originX: 0, originY: 0 };
+let rootShard = null;      // always the 50×50 region shard
+let current   = null;      // { type: 'shard'|'slice'|'room', sid, data }
 
-let hoverTile = null;
+let hoverTile    = null;
 let selectedTile = null;
 
+let paused  = false;
 let mounted = false;
-let ready = false;
-let paused = true;
 
-// — event bookkeeping —
-let handlers = [];
-const add = (el, type, fn, opts) => { el.addEventListener(type, fn, opts); handlers.push([el, type, fn, opts]); };
-const removeAll = () => { for (const [el, type, fn, opts] of handlers) el.removeEventListener(type, fn, opts); handlers = []; };
+// Internal drag-to-pan (pre-zoom screen px)
+let pan = { x: 0, y: 0 };
+let dragging = false;
+let dragStart = { x: 0, y: 0 };
 
-// 🖱️ drag-pan state
-let isDragging = false;
-let dragStartX = 0, dragStartY = 0;
-let dragStartOriginX = 0, dragStartOriginY = 0;
-let dragMoved = 0;
+const origin = { originX: 0, originY: 0 };
 
-// Pointer-driven drag that mutates `origin` in place
-function wireDragPan() {
-  const onDown = (e) => {
-    if (paused) return;
-    isDragging = true;
-    dragMoved = 0;
-    dragStartX = e.clientX;
-    dragStartY = e.clientY;
-    dragStartOriginX = origin.originX;
-    dragStartOriginY = origin.originY;
-    canvas.classList.add('grabbing');
-    canvas.setPointerCapture?.(e.pointerId);
-  };
-
-  const onMove = (e) => {
-    if (!isDragging || paused) return;
-    const scale = (typeof getZoomLevel === 'function' ? getZoomLevel() : 1) || 1;
-    const dx = (e.clientX - dragStartX) / scale;
-    const dy = (e.clientY - dragStartY) / scale;
-
-    origin.originX = dragStartOriginX + dx;
-    origin.originY = dragStartOriginY + dy;
-
-    dragMoved = Math.max(dragMoved, Math.abs(dx) + Math.abs(dy));
-    redraw();
-  };
-
-  const onUp = (e) => {
-    isDragging = false;
-    canvas.classList.remove('grabbing');
-    canvas.releasePointerCapture?.(e.pointerId);
-  };
-
-  // Prevent “click” selecting a tile right after a drag
-  const suppressClickIfDragged = (e) => {
-    if (dragMoved > 4) {
-      e.stopPropagation();
-      e.preventDefault();
-    }
-  };
-
-  add(canvas, 'pointerdown', onDown);
-  add(canvas, 'pointermove', onMove);
-  add(canvas, 'pointerup', onUp);
-  add(canvas, 'pointercancel', onUp);
-  add(canvas, 'click', suppressClickIfDragged, true); // capture phase to pre-empt tile click
-}
-
-function shimZoomIdsForCamera() {
-  // camera.js expects #zoomIn / #zoomOut / #zoomDisplay
-  const inBtn = document.getElementById('zoomInBtn');
-  const outBtn = document.getElementById('zoomOutBtn');
-  const overlay = document.getElementById('zoomOverlay');
-  if (inBtn && !document.getElementById('zoomIn')) inBtn.id = 'zoomIn';
-  if (outBtn && !document.getElementById('zoomOut')) outBtn.id = 'zoomOut';
-  if (overlay && !document.getElementById('zoomDisplay')) overlay.id = 'zoomDisplay';
-}
-
-async function loadDefaultShard() {
-  if (shard) return shard;
-  const url = '/static/public/shards/shard_0_0.json';
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to load ${url}`);
-  shard = await res.json();
-  return shard;
-}
+/* ──────────────────────────────
+ * Helpers
+ * ────────────────────────────── */
 
 function fitCanvas() {
-  if (!wrapper || !canvas || !shard) return;
-  const fit = fitIsoTransform(
-    wrapper.clientWidth, wrapper.clientHeight,
-    shard.width, shard.height,
-    TILE_WIDTH, TILE_HEIGHT
-  );
-  canvas.width  = Math.ceil(fit.mapW || wrapper.clientWidth);
-  canvas.height = Math.ceil(fit.mapH || wrapper.clientHeight);
+  if (!wrapper || !canvas) return;
 
-  // ✅ Don’t replace `origin`; mutate it so all readers keep the same reference
-  const o = computeIsoOrigin(canvas.width, canvas.height);
-  origin.originX = o.originX;
-  origin.originY = o.originY;
+  canvas.width  = wrapper.clientWidth;
+  canvas.height = wrapper.clientHeight;
+
+  const data = current?.data;
+  if (data?.width && data?.height) {
+    const mapH = (data.width + data.height) * (TILE_HEIGHT / 2);
+    origin.originX = canvas.width / 2;
+    origin.originY = Math.max(0, (canvas.height - mapH) / 2);
+  } else {
+    origin.originX = canvas.width / 2;
+    origin.originY = 40;
+  }
 }
 
 function redraw() {
-  if (!ctx || !shard) return;
-  renderShard(ctx, shard, { hoverTile, selectedTile, origin });
+  if (!ctx || !canvas || !current?.data) return;
+
+  // Clear to identity; DO NOT scale canvas here (CSS transform handles zoom)
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Apply pan to origin for drawing
+  const drawOrigin = {
+    originX: origin.originX + pan.x,
+    originY: origin.originY + pan.y
+  };
+
+  renderShard(ctx, current.data, { hoverTile, selectedTile, origin: drawOrigin });
 }
 
-function wireInteractions() {
-  add(canvas, 'mousemove', (e) => {
-    if (paused || !shard || isDragging) return; // ignore hover while dragging
-    const rect = canvas.getBoundingClientRect();
-    const t = getTileUnderMouseIso(
-      e.clientX - rect.left,
-      e.clientY - rect.top,
-      canvas,
-      shard,
-      origin,
-      TILE_WIDTH,
-      TILE_HEIGHT
-    );
-    if (t?.x !== hoverTile?.x || t?.y !== hoverTile?.y) {
-      hoverTile = t || null;
-      redraw();
-    }
+function logHit(label, { e, rect, drawOrigin, zoom, tile }) {
+  console.log('[hit]', label, {
+    zoom,
+    mouse: { x: e.clientX - rect.left, y: e.clientY - rect.top },
+    origin: drawOrigin,
+    pan,
+    canvas: { w: canvas?.width, h: canvas?.height },
+    tile
   });
+}
 
-  add(canvas, 'click', (e) => {
-    if (paused || !shard) return;
-    if (dragMoved > 4) return; // already suppressed in capture, belt & suspenders
-    const rect = canvas.getBoundingClientRect();
-    const t = getTileUnderMouseIso(
-      e.clientX - rect.left,
-      e.clientY - rect.top,
-      canvas,
-      shard,
-      origin,
-      TILE_WIDTH,
-      TILE_HEIGHT
-    );
-    if (!t) return;
-    selectedTile = t;
-    updateDevStatsPanel(t);
+export function refitAndRedraw() {
+  requestAnimationFrame(() => {
+    fitCanvas();
     redraw();
-
-    // Force-open info panel idempotently
-    const p = document.getElementById('infoPanel');
-    if (p) {
-      p.style.display = 'block';
-      const icon = document.querySelector('button.panel-toggle[data-target="infoPanel"] .toggle-icon');
-      if (icon) icon.textContent = '–';
-    }
   });
 }
 
-/** Public API **/
-export async function mountMap(rootSelector = '#mapViewer', { autoload = true } = {}) {
-  if (mounted) { showMap(); return; }
+/* ──────────────────────────────
+ * Visibility / lifecycle
+ * ────────────────────────────── */
 
-  const host = document.querySelector(rootSelector);
-  if (!host) throw new Error('[mapView] host not found');
+export function showMap() {
+  const w = wrapper || document.getElementById('viewportWrapper');
+  if (w) w.style.display = 'flex';
+}
+export function hideMap() {
+  const w = wrapper || document.getElementById('viewportWrapper');
+  if (w) w.style.display = 'none';
+}
+export function pauseMap()  { paused = true;  }
+export function resumeMap() { paused = false; }
 
-  wrapper = document.getElementById('viewportWrapper');
-  if (!wrapper) {
-    wrapper = document.createElement('div');
-    wrapper.id = 'viewportWrapper';
-    // tip: your CSS can set display:flex here; JS just toggles block/none
-    host.appendChild(wrapper);
+export function isMapMounted() { return mounted; }
+export function isMapReady()   { return !!(current && current.data && ctx); }
+
+/* ──────────────────────────────
+ * Context (root shard vs current)
+ * ────────────────────────────── */
+
+export function setShard(s) {
+  rootShard = s;
+  if (!current || current.type === 'shard') {
+    current = { type: 'shard', sid: s.id || 's0_0', data: s };
+  }
+  refitAndRedraw();
+}
+export function getShard()   { return rootShard; }
+export function getContext() { return current ? { ...current } : null; }
+
+export function swapContext({ type, sid, data, keepCamera = false }) {
+  if (type === 'shard' && data) rootShard = data;
+
+  // Normalize room: always a 1×1 shard-like grid so render/pick are uniform
+  if (type === 'room' && data && !data.tiles) {
+    data = {
+      id: data.id || `room:${sid}`,
+      type: 'room',
+      width: 1,
+      height: 1,
+      tiles: [[ { ...data, kind: data.kind || 'room' } ]]
+    };
   }
 
-  canvas = document.getElementById('viewport');
+  current = { type, sid, data };
+  if (!keepCamera) { hoverTile = null; selectedTile = null; }
+  // New view starts centered (no carry-over pan)
+  pan.x = 0; pan.y = 0;
+
+  redraw();
+}
+
+/* ──────────────────────────────
+ * Input (drag pan + pick)
+ * ────────────────────────────── */
+
+function onMouseDown(e) {
+  if (!canvas) return;
+  dragging = true;
+  canvas.style.cursor = 'grabbing';
+  dragStart.x = e.clientX;
+  dragStart.y = e.clientY;
+}
+
+function endDrag() {
+  dragging = false;
+  if (canvas) canvas.style.cursor = 'grab';
+}
+
+function onMouseMove(e) {
+  if (paused || !canvas || !current?.data) return;
+
+  // drag-to-pan
+  if (dragging) {
+    const z = (getZoomLevel?.() || 1);
+    pan.x += (e.clientX - dragStart.x) / z;
+    pan.y += (e.clientY - dragStart.y) / z;
+    dragStart.x = e.clientX;
+    dragStart.y = e.clientY;
+    redraw();
+    return;
+  }
+
+  // hover tile
+  const rect = canvas.getBoundingClientRect();
+  const drawOrigin = { originX: origin.originX + pan.x, originY: origin.originY + pan.y };
+  const tile = getTileUnderMouseIso(
+    e.clientX - rect.left,
+    e.clientY - rect.top,
+    canvas,
+    current.data,
+    drawOrigin,
+    TILE_WIDTH,
+    TILE_HEIGHT
+  );
+  if (tile?.x !== hoverTile?.x || tile?.y !== hoverTile?.y) {
+    hoverTile = tile || null;
+    logHit('move', { e, rect, drawOrigin, zoom: getZoomLevel?.(), tile });
+    redraw();
+  }
+}
+
+function onClick(e) {
+  if (paused || !canvas || !current?.data) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const drawOrigin = { originX: origin.originX + pan.x, originY: origin.originY + pan.y };
+  const tile = getTileUnderMouseIso(
+    e.clientX - rect.left,
+    e.clientY - rect.top,
+    canvas,
+    current.data,
+    drawOrigin,
+    TILE_WIDTH,
+    TILE_HEIGHT
+  );
+  if (!tile) return;
+
+  selectedTile = tile;
+  window.__lastSelectedTile = tile; // dev/HUD hook
+
+  // Update the info panel
+  updateDevStatsPanel(selectedTile);
+
+  logHit('click', { e, rect, drawOrigin, zoom: getZoomLevel?.(), tile });
+  redraw();
+}
+
+export function getSelectedTile() {
+  return selectedTile ? { ...selectedTile } : null;
+}
+
+/* ──────────────────────────────
+ * Mount
+ * ────────────────────────────── */
+
+export async function mountMap(viewerSel = '#mapViewer', opts = { autoload: true }) {
+  if (mounted && ctx) { refitAndRedraw(); return; }
+
+  const viewer = document.querySelector(viewerSel);
+  if (!viewer) throw new Error('[mapView] mountMap: viewer not found');
+
+  wrapper = viewer.querySelector('#viewportWrapper') || viewer;
+  canvas  = viewer.querySelector('#viewport');
   if (!canvas) {
     canvas = document.createElement('canvas');
     canvas.id = 'viewport';
     wrapper.appendChild(canvas);
   }
-  ctx = canvas.getContext('2d');
+  ctx = canvas.getContext('2d', { alpha: false });
 
-  // Make visible before measuring to get accurate client sizes
+  // ensure wrapper visible before measuring
   showMap();
+  await new Promise(r => requestAnimationFrame(r));
 
-  if (autoload && !shard) {
-    await loadDefaultShard();
+  // autoload shard if needed
+  if (opts?.autoload && !rootShard) {
+    const s = await fetch('/static/public/shards/shard_0_0.json').then(r => r.json());
+    rootShard = s;
+    current   = { type: 'shard', sid: s.id || 's0_0', data: s };
   }
 
   fitCanvas();
   redraw();
 
-  // Zoom controls
-  shimZoomIdsForCamera();
-  setupZoomControls();
-  console.log('[mapView] zoom @', Math.round((getZoomLevel?.() || 1) * 100) + '%');
+  // input
+  canvas.addEventListener('mousedown', onMouseDown);
+  window.addEventListener('mouseup', endDrag);
+  canvas.addEventListener('mouseleave', endDrag);
+  canvas.addEventListener('mousemove', onMouseMove);
+  canvas.addEventListener('click', onClick);
+  canvas.style.cursor = 'grab';
 
-  // Inputs
-  wireInteractions();
-  wireDragPan();           // 🆕 grab-to-pan
+  // Wheel zoom / any extra camera bindings you provide.
+  // Keep optional to avoid conflicts if not exported.
+  bindCameraTargets?.({ canvas, wrapper, onChange: () => redraw() });
+  setupZoomControls?.({ canvas, renderFn: () => redraw() });
 
+  L(`zoom @ ${Math.round((getZoomLevel?.() || 1) * 100)}%`);
   mounted = true;
-  ready = !!shard;
-  paused = false;
 }
 
-export function unmountMap() {
-  if (!mounted) return;
-  removeAll();
-  canvas?.remove();
-  wrapper = canvas = ctx = null;
-  mounted = false;
-  ready = false;
-  paused = true;
-}
-
-export function pauseMap() {
-  if (!mounted) return;
-  paused = true;
-  removeAll();
-}
-
-export function resumeMap() {
-  if (!mounted) return;
-  if (!paused) return;
-  paused = false;
-  wireInteractions();
-  wireDragPan();
-  redraw();
-}
-
-export function showMap() { if (wrapper) wrapper.style.display = 'block'; }
-export function hideMap() { if (wrapper) wrapper.style.display = 'none'; }
-
-export function isMapMounted() { return mounted; }
-export function isMapReady() { return ready; }
-
-export function getShard() { return shard; }
-export function setShard(newShard) { shard = newShard; fitCanvas(); redraw(); }
-export function refitAndRedraw() { fitCanvas(); redraw(); }
-
-export function getSelectedTile() { return selectedTile; }
-export function getHoverTile() { return hoverTile; }
-export function getOrigin() { return origin; }
-export function forceRedraw() { redraw(); }
+export default {
+  // lifecycle
+  mountMap, isMapMounted, isMapReady, showMap, hideMap, pauseMap, resumeMap, refitAndRedraw,
+  // context
+  getShard, setShard, getContext, swapContext, getSelectedTile
+};

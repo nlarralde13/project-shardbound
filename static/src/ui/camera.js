@@ -20,7 +20,7 @@ function updateOverlay() {
   if (overlayEl) overlayEl.textContent = `${Math.round(zoomLevel * 100)}%`;
 }
 
-function applyZoom(nextZoom, centerX, centerY) {
+export function applyZoom(nextZoom, centerX, centerY) {
   // Clamp: 0.3x .. 2.0x (tweak if needed)
   zoomLevel = Math.max(0.3, Math.min(2.0, nextZoom));
 
@@ -42,7 +42,10 @@ function applyZoom(nextZoom, centerX, centerY) {
     wrapperRef.scrollTo({ left: cx, top: cy, behavior: 'auto' });
   }
 }
-
+export function bindCameraTargets({ canvas, wrapper }) {
+  canvasRef = canvas;
+  wrapperRef = wrapper;
+}
 /**
  * Wire zoom buttons + overlay.
  * Accepts both "Btn/Overlay" IDs and fallback IDs to match different HTMLs.
@@ -92,6 +95,8 @@ export function setupZoomControls({
     const c = getCenter();
     applyZoom(zoomLevel - 0.1, c.x, c.y);
   });
+
+  
 
   updateOverlay();
 }

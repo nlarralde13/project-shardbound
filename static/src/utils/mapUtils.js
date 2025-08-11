@@ -56,29 +56,100 @@ export function screenToOrtho(mouseX, mouseY, scrollX = 0, scrollY = 0, tileSize
  *  Unified hit-testing helpers
  * ============================================================== */
 
-export function getTileUnderMouseIso(mouseX, mouseY, canvas, shard, origin, tileW = TILE_WIDTH, tileH = TILE_HEIGHT) {
+// utils/mapUtils.js  (replace getTileUnderMouseIso with this safer version)
+// Robust, zoom/pan-aware, diamond-accurate iso hit test
+// utils/mapUtils.js — drop-in replacement for getTileUnderMouseIso
+
+// utils/mapUtils.js — drop-in replacement for getTileUnderMouseIso
+
+export function getTileUnderMouseIso(
+  mouseX,
+  mouseY,
+  canvas,
+  shard,
+  origin,
+  tileW = TILE_WIDTH,
+  tileH = TILE_HEIGHT
+) {
   if (!canvas || !shard) return null;
 
-  const wrapper = canvas.parentElement; // expected scroll container
-  const scrollX = wrapper?.scrollLeft ?? 0;
-  const scrollY = wrapper?.scrollTop ?? 0;
-  const zoom = getZoomLevel?.() ?? 1;
+  // Derive actual on-screen scale from CSS vs backing pixels (robust to CSS transforms)
+  const rect = canvas.getBoundingClientRect();
+  const sx = rect.width  / (canvas.width  || 1);
+  const sy = rect.height / (canvas.height || 1);
+  const cssScale = (isFinite(sx) && isFinite(sy)) ? (sx + sy) * 0.5 : 1;
 
-  const { tx, ty } = screenToIso(
-    mouseX,
-    mouseY,
-    origin.originX,
-    origin.originY,
-    scrollX,
-    scrollY,
-    tileW,
-    tileH,
-    zoom
-  );
+  // Convert mouse from CSS pixels → backing pixels (pre-zoom coords)
+  const mxAbs = mouseX / cssScale;
+  const myAbs = mouseY / cssScale;
 
-  if (tx < 0 || ty < 0 || tx >= shard.width || ty >= shard.height) return null;
-  return { ...shard.tiles[ty][tx], x: tx, y: ty };
+  const hw = tileW * 0.5;
+  const hh = tileH * 0.5;
+
+  // Robust dimensions
+  const w = Number.isFinite(shard?.width)  ? shard.width  : (Array.isArray(shard?.tiles?.[0]) ? shard.tiles[0].length : 0);
+  const h = Number.isFinite(shard?.height) ? shard.height : (Array.isArray(shard?.tiles)      ? shard.tiles.length   : 0);
+  if (w <= 0 || h <= 0) return null;
+
+  // Coarse iso -> tile estimate
+  const ax = mxAbs - origin.originX;
+  const ay = myAbs - origin.originY;
+  const dx = ax / hw;
+  const dy = ay / hh;
+  const estTx = Math.floor((dx + dy) * 0.5);
+  const estTy = Math.floor((dy - dx) * 0.5);
+
+  // Helpers
+  const centerOf = (tx, ty) => {
+    const x = origin.originX + (tx - ty) * hw;
+    const y = origin.originY + (tx + ty) * hh + hh; // center = top + hh
+    return { x, y };
+  };
+  const inDiamond = (tx, ty) => {
+    if (tx < 0 || ty < 0 || tx >= w || ty >= h) return false;
+    const c = centerOf(tx, ty);
+    const lx = Math.abs(mxAbs - c.x) / hw;
+    const ly = Math.abs(myAbs - c.y) / hh;
+    return (lx + ly) <= 1.00001; // tiny epsilon for borders
+  };
+
+  // 1) Try coarse
+  if (inDiamond(estTx, estTy)) {
+    const cell = shard.tiles?.[estTy]?.[estTx];
+    return cell ? { ...cell, x: estTx, y: estTy } : null;
+  }
+
+  // 2) Cardials then diagonals
+  const neighbors = [
+    [ 1,  0], [-1,  0], [ 0,  1], [ 0, -1],
+    [ 1,  1], [-1, -1], [ 1, -1], [-1,  1],
+  ];
+  for (const [ox, oy] of neighbors) {
+    const tx = estTx + ox, ty = estTy + oy;
+    if (!inDiamond(tx, ty)) continue;
+    const cell = shard.tiles?.[ty]?.[tx];
+    if (cell) return { ...cell, x: tx, y: ty };
+  }
+
+  // 3) Fallback: nearest center
+  let best = null, bestD2 = Infinity;
+  for (let oy = -1; oy <= 1; oy++) {
+    for (let ox = -1; ox <= 1; ox++) {
+      const tx = estTx + ox, ty = estTy + oy;
+      if (tx < 0 || ty < 0 || tx >= w || ty >= h) continue;
+      const c = centerOf(tx, ty);
+      const d2 = (mxAbs - c.x) ** 2 + (myAbs - c.y) ** 2;
+      if (d2 < bestD2) { bestD2 = d2; best = { tx, ty }; }
+    }
+  }
+  if (!best) return null;
+  const cell = shard.tiles?.[best.ty]?.[best.tx];
+  return cell ? { ...cell, x: best.tx, y: best.ty } : null;
 }
+
+
+
+
 
 export function getTileUnderMouseOrtho(mouseX, mouseY, canvas, shard, tileSize = BASE_ORTHO_SIZE) {
   if (!canvas || !shard) return null;

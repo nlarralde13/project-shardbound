@@ -1,18 +1,20 @@
-// Viewport HUD: top-right Map button + bottom contextual action row.
+// /static/src/ui/viewportHud.js
+// Viewport HUD: Map button + optional action row (safe for ESM in browsers)
 
 import {
   getViewportState,
   onViewportChange,
   goConsole,
-  goWorld,
-  goRegion,
-  goMiniShard
+  goShard,
+  goSlice,
 } from '../state/viewportState.js';
 
 export function mountViewportHUD(wrapperSel = '#viewportWrapper') {
   const wrapper = document.querySelector(wrapperSel) || document.getElementById('mapViewer');
-  if (!wrapper) return console.warn('[viewportHUD] wrapper not found');
-
+  if (!wrapper) {
+    console.warn('[viewportHUD] wrapper not found:', wrapperSel);
+    return;
+  }
   wrapper.style.position = 'relative';
 
   // Map button (top-right)
@@ -25,65 +27,52 @@ export function mountViewportHUD(wrapperSel = '#viewportWrapper') {
     wrapper.appendChild(mapBtn);
   }
 
-  // ✅ guard against double-binding
+  // ✅ guard against double-binding if HUD is mounted more than once
   if (!mapBtn.dataset.bound) {
     mapBtn.addEventListener('click', () => {
-      const { getViewportState, goConsole, goWorld, goRegion, goMiniShard } = require('../state/viewportState.js');
       const { current } = getViewportState();
-      if (current === 'console') goWorld();
-      else if (current === 'world') goConsole();
-      else if (current === 'region') goWorld();
-      else if (current === 'minishard') goRegion({ fromMiniShard: true });
+      // Toggle: console <-> any map state
+      if (current === 'console') {
+        goShard();         // open the shard map (your primary map view)
+      } else {
+        goConsole();       // return to gameboard
+      }
     });
     mapBtn.dataset.bound = '1';
   }
 
-  // Action row (bottom)
+  // Optional: bottom action row (kept minimal; your main action bar is separate)
   let actionRow = wrapper.querySelector('.vp-actions');
   if (!actionRow) {
     actionRow = document.createElement('div');
     actionRow.className = 'vp-actions';
+    actionRow.style.display = 'none'; // hide if you don't want HUD actions
     wrapper.appendChild(actionRow);
   }
-
-  // Map button cycle behavior
-  mapBtn.addEventListener('click', () => {
-    const { current } = getViewportState();
-    if (current === 'console') goWorld();
-    else if (current === 'world') goConsole();
-    else if (current === 'region') goWorld();
-    else if (current === 'minishard') goRegion({ fromMiniShard: true });
-  });
 
   const renderActions = () => {
     const { current } = getViewportState();
     actionRow.innerHTML = '';
 
-    const add = (label, handler) => {
-      const b = document.createElement('button');
-      b.className = 'vp-action';
-      b.textContent = label;
-      b.addEventListener('click', handler);
-      actionRow.appendChild(b);
-    };
+    // If you ever want HUD-level quick actions again, uncomment below.
+    // const add = (label, handler) => {
+    //   const b = document.createElement('button');
+    //   b.className = 'vp-action';
+    //   b.textContent = label;
+    //   b.addEventListener('click', handler);
+    //   actionRow.appendChild(b);
+    // };
 
-    switch (current) {
-      case 'console':
-        add('Start Adventure', () => goWorld());
-        add('Load Game', () => document.getElementById('loadShardBtn')?.click());
-        break;
-      case 'world':
-        add('Zoom to Region', () => goRegion({ regionId: 'auto' }));
-        add('Center on Player', () => window?.playerState?.centerOnPlayer?.());
-        break;
-      case 'region':
-        add('Explore Tile', () => window?.dispatchExploreSelected?.());
-        add('Back to World', () => goWorld());
-        break;
-      case 'minishard':
-        add('Back to Region', () => goRegion({ fromMiniShard: true }));
-        break;
-    }
+    // Example of state-aware actions (disabled by default):
+    // if (current === 'shard') {
+    //   add('Back to Console', () => goConsole());
+    // } else if (current === 'slice') {
+    //   add('Back to Shard', () => goShard());
+    // } else if (current === 'room') {
+    //   add('Back to Slice', () => goSlice({ fromRoom: true }));
+    // } else if (current === 'console') {
+    //   add('Open Map', () => goShard());
+    // }
   };
 
   renderActions();

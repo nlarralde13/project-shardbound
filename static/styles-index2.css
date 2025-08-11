@@ -34,8 +34,13 @@ body {
   position: relative; background: #0b0b0b;
   border-radius: 10px; overflow: hidden; box-shadow: 0 0 12px #000;
 }
-#viewportWrapper { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
-#viewport { display: block; image-rendering: pixelated; }
+#viewportWrapper {
+  position: absolute;     /* or relative, whichever you use */
+  inset: 0;
+  display: flex;          /* critical */
+  align-items: center;    /* vertical center */
+  justify-content: center;/* horizontal center */
+}
 
 .panelBox {
   background: rgba(32,16,8,.95);
@@ -106,7 +111,10 @@ body {
 }
 /* Default to Gameboard; map hidden until toggled */
 #consoleView { display: block; height: 100%; }
-#viewportWrapper { display: none; }
+#viewportWrapper{
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+}
 
 /* Simple console styles (tweak to taste) */
 .console-wrap { display:flex; flex-direction:column; height:100%; }
