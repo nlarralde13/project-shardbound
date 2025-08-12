@@ -102,19 +102,30 @@ body {
   width:40px; height:40px; border-radius:8px; cursor:pointer;
   background:rgba(20,20,20,.9); border:1px solid #444;
 }
-.console-box{
-  position:absolute; inset:auto 16px 16px 16px; z-index:4;
+/* Canvas wrapper sits below the console */
+#viewportWrapper{
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  z-index: 1;               /* add */
+}
+
+/* Console should be an overlay sized by JS (25% height by default).
+   Do NOT force it to 100% height here. */
+#consoleView{
+  display:block;            /* keep it visible */
+  height:auto;              /* was 100% — remove it so JS sizing wins */
+  z-index: 4;               /* above the canvas */
+}
+
+/* Optional: consistent visuals if JS inline styles are delayed */
+#consoleView.console-box{
+  position:absolute; left:16px; right:16px; bottom:16px;
   min-height:120px; padding:12px; border-radius:8px;
   background:rgba(10,10,10,.85); border:1px solid #333; color:#eee;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
   line-height:1.35;
 }
-/* Default to Gameboard; map hidden until toggled */
-#consoleView { display: block; height: 100%; }
-#viewportWrapper{
-  position:absolute; inset:0;
-  display:flex; align-items:center; justify-content:center;
-}
+
 
 /* Simple console styles (tweak to taste) */
 .console-wrap { display:flex; flex-direction:column; height:100%; }

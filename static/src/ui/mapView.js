@@ -1,10 +1,15 @@
 // ui/mapView.js
 // Map canvas + view context manager (shard | slice | room)
+// - CSS-only zoom (no canvas transform scaling)
+// - Internal drag-to-pan that works with overflow:hidden
+// - Robust iso hit-testing (pan/zoom aware)
+// - Room normalization (1×1 shard-like grid)
+// - Idempotent mount, info-panel updates, rich logs
 
 import { renderShard } from '../shards/renderShard.js';
 import { TILE_WIDTH, TILE_HEIGHT } from '../config/mapConfig.js';
 import { getTileUnderMouseIso, updateDevStatsPanel } from '../utils/mapUtils.js';
-import { getZoomLevel, setupZoomControls, bindCameraTargets } from '../ui/camera.js';
+import { setupZoomControls, bindCameraTargets } from '../ui/camera.js';
 
 const now = () => {
   const d = new Date();
@@ -28,7 +33,7 @@ let selectedTile = null;
 let paused  = false;
 let mounted = false;
 
-// Internal drag-to-pan (pre-zoom screen px)
+// Internal drag-to-pan (pre-zoom pixels)
 let pan = { x: 0, y: 0 };
 let dragging = false;
 let dragStart = { x: 0, y: 0 };
@@ -38,6 +43,15 @@ const origin = { originX: 0, originY: 0 };
 /* ──────────────────────────────
  * Helpers
  * ────────────────────────────── */
+
+// Derive CSS scale (visual pixels / backing pixels)
+function getCssScale() {
+  if (!canvas) return 1;
+  const rect = canvas.getBoundingClientRect();
+  const sx = rect.width  / (canvas.width  || 1);
+  const sy = rect.height / (canvas.height || 1);
+  return (isFinite(sx) && isFinite(sy)) ? (sx + sy) * 0.5 : 1;
+}
 
 function fitCanvas() {
   if (!wrapper || !canvas) return;
@@ -59,7 +73,7 @@ function fitCanvas() {
 function redraw() {
   if (!ctx || !canvas || !current?.data) return;
 
-  // Clear to identity; DO NOT scale canvas here (CSS transform handles zoom)
+  // Clear to identity; DO NOT scale canvas here (CSS transform owns zoom)
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -72,21 +86,21 @@ function redraw() {
   renderShard(ctx, current.data, { hoverTile, selectedTile, origin: drawOrigin });
 }
 
-function logHit(label, { e, rect, drawOrigin, zoom, tile }) {
+export function refitAndRedraw() {
+  requestAnimationFrame(() => {
+    fitCanvas();
+    redraw();
+  });
+}
+
+function logHit(label, { e, rect, drawOrigin, tile }) {
   console.log('[hit]', label, {
-    zoom,
+    zoom_css: getCssScale(),
     mouse: { x: e.clientX - rect.left, y: e.clientY - rect.top },
     origin: drawOrigin,
     pan,
     canvas: { w: canvas?.width, h: canvas?.height },
     tile
-  });
-}
-
-export function refitAndRedraw() {
-  requestAnimationFrame(() => {
-    fitCanvas();
-    redraw();
   });
 }
 
@@ -138,7 +152,7 @@ export function swapContext({ type, sid, data, keepCamera = false }) {
 
   current = { type, sid, data };
   if (!keepCamera) { hoverTile = null; selectedTile = null; }
-  // New view starts centered (no carry-over pan)
+  // New view starts centered (reset pan)
   pan.x = 0; pan.y = 0;
 
   redraw();
@@ -166,7 +180,7 @@ function onMouseMove(e) {
 
   // drag-to-pan
   if (dragging) {
-    const z = (getZoomLevel?.() || 1);
+    const z = getCssScale();
     pan.x += (e.clientX - dragStart.x) / z;
     pan.y += (e.clientY - dragStart.y) / z;
     dragStart.x = e.clientX;
@@ -189,7 +203,7 @@ function onMouseMove(e) {
   );
   if (tile?.x !== hoverTile?.x || tile?.y !== hoverTile?.y) {
     hoverTile = tile || null;
-    logHit('move', { e, rect, drawOrigin, zoom: getZoomLevel?.(), tile });
+    logHit('move', { e, rect, drawOrigin, tile });
     redraw();
   }
 }
@@ -212,11 +226,8 @@ function onClick(e) {
 
   selectedTile = tile;
   window.__lastSelectedTile = tile; // dev/HUD hook
-
-  // Update the info panel
-  updateDevStatsPanel(selectedTile);
-
-  logHit('click', { e, rect, drawOrigin, zoom: getZoomLevel?.(), tile });
+  updateDevStatsPanel(selectedTile); // keep info panel in sync
+  logHit('click', { e, rect, drawOrigin, tile });
   redraw();
 }
 
@@ -229,6 +240,7 @@ export function getSelectedTile() {
  * ────────────────────────────── */
 
 export async function mountMap(viewerSel = '#mapViewer', opts = { autoload: true }) {
+  // Idempotent mount
   if (mounted && ctx) { refitAndRedraw(); return; }
 
   const viewer = document.querySelector(viewerSel);
@@ -257,7 +269,7 @@ export async function mountMap(viewerSel = '#mapViewer', opts = { autoload: true
   fitCanvas();
   redraw();
 
-  // input
+  // input listeners
   canvas.addEventListener('mousedown', onMouseDown);
   window.addEventListener('mouseup', endDrag);
   canvas.addEventListener('mouseleave', endDrag);
@@ -265,12 +277,11 @@ export async function mountMap(viewerSel = '#mapViewer', opts = { autoload: true
   canvas.addEventListener('click', onClick);
   canvas.style.cursor = 'grab';
 
-  // Wheel zoom / any extra camera bindings you provide.
-  // Keep optional to avoid conflicts if not exported.
+  // Optional: wheel-zoom / additional camera bindings can call redraw()
   bindCameraTargets?.({ canvas, wrapper, onChange: () => redraw() });
   setupZoomControls?.({ canvas, renderFn: () => redraw() });
 
-  L(`zoom @ ${Math.round((getZoomLevel?.() || 1) * 100)}%`);
+  L(`zoom @ ${Math.round(getCssScale() * 100)}%`);
   mounted = true;
 }
 

@@ -1,296 +1,273 @@
-// main.js — orchestrator (gameboard/console + map views)
+// Boots Pixi, overlay console (5-line clamp + typewriter), hover/select,
+// drag-to-pan & wheel-zoom (from pixiRenderer), SFX and Fireball shake.
+// Also guards chat init when elements are missing.
 
+import { computeIsoOrigin, getTileUnderMouseIso, updateDevStatsPanel } from './utils/mapUtils.js';
+import { initChat, sendMessage } from './ui/chat.js';
 import { togglePanel } from './ui/panels.js';
-import { mountViewportHUD } from './ui/viewportHud.js';
-
-import {
-  goConsole, goShard, goSlice, goRoom,
-  onViewportChange, getViewportState
-} from './state/viewportState.js';
-
-import { generateSlice } from './shards/generateSlice.js';
-import { generateRoom }  from './shards/generateRoom.js';
-
-import {
-  getSelectedTile, getContext, swapContext,
-  isMapMounted, isMapReady, mountMap,
-  showMap, hideMap, pauseMap, resumeMap,
-  refitAndRedraw, getShard, setShard
-} from './ui/mapView.js';
-
-import { applyZoom } from './ui/camera.js';
-
-import {
-  mountConsole, showConsole, hideConsole,
-  appendLine, onCommand
-} from './ui/consoleView.js';
-
 import { saveShard, loadShardFromFile, regenerateShard } from './shards/shardLoader.js';
+import { createPixiRenderer } from './gfx/pixiRenderer.js';
+import { handleConsoleCommand } from './data/consoleCommands.js';
 
-import {
-  initActionBar, renderActionBarFor, setActionProfile
-} from './ui/actionMenu.js';
+const PLAYER = 'Player1';
+const LAST_SID_KEY = 'lastShardFile';
+const DEFAULT_SID_FILE = 'shard_0_0.json';
+const L = (...a) => console.log('[main]', ...a);
 
-import {
-  setDevMode, canSwapClass,
-  getProfile, loadClass, onProfileChange
-} from './state/playerProfile.js';
-
-import { skillCatalog } from './data/skillCatalog.js';
-
-/* ───────── helpers / logging ───────── */
-
-const H = (id) => document.getElementById(id);
-const now = () => {
-  const d = new Date();
-  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}.${String(d.getMilliseconds()).padStart(3,'0')}`;
-};
-const L = {
-  main: (...a) => console.log(`[${now()}][main]`, ...a),
-  ui:   (...a) => console.log(`[${now()}][ui]`,   ...a),
-  fsm:  (...a) => console.log(`[${now()}][fsm]`,  ...a),
-  map:  (...a) => console.log(`[${now()}][map]`,  ...a),
-  h:    (...a) => console.log(`[${now()}][handlers]`, ...a),
-  err:  (...a) => console.error(`[${now()}][ERROR]`, ...a),
-};
-const say = (msg) => appendLine(`${now()} ${msg}`);
-
-function detectDev() {
-  const q = new URLSearchParams(location.search);
-  const val = q.get('dev') === '1' || localStorage.getItem('dev') === '1';
-  L.main('detectDev →', val);
-  return val;
+/* ── SFX & shake ── */
+function sfx(type = 'ui') {
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return;
+  const ctx = new Ctx();
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  const t = ctx.currentTime, A = 0.02, D = 0.12;
+  const f = type === 'select' ? 540 : type === 'ok' ? 660 : 420;
+  o.frequency.setValueAtTime(f, t);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.3, t + A);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + A + D);
+  o.start(t); o.stop(t + A + D + 0.02);
+}
+function screenShake(el = document.getElementById('mapViewer'), mag = 6, ms = 120) {
+  const start = performance.now();
+  (function tick(now) {
+    const p = Math.min(1, (now - start) / ms), d = 1 - p;
+    el.style.transform = `translate(${(Math.random()*2-1)*mag*d}px, ${(Math.random()*2-1)*mag*d}px)`;
+    if (p < 1) requestAnimationFrame(tick);
+    else el.style.transform = '';
+  })(start);
 }
 
-function canvasCenter() {
-  const c = H('viewport');
-  return { x: (c?.width || 0) / 2, y: (c?.height || 0) / 2 };
-}
+/* ── Console overlay ── */
+function mountConsoleOverlay(rootSel = '#mapViewer') {
+  const host = document.querySelector(rootSel);
+  if (!host) return null;
 
-/* remember last slice payload so room→slice and slice→shard work */
-let __lastSlicePayload = null;
+  let el = document.getElementById('consoleView');
+  if (!el) { el = document.createElement('div'); el.id = 'consoleView'; host.appendChild(el); }
+  el.classList.add('console-box');
+  Object.assign(el.style, {
+    position: 'absolute', left: '16px', right: '16px', bottom: '16px',
+    height: '25%', padding: '10px 12px 12px', color: '#eee',
+    background: 'rgba(10,10,10,.55)', borderTop: '1px solid #333',
+    backdropFilter: 'saturate(120%) blur(2px)', zIndex: 4, overflowY: 'auto'
+  });
 
-/* ───────── action handlers ───────── */
-function buildActionHandlers() {
-  return {
-    console: () => {
-      L.h('console() clicked; current =', getViewportState().current);
-      goConsole();
-    },
+  el.innerHTML = `
+    <div class="console-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <strong>Console</strong>
+      <div>
+        <button id="consolePinBtn" title="Toggle click-through" style="margin-right:6px;">🧲</button>
+        <button id="consoleClearBtn" title="Clear">🧹</button>
+      </div>
+    </div>
+    <div id="consoleLog" class="console-log" style="font-family:monospace;font-size:.9rem;line-height:1.35;"></div>
+    <input id="commandInput" placeholder="Type a command… (Enter to run)"
+           style="width:100%;margin-top:6px;background:rgba(30,30,30,.8);
+                  border:1px solid #444;border-radius:6px;color:#eee;padding:6px 8px;" />
+  `;
 
-    back: () => {
-      const { current } = getViewportState();
-      L.h('back() clicked; current =', current, 'lastSlicePayload =', __lastSlicePayload);
-      if (current === 'room') {
-        if (__lastSlicePayload) goSlice(__lastSlicePayload);
-      } else if (current === 'slice') {
-        goShard();
-      }
-    },
+  const logEl = el.querySelector('#consoleLog');
+  const input = el.querySelector('#commandInput');
 
-    explore: () => {
-      const { current } = getViewportState();
-      const t = getSelectedTile?.();
-      L.h('explore() clicked; current =', current, 'tile =', t);
-      if (!t) { say('Select a tile to explore.'); return; }
-
-      if (current === 'shard') {
-        const { sid } = getContext() || { sid: 's0_0' };
-        const slice = generateSlice({ sid, center: { tx: t.x, ty: t.y } });
-        __lastSlicePayload = { sid, slice };
-        goSlice(__lastSlicePayload);
-      } else if (current === 'slice') {
-        const { sid } = getContext() || { sid: 's0_0' };
-        const room = generateRoom({ sid, tx: t.x, ty: t.y, kind: t.kind, name: t.name });
-        goRoom({ sid, room });
-      } else {
-        say('Nothing to explore here.');
-      }
-    },
-
-    __skill__: (def) => {
-      appendLine(`You used ${def.label || def.id}.`);
-    }
+  const clamp5 = () => {
+    while (logEl.children.length > 5) logEl.removeChild(logEl.firstChild);
+    logEl.scrollTop = logEl.scrollHeight;
   };
+  const appendLine = (text) => { const d = document.createElement('div'); d.textContent = text; logEl.appendChild(d); clamp5(); };
+  const typeLine = (text, speed = 18) => {
+    let i = 0; const d = document.createElement('div'); logEl.appendChild(d);
+    (function tick(){ d.textContent = (d.textContent||'') + text[i++]; i<text.length ? setTimeout(tick, speed) : clamp5(); })();
+  };
+
+  el.querySelector('#consolePinBtn')?.addEventListener('click', () => {
+    el.classList.toggle('passthrough');
+    el.style.pointerEvents = el.classList.contains('passthrough') ? 'none' : 'auto';
+  });
+  el.querySelector('#consoleClearBtn')?.addEventListener('click', () => { logEl.innerHTML = ''; });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const text = input.value.trim();
+      if (!text) return;
+      appendLine(`> ${text}`);
+      input.value = '';
+      const out = handleConsoleCommand(text, window.__consoleCtx || {});
+      if (out === '__clear__') logEl.innerHTML = '';
+      else if (out) out.split('\n').forEach(appendLine);
+      e.preventDefault();
+    }
+  });
+
+  // flavor text + helper
+  typeLine('A cold wind crosses the shard…');
+  appendLine('Type "help" for commands.');
+
+  return { appendLine, focus: () => input.focus(), logEl };
 }
 
-/* ───────── boot ───────── */
+/* ── helpers ── */
+function sizeCanvasToWrapper(canvas, wrapper) {
+  const w = wrapper.clientWidth, h = wrapper.clientHeight;
+  if (w && h && (canvas.width !== w || canvas.height !== h)) { canvas.width = w; canvas.height = h; return true; }
+  return false;
+}
+async function loadShardAuto(fileName) {
+  const tries = [
+    `/static/public/shards/${fileName}`,
+    `/public/shards/${fileName}`,
+    `/static/shards/${fileName}`,
+    `/shards/${fileName}`,
+    fileName
+  ];
+  for (const url of tries) {
+    try { const r = await fetch(url, { cache: 'no-store' }); if (r.ok) { const j = await r.json(); j.id = j.id || fileName.replace(/\.json$/,''); return j; } }
+    catch { /* try next */ }
+  }
+  return null;
+}
 
+/* ── Boot ── */
 window.addEventListener('DOMContentLoaded', async () => {
-  L.main('DOMContentLoaded');
-  setDevMode(detectDev());
+  L('boot');
 
+  // positioning context
+  const mapViewer = document.getElementById('mapViewer');
+  if (mapViewer && getComputedStyle(mapViewer).position === 'static') mapViewer.style.position = 'relative';
+
+  // panel toggles
   document.querySelectorAll('.panel-toggle').forEach(btn => {
-    if (!btn.querySelector('.toggle-icon')) {
-      const ic = document.createElement('span');
-      ic.className = 'toggle-icon'; ic.textContent = '+';
-      btn.appendChild(ic);
-    }
-    const targetId = btn.dataset.target;
-    btn.addEventListener('click', () => togglePanel(targetId));
+    if (!btn.querySelector('.toggle-icon')) { const ic = document.createElement('span'); ic.className = 'toggle-icon'; ic.textContent = '+'; btn.appendChild(ic); }
+    btn.addEventListener('click', () => togglePanel(btn.dataset.target));
   });
 
-  // Console on first load
-  mountConsole('#mapViewer');
-  showConsole();
+  const wrapper = document.getElementById('viewportWrapper') || mapViewer;
+  const canvas  = document.getElementById('viewport');
+  if (!wrapper || !canvas) return console.error('[main] missing viewport');
 
-  // Hide legacy chat area if present
-  const legacy = H('chatContainer');
-  if (legacy) legacy.style.display = 'none';
+  // overlay console
+  const consoleUI = mountConsoleOverlay('#mapViewer');
+  const say = (m) => consoleUI?.appendLine?.(m);
 
-  // Make sure wrapper is hidden initially
-  const vw = H('viewportWrapper');
-  if (vw) vw.style.display = 'none';
+  // zoom id shim (optional)
+  for (const [from, to] of [['zoomInBtn','zoomIn'], ['zoomOutBtn','zoomOut'], ['zoomOverlay','zoomDisplay']]) {
+    const el = document.getElementById(from); if (el && !document.getElementById(to)) el.id = to;
+  }
 
-  mountViewportHUD('#mapViewer');
+  // load shard
+  const sidFile = localStorage.getItem(LAST_SID_KEY) || DEFAULT_SID_FILE;
+  const shard = await loadShardAuto(sidFile);
+  if (!shard) { say?.(`Failed to load ${sidFile}`); return; }
+  window.__currentShard = shard;
+  localStorage.setItem(LAST_SID_KEY, sidFile);
+  L('shard loaded', sidFile, shard);
 
-  // Action bar
-  const profile = getProfile();
-  setActionProfile(profile);
-  initActionBar({
-    container: '#actionBar',
-    playerProfile: profile,
-    state: 'console',
-    on: buildActionHandlers(),
+  // size canvas + PIXI
+  sizeCanvasToWrapper(canvas, wrapper);
+  let origin = computeIsoOrigin(canvas.width, canvas.height);
+  const pixi = createPixiRenderer({ canvas, shard, tileW: 16, tileH: 8 });
+  pixi.setOrigin(origin);
+  pixi.resize();
+
+  // console command context
+  window.__consoleCtx = { canvas, shard, pixi };
+
+  // resize handling
+  window.addEventListener('resize', () => {
+    if (sizeCanvasToWrapper(canvas, wrapper)) {
+      origin = computeIsoOrigin(canvas.width, canvas.height);
+      pixi.setOrigin(origin);
+      pixi.resize();
+    }
   });
 
-  onProfileChange((p) => {
-    setActionProfile(p);
-    renderActionBarFor(getViewportState().current, { on: buildActionHandlers() });
-    say(`Class loaded: ${p.name}. HP:${p.stats.hp} MP:${p.stats.mp} SP:${p.stats.sp}`);
+  // zoom buttons → pixi zoom at center
+  const centerAnchor = () => ({ x: canvas.width/2, y: canvas.height/2 });
+  document.getElementById('zoomIn')?.addEventListener('click', () => {
+    const a = centerAnchor(); pixi.zoomInAt(a.x, a.y);
+    const label = document.getElementById('zoomDisplay'); if (label) label.textContent = `${Math.round((pixi.world?.scale?.x||1)*100)}%`;
+  });
+  document.getElementById('zoomOut')?.addEventListener('click', () => {
+    const a = centerAnchor(); pixi.zoomOutAt(a.x, a.y);
+    const label = document.getElementById('zoomDisplay'); if (label) label.textContent = `${Math.round((pixi.world?.scale?.x||1)*100)}%`;
   });
 
-  // Console commands
-  onCommand((cmd) => {
-    const text = cmd.trim();
-    const lower = text.toLowerCase();
+  // chat (guard when elements are missing)
+  const chatHistoryEl = document.querySelector('#chatHistory');
+  const chatInputEl   = document.querySelector('#chatInput');
+  if (chatHistoryEl && chatInputEl) {
+    initChat('#chatHistory', '#chatInput');
+  } else {
+    console.log('[chat] Skipping init: missing #chatHistory or #chatInput');
+  }
 
-    if (lower === 'help') {
-      return [
-        'Commands:',
-        '  map            → open the map',
-        '  console        → return to gameboard',
-        '  skills         → list your skills',
-        '  stats          → show HP/MP/SP',
-        '  class <id>     → (dev only) switch class',
-        'Classes: fighter, mage, paladin, cleric, rogue, druid, ranger',
-      ].join('\n');
-    }
-    if (lower === 'map')     { goShard();   return 'Opening map…'; }
-    if (lower === 'console') { goConsole(); return 'Back to gameboard.'; }
+  // actions (+ SFX + shake)
+  document.querySelectorAll('.action-btn').forEach(btn => {
+    btn.addEventListener('click', () => sfx('ok'));
+    btn.addEventListener('click', () => sendMessage?.(`${PLAYER} used ${btn.dataset.action || btn.title || 'Action'}`));
+  });
+  document.querySelector('[data-action="Fireball"]')?.addEventListener('click', () => screenShake());
 
-    if (lower === 'skills') {
-      const p = getProfile();
-      const lines = (p.skills || []).map(id => `  • ${skillCatalog[id]?.name || id}`);
-      return lines.length ? ['Skills:', ...lines].join('\n') : 'No skills learned.';
+  // hover/select using inverse WORLD transform (defensive if world undefined)
+  let hoverTile = null, selectedTile = null;
+  function toWorld(mx, my) {
+    const w = pixi?.world || pixi?.stage;            // ← defensive: use stage if world missing
+    const s = w?.scale?.x || 1;
+    const pos = w?.position || { x: 0, y: 0 };
+    return { x: (mx - pos.x) / s, y: (my - pos.y) / s };
+  }
+
+  canvas.addEventListener('mousemove', (e) => {
+    const r = canvas.getBoundingClientRect();
+    const { x, y } = toWorld(e.clientX - r.left, e.clientY - r.top);
+    const t = getTileUnderMouseIso(x, y, canvas, shard, origin);
+    if ((t?.x !== hoverTile?.x) || (t?.y !== hoverTile?.y)) {
+      hoverTile = t || null;
+      pixi.setHover(hoverTile);
+      canvas.style.cursor = hoverTile ? 'pointer' : 'default';
     }
-    if (lower === 'stats') {
-      const { hp, mp, sp } = getProfile().stats;
-      return `HP:${hp}  MP:${mp}  SP:${sp}`;
-    }
-    if (lower.startsWith('class ')) {
-      const id = lower.split(/\s+/)[1];
-      if (!canSwapClass()) return 'Class swapping is disabled.';
-      try { loadClass(id); return `Class switched to ${getProfile().name}.`; }
-      catch { return `Unknown class "${id}". Try: fighter, mage, paladin, cleric, rogue, druid, ranger.`; }
-    }
-    return null;
   });
 
-  // Start in console
-  goConsole();
-
-  // Router
-  onViewportChange(async ({ current, payload }) => {
-    L.fsm('onViewportChange →', current, 'payload:', payload);
-
-    if (current === 'console') {
-      hideMap(); pauseMap(); showConsole();
-      renderActionBarFor('console', { on: buildActionHandlers() });
-      return;
-    }
-
-    // map views
-    hideConsole();
-    showMap();                                    // make wrapper visible
-    await new Promise(r => requestAnimationFrame(r));
-
-    if (!isMapMounted()) {
-      L.map('mountMap → start');
-      await mountMap('#mapViewer', { autoload: true });
-    }
-    if (!isMapReady()) {
-      L.map('mountMap (again)');
-      await mountMap('#mapViewer', { autoload: true });
-    }
-
-    if (current === 'shard') {
-      let s = getShard();
-      // if autoload hadn’t finished before, get it after mount
-      if (!s) { await new Promise(r => requestAnimationFrame(r)); s = getShard(); }
-
-      L.map('swapContext → shard', { sid: s?.id || 's0_0', hasData: !!s });
-      swapContext({ type: 'shard', sid: s?.id || 's0_0', data: s, keepCamera: false });
-
-      await new Promise(r => requestAnimationFrame(r));
-      refitAndRedraw();
-      const { x, y } = canvasCenter();
-      applyZoom(1.0, x, y);
-    }
-
-    if (current === 'slice') {
-      const { sid, slice } = payload || {};
-      __lastSlicePayload = payload || null;
-      L.map('swapContext → slice', { sid, hasSlice: !!slice });
-      swapContext({ type:'slice', sid, data: slice, keepCamera:false });
-
-      await new Promise(r => requestAnimationFrame(r));
-      refitAndRedraw();
-      const { x, y } = canvasCenter();
-      applyZoom(2.0, x, y);
-    }
-
-    if (current === 'room') {
-      const { sid, room } = payload || {};
-      L.map('swapContext → room', { sid, hasRoom: !!room });
-      swapContext({ type:'room', sid, data: room, keepCamera:false });
-
-      await new Promise(r => requestAnimationFrame(r));
-      refitAndRedraw();
-      const { x, y } = canvasCenter();
-      applyZoom(3.0, x, y);
-    }
-
-    resumeMap();
-    renderActionBarFor(current, { on: buildActionHandlers() });
+  canvas.addEventListener('click', (e) => {
+    const r = canvas.getBoundingClientRect();
+    const { x, y } = toWorld(e.clientX - r.left, e.clientY - r.top);
+    const t = getTileUnderMouseIso(x, y, canvas, shard, origin);
+    if (!t) return;
+    selectedTile = t;
+    pixi.setSelected(selectedTile);
+    window.__lastSelectedTile = t;
+    updateDevStatsPanel?.(t);
+    togglePanel('infoPanel');
+    sfx('select');
   });
 
-  // Dev: save/load/regen
-  H('saveShard')?.addEventListener('click', () => {
-    if (!isMapReady()) return say('[dev] save ignored: map not ready');
-    saveShard(getShard()); say('Shard saved.');
+  // dev buttons
+  document.getElementById('saveShard')?.addEventListener('click', () => {
+    try { saveShard?.(shard); say?.('Shard saved.'); } catch (e) { say?.(`Save failed: ${e?.message || e}`); }
   });
-
-  H('loadShardBtn')?.addEventListener('click', () => H('loadShardInput')?.click());
-  H('loadShardInput')?.addEventListener('change', async (e) => {
+  document.getElementById('loadShardBtn')?.addEventListener('click', () => document.getElementById('loadShardInput')?.click());
+  document.getElementById('loadShardInput')?.addEventListener('change', async (e) => {
     const f = e.target.files?.[0]; if (!f) return;
-    try { const s = await loadShardFromFile(f); setShard(s); say('Shard loaded.'); }
-    catch (err) { say(`[dev] Load shard failed: ${err?.message || err}`); }
+    try {
+      const s = await loadShardFromFile?.(f);
+      if (s) {
+        window.__currentShard = s; window.__consoleCtx.shard = s;
+        localStorage.setItem(LAST_SID_KEY, f.name); say?.(`Loaded shard: ${f.name}`);
+        pixi.setShard(s); origin = computeIsoOrigin(canvas.width, canvas.height); pixi.setOrigin(origin);
+      }
+    } catch (err) { say?.(`Load failed: ${err?.message || err}`); }
     finally { e.target.value = ''; }
   });
-
-  H('regenWorld')?.addEventListener('click', async () => {
-    try { const s = await regenerateShard({}); setShard(s); say('Shard regenerated.'); }
-    catch (err) { say(`[dev] Regen failed: ${err?.message || err}`); }
+  document.getElementById('regenWorld')?.addEventListener('click', async () => {
+    try {
+      const s = await regenerateShard?.({}); if (s) {
+        window.__currentShard = s; window.__consoleCtx.shard = s;
+        localStorage.setItem(LAST_SID_KEY, DEFAULT_SID_FILE); say?.('Shard regenerated.');
+        pixi.setShard(s); origin = computeIsoOrigin(canvas.width, canvas.height); pixi.setOrigin(origin);
+      }
+    } catch (err) { say?.(`Regen failed: ${err?.message || err}`); }
   });
 
-  // quick toggle with 'm'
-  document.addEventListener('keydown', (e) => {
-    if (e.key.toLowerCase() === 'm') {
-      const visible = (H('viewportWrapper')?.style.display !== 'none');
-      visible ? goConsole() : goShard();
-    }
-  });
-
-  L.main('Boot complete');
+  say?.(`Ready. Current shard: ${sidFile}`);
 });

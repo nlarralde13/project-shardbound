@@ -4,7 +4,7 @@
 const listeners = new Set();
 
 const state = {
-  current: 'console',   // 'console' | 'shard' | 'slice' | 'room'
+  current: 'shard',   // 'console' | 'shard' | 'slice' | 'room'
   payload: null,
 };
 

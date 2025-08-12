@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,12 +6,15 @@
   <title>🧙 PROJECT SHARDBOUND</title>
   <link rel="stylesheet" href="/static/styles-index2.css" />
   <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=UnifrakturCook:wght@700&display=swap" rel="stylesheet" />
+
+  <!-- PixiJS (global PIXI) -->
+  <script src="https://unpkg.com/pixi.js@7/dist/pixi.min.js"></script>
 </head>
 <body>
   <div id="gameUI">
     <header id="banner">
-  🧙 PROJECT SHARDBOUND
-</header>
+      🧙 PROJECT SHARDBOUND
+    </header>
 
     <div id="mainLayout">
       <aside id="leftBar">
@@ -28,28 +32,20 @@
 
       <section id="centerPanel">
         <div id="mapViewer">
-          <!-- HUD: Map toggle -->
-          <button id="mapToggleBtn" title="Open Map" class="vp-mapbtn">🗺️ Map</button>
-          
-          <div id="viewportWrapper" style="display: none">
+          <div id="viewportWrapper">
+            <!-- Pixi renders into this canvas (passed as "view") -->
             <canvas id="viewport"></canvas>
           </div>
 
-          <!-- Console (text) view goes here on login -->
+          <!-- Console overlay is mounted here by JS -->
           <div id="consoleView" class="console-box" aria-live="polite"></div>
-          
         </div>
 
-        <div id="actionBar">
+        <!--<div id="actionBar">
           <button class="action-btn" title="Slash"     data-action="Slash">🗡️</button>
           <button class="action-btn" title="Fireball"  data-action="Fireball">🔥</button>
           <button class="action-btn" title="Shield Up" data-action="Shield Up">🛡️</button>
-        </div>
-
-        <div id="chatContainer">
-          <div id="chatHistory"></div>
-          <textarea id="chatInput" placeholder="Type & press Enter…"></textarea>
-        </div>
+        </div> -->
       </section>
 
       <aside id="rightBar">
@@ -65,6 +61,7 @@
     </div>
   </div>
 
+  <!-- Entry module -->
   <script type="module" src="/static/src/main.js"></script>
 </body>
 </html>
