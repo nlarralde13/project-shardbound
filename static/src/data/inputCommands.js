@@ -1,66 +1,104 @@
-// Central source of truth for input mappings (keyboard + helpers)
-// Keep ALL keybindings here and import this from main.
+// /static/src/data/inputCommands.js
+// Centralized inputs for camera + console helpers.
+export function initInputCommands({ getCtx }) {
+  // getCtx() should return { pixi, canvas } from main when called
 
-import { applyZoom, getZoomLevel } from '../ui/camera.js';
-import { goWorld } from '../state/viewportState.js';
+  // --- Keyboard: pan with WASD / Arrows ---
+  
 
-// Optional camera nudge; if you expose moveCameraBy in camera.js, you can import it.
-// import { moveCameraBy } from '../ui/camera.js';
+  // --- Touch: pinch to zoom + two-finger pan ---
+  let touchState = null;
 
-export function initInputCommands({ wrapper, canvas, runCommand, onFocusConsole } = {}) {
-  // --- Keyboard commands ---
-  window.addEventListener('keydown', (e) => {
-    const k = e.key;
+  function getTouches(e) {
+    const rect = (getCtx()?.canvas)?.getBoundingClientRect();
+    return Array.from(e.touches).map(t => ({
+      x: t.clientX - rect.left,
+      y: t.clientY - rect.top
+    }));
+  }
 
-    // Focus console input
-    if (k === '/' && onFocusConsole) {
-      e.preventDefault();
-      onFocusConsole();
-      return;
-    }
+  function dist(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return Math.hypot(dx,dy); }
+  function mid(a,b){ return { x:(a.x+b.x)/2, y:(a.y+b.y)/2 }; }
 
-    // Map focus
-    if (k.toLowerCase() === 'm') {
-      goWorld();
-      return;
-    }
+  window.addEventListener('touchstart', (e) => {
+    if (e.touches.length < 2) return;
+    const pts = getTouches(e);
+    touchState = {
+      lastMid: mid(pts[0], pts[1]),
+      lastDist: dist(pts[0], pts[1])
+    };
+  }, { passive: true });
 
-    // Zoom
-    if (k === '+' || k === '=') {
-      const { x, y } = centerOfCanvas(canvas);
-      applyZoom(getZoomLevel() + 0.1, x, y);
-      e.preventDefault();
-      return;
-    }
-    if (k === '-') {
-      const { x, y } = centerOfCanvas(canvas);
-      applyZoom(getZoomLevel() - 0.1, x, y);
-      e.preventDefault();
-      return;
-    }
+  window.addEventListener('touchmove', (e) => {
+    if (!touchState || e.touches.length < 2) return;
+    e.preventDefault();
 
-    // Example: camera pan nudges (uncomment if you wire moveCameraBy)
-    // if (k === 'ArrowUp')    { moveCameraBy(0, -1); e.preventDefault(); }
-    // if (k === 'ArrowDown')  { moveCameraBy(0,  1); e.preventDefault(); }
-    // if (k === 'ArrowLeft')  { moveCameraBy(-1, 0); e.preventDefault(); }
-    // if (k === 'ArrowRight') { moveCameraBy(1,  0); e.preventDefault(); }
-  });
+    const ctx = getCtx(); if (!ctx?.pixi) return;
+    const w = ctx.pixi.world || ctx.pixi.stage;
 
-  // --- (Optional) clickable helpers to dispatch commands from UI elements ---
-  // Example: wire a data-cmd attribute to runCommand
-  document.addEventListener('click', (e) => {
-    const el = e.target.closest('[data-cmd]');
-    if (!el) return;
-    const cmd = el.getAttribute('data-cmd');
-    if (cmd && runCommand) {
-      runCommand(cmd);
-    }
-  });
-}
+    const pts = getTouches(e);
+    const m  = mid(pts[0], pts[1]);
+    const d  = dist(pts[0], pts[1]);
 
-function centerOfCanvas(canvas) {
+    // zoom delta
+    const scaleNow = w.scale.x || 1;
+    const target   = clamp(scaleNow * (d / touchState.lastDist), 0.5, 3);
+    setZoomAround(ctx, target, m.x, m.y);
+
+    // pan by mid movement
+    const dx = m.x - touchState.lastMid.x;
+    const dy = m.y - touchState.lastMid.y;
+    w.position.x += dx;
+    w.position.y += dy;
+
+    touchState.lastMid = m;
+    touchState.lastDist = d;
+
+    clampToBounds(ctx);
+  }, { passive: false });
+
+  window.addEventListener('touchend', () => { touchState = null; }, { passive: true });
+
+  // Helpers
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+  function setZoomAround({ pixi }, newScale, anchorX, anchorY){
+    const w = pixi.world || pixi.stage;
+    const old = w.scale.x || 1;
+    const s = clamp(newScale, 0.5, 3);
+    if (s === old) return;
+
+    const mx = anchorX, my = anchorY;
+    const wx = (mx - w.position.x) / old;
+    const wy = (my - w.position.y) / old;
+    w.scale.set(s);
+    w.position.set(mx - wx * s, my - wy * s);
+
+    const label = document.getElementById('zoomDisplay');
+    if (label) label.textContent = `${Math.round(s*100)}%`;
+  }
+
+  function clampToBounds({ pixi, canvas }){
+    // Simple soft clamp that keeps some margin; refine after tileset swap.
+    const w = pixi.world || pixi.stage;
+    const s = w.scale.x || 1;
+    const margin = 100;
+
+    // Allow wide roam for now; just prevent total runaway
+    w.position.x = clamp(w.position.x, -canvas.width*2, canvas.width*2);
+    w.position.y = clamp(w.position.y, -canvas.height*2, canvas.height*2);
+  }
+
+  // expose a programmatic center used by console command 'center'
   return {
-    x: (canvas?.width || 0) / 2,
-    y: (canvas?.height || 0) / 2,
+    centerOnScreen(){
+      const { pixi, canvas } = getCtx(); if (!pixi) return;
+      const w = pixi.world || pixi.stage;
+      // reset transform
+      w.scale.set(1);
+      w.position.set(0,0);
+      const label = document.getElementById('zoomDisplay');
+      if (label) label.textContent = '100%';
+    }
   };
 }
