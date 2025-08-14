@@ -1,4 +1,6 @@
-// Boots Pixi, overlay console, player token + movement (console + arrows), SFX+shake.
+// /static/src/main.js
+// Works with chunked pixiRenderer. No button zoom; wheel/pinch only.
+// Keeps shard/origin mutable and refreshed on load/regen. Hover/click pick aligned.
 
 import { computeIsoOrigin, getTileUnderMouseIso, updateDevStatsPanel } from './utils/mapUtils.js';
 import { initChat, sendMessage } from './ui/chat.js';
@@ -11,14 +13,13 @@ import {
   playerState,
   initPlayerForShard,
   onPlayerChange,
-  movePlayerBy,
-  setPlayerPosition
+  movePlayerBy
 } from './state/playerState.js';
 
 const PLAYER = 'Player1';
 const LAST_SID_KEY = 'lastShardFile';
 const DEFAULT_SID_FILE = 'shard_0_0.json';
-const TILE_WIDTH = 32, TILE_HEIGHT = 16; // source of truth for picking
+const TILE_WIDTH = 32, TILE_HEIGHT = 16; // picker uses full sizes; renderer uses halves
 const L = (...a) => console.log('[main]', ...a);
 
 /* ── SFX & shake ── */
@@ -107,7 +108,6 @@ function mountConsoleOverlay(rootSel = '#mapViewer') {
     }
   });
 
-  // flavor
   typeLine('A cold wind crosses the shard…');
   appendLine('Type "help" for commands.');
 
@@ -142,7 +142,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   const mapViewer = document.getElementById('mapViewer');
   if (mapViewer && getComputedStyle(mapViewer).position === 'static') mapViewer.style.position = 'relative';
 
-  // panel toggles
   document.querySelectorAll('.panel-toggle').forEach(btn => {
     if (!btn.querySelector('.toggle-icon')) { const ic = document.createElement('span'); ic.className = 'toggle-icon'; ic.textContent = '+'; btn.appendChild(ic); }
     btn.addEventListener('click', () => togglePanel(btn.dataset.target));
@@ -156,14 +155,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   const consoleUI = mountConsoleOverlay('#mapViewer');
   const say = (m) => consoleUI?.appendLine?.(m);
 
-  // zoom id shim (optional)
-  for (const [from, to] of [['zoomInBtn','zoomIn'], ['zoomOutBtn','zoomOut'], ['zoomOverlay','zoomDisplay']]) {
-    const el = document.getElementById(from); if (el && !document.getElementById(to)) el.id = to;
-  }
-
   // load shard
   const sidFile = localStorage.getItem(LAST_SID_KEY) || DEFAULT_SID_FILE;
-  const shard = await loadShardAuto(sidFile);
+  let shard = await loadShardAuto(sidFile);
   if (!shard) { say?.(`Failed to load ${sidFile}`); return; }
   window.__currentShard = shard;
   localStorage.setItem(LAST_SID_KEY, sidFile);
@@ -176,7 +170,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     canvas,
     shard,
     tileW: TILE_WIDTH / 2,
-    tileH: TILE_HEIGHT / 2
+    tileH: TILE_HEIGHT / 2,
+    chunkSize: 64,              // tune to 64 or 32. 64 is great up to ~500x500
   });
   pixi.setOrigin(origin);
   pixi.resize();
@@ -186,10 +181,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   pixi.setPlayer(playerState.x, playerState.y);
   onPlayerChange(p => { pixi.setPlayer(p.x, p.y); });
 
-  // center helper for console
   function centerOnPlayer() {
-    const s = playerState;
-    pixi.centerOn(s.x, s.y, canvas.width, canvas.height);
+    pixi.centerOn(playerState.x, playerState.y, canvas.width, canvas.height);
   }
 
   // console command context
@@ -210,21 +203,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // zoom buttons → pixi zoom at center
-  const centerAnchor = () => ({ x: canvas.width/2, y: canvas.height/2 });
-  document.getElementById('zoomIn')?.addEventListener('click', () => {
-    const a = centerAnchor(); pixi.zoomInAt(a.x, a.y);
-    const label = document.getElementById('zoomDisplay'); if (label) label.textContent = `${Math.round((pixi.world?.scale?.x||1)*100)}%`;
-  });
-  document.getElementById('zoomOut')?.addEventListener('click', () => {
-    const a = centerAnchor(); pixi.zoomOutAt(a.x, a.y);
-    const label = document.getElementById('zoomDisplay'); if (label) label.textContent = `${Math.round((pixi.world?.scale?.x||1)*100)}%`;
-  });
-
   // chat (guard if elements missing)
-  const chatHistoryEl = document.querySelector('#chatHistory');
-  const chatInputEl   = document.querySelector('#chatInput');
-  if (chatHistoryEl && chatInputEl) {
+  if (document.querySelector('#chatHistory') && document.querySelector('#chatInput')) {
     initChat('#chatHistory', '#chatInput');
   } else {
     console.log('[chat] Skipping init: missing #chatHistory or #chatInput');
@@ -237,7 +217,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
   document.querySelector('[data-action="Fireball"]')?.addEventListener('click', () => screenShake());
 
-  // inverse WORLD transform for picking
+  // Picking: inverse WORLD transform
   let hoverTile = null, selectedTile = null;
   function toWorld(mx, my) {
     const w = pixi?.world || pixi?.stage;
@@ -249,9 +229,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   canvas.addEventListener('mousemove', (e) => {
     const r = canvas.getBoundingClientRect();
     const { x, y } = toWorld(e.clientX - r.left, e.clientY - r.top);
-    const t = getTileUnderMouseIso(
-      x, y, canvas, shard, origin, TILE_WIDTH, TILE_HEIGHT
-    );
+    const t = getTileUnderMouseIso(x, y, canvas, shard, origin, TILE_WIDTH, TILE_HEIGHT);
     if ((t?.x !== hoverTile?.x) || (t?.y !== hoverTile?.y)) {
       hoverTile = t || null;
       pixi.setHover(hoverTile);
@@ -262,9 +240,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   canvas.addEventListener('click', (e) => {
     const r = canvas.getBoundingClientRect();
     const { x, y } = toWorld(e.clientX - r.left, e.clientY - r.top);
-    const t = getTileUnderMouseIso(
-      x, y, canvas, shard, origin, TILE_WIDTH, TILE_HEIGHT
-    );
+    const t = getTileUnderMouseIso(x, y, canvas, shard, origin, TILE_WIDTH, TILE_HEIGHT);
     if (!t) return;
     selectedTile = t;
     pixi.setSelected(selectedTile);
@@ -274,7 +250,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     sfx('select');
   });
 
-  // Arrow keys move the PLAYER (WASD still free for camera if you add it later)
+  // Arrow keys move the PLAYER (tile-by-tile)
   window.addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase();
     let dx = 0, dy = 0;
@@ -283,41 +259,60 @@ window.addEventListener('DOMContentLoaded', async () => {
     else if (k === 'arrowleft') dx = -1;
     else if (k === 'arrowright') dx = 1;
     else return;
-
     e.preventDefault();
     movePlayerBy(dx, dy, shard);
     sfx('select');
-    // keep token in view if you want:
-    // centerOnPlayer();
   });
 
-  // dev buttons
+  // dev: save/load/regen
   document.getElementById('saveShard')?.addEventListener('click', () => {
     try { saveShard?.(shard); say?.('Shard saved.'); } catch (e) { say?.(`Save failed: ${e?.message || e}`); }
   });
-  document.getElementById('loadShardBtn')?.addEventListener('click', () => document.getElementById('loadShardInput')?.click());
+
+  document.getElementById('loadShardBtn')?.addEventListener('click', () =>
+    document.getElementById('loadShardInput')?.click()
+  );
+
   document.getElementById('loadShardInput')?.addEventListener('change', async (e) => {
     const f = e.target.files?.[0]; if (!f) return;
     try {
       const s = await loadShardFromFile?.(f);
       if (s) {
         window.__currentShard = s;
+        shard = s;
+        if (window.__consoleCtx) window.__consoleCtx.shard = s;
+
         localStorage.setItem(LAST_SID_KEY, f.name);
         say?.(`Loaded shard: ${f.name}`);
-        pixi.setShard(s); initPlayerForShard(s); pixi.setPlayer(playerState.x, playerState.y);
-        origin = computeIsoOrigin(canvas.width, canvas.height); pixi.setOrigin(origin);
+
+        pixi.setShard(s);
+        initPlayerForShard(s);
+        pixi.setPlayer(playerState.x, playerState.y);
+
+        origin = computeIsoOrigin(canvas.width, canvas.height);
+        pixi.setOrigin(origin);
       }
     } catch (err) { say?.(`Load failed: ${err?.message || err}`); }
     finally { e.target.value = ''; }
   });
+
   document.getElementById('regenWorld')?.addEventListener('click', async () => {
     try {
-      const s = await regenerateShard?.({}); if (s) {
+      const s = await regenerateShard?.({});
+      if (s) {
         window.__currentShard = s;
+        shard = s;
+        if (window.__consoleCtx) window.__consoleCtx.shard = s;
+
         localStorage.setItem(LAST_SID_KEY, DEFAULT_SID_FILE);
         say?.('Shard regenerated.');
-        pixi.setShard(s); initPlayerForShard(s); pixi.setPlayer(playerState.x, playerState.y);
-        origin = computeIsoOrigin(canvas.width, canvas.height); pixi.setOrigin(origin);
+
+        pixi.setShard(s);
+        initPlayerForShard(s);
+        pixi.setPlayer(playerState.x, playerState.y);
+
+        origin = computeIsoOrigin(canvas.width, canvas.height);
+        pixi.setOrigin(origin);
       }
     } catch (err) { say?.(`Regen failed: ${err?.message || err}`); }
   });

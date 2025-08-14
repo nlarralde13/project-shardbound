@@ -9,8 +9,8 @@ import { regenerateShard } from './shardLoader.js';
  * @returns {{ width: number, height: number, tiles: object[][] }}
  */
 export function generateRandomShard(settings) {
-  const width = settings.worldWidth || 50;
-  const height = settings.worldHeight || 50;
+  const width = settings.worldWidth || 100;
+  const height = settings.worldHeight || 100;
   const landPercent = settings.landPercent || 0.35; // 35% land by default
 
   const totalTiles = width * height;
