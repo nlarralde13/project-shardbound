@@ -11,5 +11,9 @@ def index():
 def test_index():
     return render_template('index2.html')
 
+@app.route('/rng-test')
+def rng_test():
+    return render_template('/static/src/dev/rng-test.html')
+
 if __name__ == '__main__':
     app.run(debug=True)

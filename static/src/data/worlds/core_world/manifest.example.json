@@ -1,0 +1,35 @@
+{
+  "worldId": "core_world",
+  "schemaVersion": 1,
+  "seed": 123456789,
+  "tileSizeKm": 1,
+  "chunk": {
+    "size": 64
+  },
+  "defaultBiomeRuleset": "v1",
+  "shards": {
+    "A": {
+      "width": 64,
+      "height": 64,
+      "neighbors": {
+        "E": "B",
+        "S": "D"
+      }
+    },
+    "B": {
+      "width": 64,
+      "height": 64,
+      "neighbors": {
+        "W": "A"
+      }
+    },
+    "D": {
+      "width": 64,
+      "height": 64,
+      "neighbors": {
+        "N": "A"
+      }
+    }
+  },
+  "notes": "64x64 shards; add more entries as the world expands."
+}

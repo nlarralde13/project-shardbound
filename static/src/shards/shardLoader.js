@@ -1,7 +1,8 @@
 // static/src/shards/shardLoader.js
 
-import { generateRandomShard } from './rdmShardGen.js';
+import { generateShard } from './rdmShardGen.js';
 import { TILE_WIDTH, TILE_HEIGHT } from '../config/mapConfig.js';
+import { mulberry32, hash2 } from '../utils/rng.js';
 
 /**
  * Loads the initial shard JSON and sizes the canvas+wrapper.
@@ -9,7 +10,7 @@ import { TILE_WIDTH, TILE_HEIGHT } from '../config/mapConfig.js';
  * @param {HTMLElement} wrapper
  * @param {string} url Optional URL to fetch (defaults to shard_0_0.json)
  */
-export async function loadAndSizeShard(canvas, wrapper, url = '/static/public/shards/shard_0_0.json') {
+export async function loadAndSizeShard(canvas, wrapper, url = '/static/src/data/worlds/core_world/shards/A_0.json') {
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`Failed to load shard: ${resp.statusText}`);
   const data = await resp.json();
@@ -42,6 +43,14 @@ export function saveShard(shardData, filename = 'shard.json') {
   a.click();
   URL.revokeObjectURL(url);
 }
+
+export async function loadShard(id, worldId="core_world") {
+  const res = await fetch(`/static/data/worlds/${worldId}/shards/${id}.json`);
+  if (!res.ok) throw new Error(`Shard ${id} not found`);
+  return await res.json();
+}
+
+
 
 /**
  * Parse a user-provided JSON file into a shard object.
@@ -81,4 +90,16 @@ export function getShardCanvasSize(width, height, tileW, tileH) {
     width: (width + height) * (tileW / 2),
     height: (width + height) * (tileH / 2),
   };
+}
+
+// static/src/shardLoader.js
+export async function loadShardFromUrl(url) {
+  const r = await fetch(url, { cache:'no-cache' });
+  if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+  return await r.json();
+}
+
+export function normalizeShard(json) {
+  // your normalizeTilesGrid here; return normalized json
+  return json;
 }

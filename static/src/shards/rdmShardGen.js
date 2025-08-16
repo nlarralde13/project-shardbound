@@ -1,80 +1,69 @@
-// /static/src/shards/rdmShardGen.js
+// /static/src/rdmShardGen.js
+// -----------------------------------------------------------------------------
+// Deterministic shard generator used by the editor's "Regenerate" and can be
+// used by the game runtime for on-the-fly world creation. Stable API:
+//   generateShard(width, height, seed, { preset })
+// Returns { id, width, height, tiles } where tiles[y][x] minimally contains:
+//   { biome, seed, sliceOptions, biomeTier, ownerFaction, passable, tags[] }
+// -----------------------------------------------------------------------------
 
-import { TILE_WIDTH, TILE_HEIGHT } from '../config/mapConfig.js';
-import { regenerateShard } from './shardLoader.js';
+import { SHARD_WIDTH, SHARD_HEIGHT } from '/static/src/config/mapConfig.js';
+import { RNG } from '/static/src/utils/rng.js';
+import { biomeRegistry } from '/static/src/data/biomeRegistry.js';
+
+/** Exported just so you can preview/set from UI if you want. */
+export const SHARD_PRESETS = {
+  default     : ['land/grassland','land/forest','water/ocean','land/mountain'],
+  archipelago : ['water/ocean','water/ocean','land/grassland','land/forest'],
+  continents  : ['land/grassland','land/forest','land/desert','water/ocean'],
+  islands     : ['water/ocean','land/grassland','land/forest']
+};
 
 /**
- * Generates a random shard with land and water using seeded landmass expansion.
- * @param {object} settings – includes width, height, landPercent (optional)
- * @returns {{ width: number, height: number, tiles: object[][] }}
+ * Generate a shard.
+ * width/height default to global config (64×64), but you can pass custom sizes.
  */
-export function generateRandomShard(settings) {
-  const width = settings.worldWidth || 150;
-  const height = settings.worldHeight || 150;
-  const landPercent = settings.landPercent || 0.50; // 35% land by default
+export function generateShard(
+  width  = SHARD_WIDTH,
+  height = SHARD_HEIGHT,
+  seed = 0,
+  { preset = 'default' } = {}
+) {
+  const rng = new RNG(seed >>> 0);
+  const bag = SHARD_PRESETS[preset] || SHARD_PRESETS.default;
 
-  const totalTiles = width * height;
-  const targetLandTiles = Math.floor(totalTiles * landPercent);
-
-  // Initialize all tiles as water
-  const tiles = Array.from({ length: height }, (_, y) =>
-    Array.from({ length: width }, (_, x) => ({
-      biome: 'water',
-      explored: false,
+  // Construct the full 2D grid up-front to avoid undefined accesses.
+  const tiles = Array.from({ length: height }, () =>
+    Array.from({ length: width }, () => ({
+      biome: 'land/grassland',
+      seed: rng.int(),          // per-tile seed enables deterministic slice gen later
+      biomeTier: 0,
+      ownerFaction: 'neutral',
+      passable: true,
       tags: [],
-      resources: [],
-      encounter: null,
+      sliceOptions: {}
     }))
   );
 
-  // Helper: get valid neighboring coords
-  function getNeighbors(x, y) {
-    return [
-      [x + 1, y], [x - 1, y],
-      [x, y + 1], [x, y - 1]
-    ].filter(([nx, ny]) => nx >= 0 && ny >= 0 && nx < width && ny < height);
-  }
+  // Simple placeholder assignment — replace with elevation/climate/whittaker later.
+  const choice = (arr) => arr[Math.floor(rng.float() * arr.length)];
 
-  // Seed a few random land centers
-  const seedCount = 5 + Math.floor(Math.random() * 5); // 5–9 landmasses
-  const seeds = [];
-  for (let i = 0; i < seedCount; i++) {
-    seeds.push([
-      Math.floor(Math.random() * width),
-      Math.floor(Math.random() * height)
-    ]);
-  }
-
-  let landPlaced = 0;
-  const frontier = [...seeds];
-
-  while (frontier.length > 0 && landPlaced < targetLandTiles) {
-    const [x, y] = frontier.shift();
-    const tile = tiles[y][x];
-    if (tile.biome === 'water') {
-      tile.biome = randomLandBiome();
-      landPlaced++;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const t = tiles[y][x];
+      t.biome = choice(bag);
+      const d = biomeRegistry[t.biome]?.sliceDefaults || {};
+      t.sliceOptions = { ...d };
     }
-
-    // Add neighbors with 60% chance to continue expansion
-    getNeighbors(x, y).forEach(([nx, ny]) => {
-      if (tiles[ny][nx].biome === 'water' && Math.random() < 0.6) {
-        frontier.push([nx, ny]);
-      }
-    });
   }
 
-  return {
-    width,
-    height,
-    tiles
-  };
+  return { id: `gen_${width}x${height}_${seed}_${preset}`, width, height, tiles };
 }
 
-/**
- * Chooses a random land biome (you can customize this).
- */
-function randomLandBiome() {
-  const landBiomes = ['grass', 'forest', 'tundra', 'desert'];
-  return landBiomes[Math.floor(Math.random() * landBiomes.length)];
-}
+/* ---------------------------------------------------------------------------
+   Tweak map
+   - SHARD_PRESETS: swap for real worldgen bands or noise-driven selection.
+   - Per-tile schema: add lightweight fields here as your editor UI grows.
+   - Determinism: all slice generation should take (worldSeed, tile.seed,
+                  biomeDefaults) + overrides to avoid storing slices.
+--------------------------------------------------------------------------- */

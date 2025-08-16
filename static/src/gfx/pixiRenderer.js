@@ -1,72 +1,86 @@
 // /static/src/gfx/pixiRenderer.js
-// pixiRenderer v4 — chunk streaming, LRU, DPR-safe textures (res=1), no overview
-// API: createPixiRenderer({ canvas, shard, tileW, tileH, chunkSize, maxResidentChunks, prefetchRadius, buildBudgetMs })
-//  -> { app, world, map, setShard, setOrigin, resize, centerOn, setHover, setSelected, setPlayer, isoToScreen, getOrigin }
+// Chunked Pixi renderer for large shards (e.g., 250x250, 500x500).
+// - One render texture per CHUNK (default 64x64 tiles) instead of per-tile objects.
+// - Drag-to-pan, wheel + pinch zoom built-in.
+// - Hover/selection overlays + player token layer kept on top.
+// - Culling toggles chunk visibility based on the view.
+//
+// API:
+//   const pixi = createPixiRenderer({ canvas, shard, tileW, tileH, chunkSize });
+//   pixi.setShard(shard)            // rebuild chunks
+//   pixi.setOrigin({x,y}|{originX,originY})  // shift all chunks by delta (no rebuild)
+//   pixi.setHover(tile|null)        // {x,y}
+//   pixi.setSelected(tile|null)     // {x,y}
+//   pixi.setPlayer(tx,ty)
+//   pixi.centerOn(tx,ty, canvasW,canvasH)
+//   pixi.resize()
+//   pixi.world                      // PIXI.Container (pan/zoom root)
 
 export function createPixiRenderer({
   canvas,
   shard,
-  tileW = 16,            // half logical tile width (32 => 16)
-  tileH = 8,             // half logical tile height (16 => 8)
-  chunkSize = 64,        // safe, larger chunks reduce sprite count
-  maxResidentChunks = 36,
-  prefetchRadius = 1,
-  buildBudgetMs = 6,
-  overviewEnabled = false,   // kept for compatibility; ignored here
-} = {}) {
+  tileW = 16,
+  tileH = 8,
+  chunkSize = 64,
+}) {
   const PIXI = window.PIXI;
   if (!PIXI) throw new Error('[pixiRenderer] PIXI global not found');
-  if (!canvas) throw new Error('[pixiRenderer] canvas is required');
-  if (!shard || !Number.isFinite(shard.width) || !Number.isFinite(shard.height) || !Array.isArray(shard.tiles)) {
-    throw new Error('[pixiRenderer] invalid shard: expected {width, height, tiles}');
-  }
 
-  // Crisp + low memory defaults
-  PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
-  PIXI.settings.ROUND_PIXELS = true;
-  PIXI.BaseTexture.defaultOptions.mipmap = PIXI.MIPMAP_MODES.OFF;
-  PIXI.BaseTexture.defaultOptions.scaleMode = PIXI.SCALE_MODES.NEAREST;
-
-  // IMPORTANT: resolution=1 so textures/backbuffer aren't multiplied by devicePixelRatio
   const app = new PIXI.Application({
     view: canvas,
     backgroundAlpha: 0,
-    resolution: 1,              // force 1x backing store
-    autoDensity: true,          // CSS size stays correct
+    resolution: window.devicePixelRatio || 1,
+    autoDensity: true,
     antialias: false,
-    powerPreference: 'high-performance',
+    preserveDrawingBuffer: true,
   });
 
-  /* ── Scene graph ───────────────────────────────────── */
-  const stage = app.stage; stage.roundPixels = true;
-  const world = new PIXI.Container(); world.roundPixels = true; stage.addChild(world);
-  const map = new PIXI.Container(); map.roundPixels = true; world.addChild(map);
+  const stage = app.stage;
+  const world = new PIXI.Container();
+  stage.addChild(world);
 
-  const selectG = new PIXI.Graphics(); selectG.roundPixels = true; world.addChild(selectG);
-  const hoverG  = new PIXI.Graphics(); hoverG .roundPixels = true; world.addChild(hoverG);
-  const playerG = new PIXI.Graphics(); playerG.roundPixels = true; world.addChild(playerG);
+  // Ground map container holds chunk sprites
+  const map = new PIXI.Container();
+  world.addChild(map);
+
+  // Overlays (stay above ground)
+  const selectG = new PIXI.Graphics();
+  const hoverG  = new PIXI.Graphics();
+  world.addChild(selectG);
+  world.addChild(hoverG);
+
+  // Player token
+  const playerG = new PIXI.Graphics();
+  world.addChild(playerG);
   let playerPos = { x: null, y: null };
 
-  /* ── Iso math ──────────────────────────────────────── */
+  // Iso geometry + origin (screen-space, pre-world transform)
   let _tileW = tileW, _tileH = tileH;
-  let _origin = { x: (canvas.width|0) / 2, y: 40 }; // authoritative origin, rounded in setOrigin()
+  let _origin = { x: canvas.width / 2, y: 40 };
 
-  const isoToScreen = (ix, iy) => ({
-    x: _origin.x + (ix - iy) * _tileW,
-    y: _origin.y + (ix + iy) * _tileH,
-  });
+  // Chunks: array of { cx, cy, sprite, aabb:{x0,y0,x1,y1} } where aabb is in world-local coords
+  let _chunks = [];
+  let _lastCullKey = '';
 
-  const tileColor = (t) => {
+  function tileColor(t) {
     const b = (t?.biome || t?.type || '').toString().toLowerCase();
     if (b.includes('water') || b === 'ocean') return 0x1a3a5a;
     if (b.includes('desert') || b.includes('sand') || b.includes('beach')) return 0xcaa45a;
     if (b.includes('mount') || b.includes('rock') || b.includes('stone')) return 0x888888;
     if (b.includes('forest') || b.includes('grass') || b === 'land') return 0x4c6b3c;
     return 0x5a6f7f;
-  };
+  }
 
-  function fillDiamond(g, sx, sy, fill) { // no stroke → avoids hairline seams
+  function isoToScreen(ix, iy) {
+    return {
+      x: _origin.x + (ix - iy) * _tileW,
+      y: _origin.y + (ix + iy) * _tileH,
+    };
+  }
+
+  function drawDiamond(g, sx, sy, fill, outline = 0x000000, outlineAlpha = 0.15) {
     g.beginFill(fill);
+    g.lineStyle(1, outline, outlineAlpha);
     g.moveTo(sx, sy - _tileH);
     g.lineTo(sx + _tileW, sy);
     g.lineTo(sx, sy + _tileH);
@@ -75,280 +89,182 @@ export function createPixiRenderer({
     g.endFill();
   }
 
-  /* ── AABBs ─────────────────────────────────────────── */
-  function rawChunkAABB(cx, cy, size) {
-    const tx0 = cx * size, ty0 = cy * size;
-    const tx1 = Math.min(tx0 + size - 1, shard.width  - 1);
-    const ty1 = Math.min(ty0 + size - 1, shard.height - 1);
+  function chunkCornersToAABB(cx, cy, size) {
+    const x0 = cx * size;
+    const y0 = cy * size;
+    const x1 = Math.min(x0 + size - 1, shard.width - 1);
+    const y1 = Math.min(y0 + size - 1, shard.height - 1);
+
     const c = [
-      isoToScreen(tx0, ty0),
-      isoToScreen(tx1, ty0),
-      isoToScreen(tx0, ty1),
-      isoToScreen(tx1, ty1),
+      isoToScreen(x0, y0),
+      isoToScreen(x1, y0),
+      isoToScreen(x0, y1),
+      isoToScreen(x1, y1),
     ];
-    const xs = c.map(p=>p.x), ys = c.map(p=>p.y);
-    return {
-      x0: Math.min(...xs) - _tileW,
-      y0: Math.min(...ys) - _tileH,
-      x1: Math.max(...xs) + _tileW,
-      y1: Math.max(...ys) + _tileH,
-      tx0, ty0, tx1, ty1,
-    };
+    // Expand by tile half extents so diamonds fit fully
+    const xs = c.map(p => p.x);
+    const ys = c.map(p => p.y);
+    let minX = Math.min(...xs) - _tileW;
+    let maxX = Math.max(...xs) + _tileW;
+    let minY = Math.min(...ys) - _tileH;
+    let maxY = Math.max(...ys) + _tileH;
+
+    return { x0: minX, y0: minY, x1: maxX, y1: maxY, tx0: x0, ty0: y0, tx1: x1, ty1: y1 };
   }
 
-  /* ── Chunks + LRU + build queue ────────────────────── */
-  // chunk = { cx, cy, sprite, tex, aabb, roundX, roundY, lastUsed, building }
-  const chunks = new Map();
-  let buildQueue = [];           // keys "cx,cy"
-  const building = new Set();
-  let tickCounter = 0;
-
-  function getChunk(cx, cy) {
-    const key = `${cx},${cy}`;
-    let ch = chunks.get(key);
-    if (!ch) {
-      const a = rawChunkAABB(cx, cy, chunkSize);
-      const rx = Math.round(a.x0), ry = Math.round(a.y0);
-      const dx = rx - a.x0,       dy = ry - a.y0;
-      ch = {
-        cx, cy,
-        sprite: null, tex: null,
-        aabb: { x0: rx, y0: ry, x1: a.x1 + dx, y1: a.y1 + dy, tx0: a.tx0, ty0: a.ty0, tx1: a.tx1, ty1: a.ty1 },
-        roundX: rx, roundY: ry,
-        lastUsed: 0,
-        building: false,
-      };
-      chunks.set(key, ch);
-    }
-    return ch;
-  }
-
-  function enqueueBuild(cx, cy, front = false) {
-    const key = `${cx},${cy}`;
-    const ch = getChunk(cx, cy);
-    if (ch.building || ch.sprite) return;
-    if (building.has(key)) return;
-    if (front) buildQueue.unshift(key); else buildQueue.push(key);
-    building.add(key);
-  }
-
-  function buildChunkTexture(ch) {
+  function buildChunkSprite(cx, cy) {
+    const aabb = chunkCornersToAABB(cx, cy, chunkSize);
     const g = new PIXI.Graphics();
-    const offX = -ch.roundX, offY = -ch.roundY;
 
-    // 1-tile bleed around chunk edges to hide seams
-    const tx0 = Math.max(0, ch.aabb.tx0 - 1);
-    const ty0 = Math.max(0, ch.aabb.ty0 - 1);
-    const tx1 = Math.min(shard.width  - 1, ch.aabb.tx1 + 1);
-    const ty1 = Math.min(shard.height - 1, ch.aabb.ty1 + 1);
+    // Draw tiles offset so the chunk's top-left is at (0,0)
+    const offX = -aabb.x0;
+    const offY = -aabb.y0;
 
-    for (let ty = ty0; ty <= ty1; ty++) {
-      const row = shard.tiles[ty];
-      for (let tx = tx0; tx <= tx1; tx++) {
-        const t = row[tx];
+    for (let ty = aabb.ty0; ty <= aabb.ty1; ty++) {
+      for (let tx = aabb.tx0; tx <= aabb.tx1; tx++) {
+        const t = shard.tiles[ty][tx];
         const p = isoToScreen(tx, ty);
-        fillDiamond(g, p.x + offX, p.y + offY, tileColor(t));
+        drawDiamond(g, p.x + offX, p.y + offY, tileColor(t));
       }
     }
 
-    // Generate texture at resolution=1 to cap VRAM usage
-    const tex = app.renderer.generateTexture(g, { resolution: 1, scaleMode: PIXI.SCALE_MODES.NEAREST });
+    const tex = app.renderer.generateTexture(g);
     g.destroy(true);
-    return tex;
+
+    const sprite = new PIXI.Sprite(tex);
+    sprite.x = aabb.x0;
+    sprite.y = aabb.y0;
+
+    map.addChild(sprite);
+    return { cx, cy, sprite, aabb: { x0: aabb.x0, y0: aabb.y0, x1: aabb.x1, y1: aabb.y1 } };
   }
 
-  function attachChunkSprite(ch) {
-    const sp = ch.sprite = new PIXI.Sprite(ch.tex);
-    sp.roundPixels = true;
-    sp.x = ch.roundX; sp.y = ch.roundY;
-    sp.visible = false;
-    map.addChild(sp);
-  }
+  function rebuildChunks() {
+    // Clear existing
+    for (const child of map.removeChildren()) child.destroy?.({ children: true, texture: true, baseTexture: true });
+    _chunks.length = 0;
 
-  function evictLRU() {
-    if (chunks.size <= maxResidentChunks) return;
-    const cand = [];
-    for (const [key, ch] of chunks) {
-      if (ch.sprite && !ch.sprite.visible && !ch.building) cand.push([key, ch.lastUsed]);
-    }
-    cand.sort((a,b) => a[1] - b[1]); // oldest first
-    for (const [key] of cand) {
-      if (chunks.size <= maxResidentChunks) break;
-      const ch = chunks.get(key);
-      ch?.sprite?.destroy({ children:false, texture:true, baseTexture:true });
-      ch?.tex?.destroy(true);
-      chunks.delete(key);
-    }
-  }
+    if (!shard?.tiles) return;
 
-  function pumpBuilder() {
-    if (pumpBuilder._scheduled) return;
-    pumpBuilder._scheduled = true;
-    requestAnimationFrame(() => {
-      pumpBuilder._scheduled = false;
-      const start = performance.now();
-      while (buildQueue.length) {
-        const key = buildQueue.shift();
-        building.delete(key);
-        const ch = chunks.get(key);
-        if (!ch || ch.sprite || ch.building) continue;
-
-        ch.building = true;
-        ch.tex = buildChunkTexture(ch);
-        attachChunkSprite(ch);
-        ch.building = false;
-        ch.lastUsed = ++tickCounter;
-
-        if (performance.now() - start > buildBudgetMs) break;
-      }
-      if (buildQueue.length) pumpBuilder();
-      evictLRU();
-      updateCulling(true);
-    });
-  }
-
-  /* ── Culling ───────────────────────────────────────── */
-  let _lastCullKey = '';
-
-  const getViewRectLocal = () => {
-    const s = world.scale.x || 1, pos = world.position || { x:0, y:0 };
-    return { x0:(0-pos.x)/s, y0:(0-pos.y)/s, x1:(canvas.width-pos.x)/s, y1:(canvas.height-pos.y)/s };
-  };
-  const rectsIntersect = (a,b,margin=128) =>
-    !(a.x1 < b.x0 - margin || a.x0 > b.x1 + margin || a.y1 < b.y0 - margin || a.y0 > b.y1 + margin);
-
-  function visibleChunkSet(view) {
-    const want = new Set();
     const nx = Math.ceil(shard.width / chunkSize);
     const ny = Math.ceil(shard.height / chunkSize);
+
     for (let cy = 0; cy < ny; cy++) {
       for (let cx = 0; cx < nx; cx++) {
-        const ch = getChunk(cx, cy);
-        if (rectsIntersect(ch.aabb, view, 128)) want.add(`${cx},${cy}`);
+        _chunks.push(buildChunkSprite(cx, cy));
       }
     }
-    if (prefetchRadius > 0) {
-      const add = [];
-      for (const key of want) {
-        const [cx, cy] = key.split(',').map(Number);
-        for (let dy = -prefetchRadius; dy <= prefetchRadius; dy++) {
-          for (let dx = -prefetchRadius; dx <= prefetchRadius; dx++) {
-            const nxC = cx + dx, nyC = cy + dy;
-            if (nxC < 0 || nyC < 0) continue;
-            if (nxC >= Math.ceil(shard.width / chunkSize) || nyC >= Math.ceil(shard.height / chunkSize)) continue;
-            add.push(`${nxC},${nyC}`);
-          }
-        }
-      }
-      add.forEach(k => want.add(k));
-    }
-    return want;
+    // Repaint overlays (hover/select/player) after rebuild
+    if (_lastHover) setHover(_lastHover);
+    if (_lastSelected) setSelected(_lastSelected);
+    if (playerPos.x != null) drawPlayer();
+
+    updateCulling(true);
   }
 
-  function updateCulling(force=false) {
+  // ---- Culling ----
+  function getViewRectLocal() {
     const s = world.scale.x || 1;
-    const key = `${world.position.x}|${world.position.y}|${s}|${canvas.width}|${canvas.height}`;
+    const pos = world.position || { x: 0, y: 0 };
+    // Convert screen rect [0,w]x[0,h] to world-local coords (pre-scale, pre-translation)
+    const x0 = (0 - pos.x) / s;
+    const y0 = (0 - pos.y) / s;
+    const x1 = (canvas.width - pos.x) / s;
+    const y1 = (canvas.height - pos.y) / s;
+    return { x0, y0, x1, y1 };
+  }
+  function rectsIntersect(a, b, margin = 256) {
+    return !(a.x1 < b.x0 - margin || a.x0 > b.x1 + margin || a.y1 < b.y0 - margin || a.y0 > b.y1 + margin);
+  }
+  function updateCulling(force = false) {
+    const key = `${world.position.x}|${world.position.y}|${world.scale.x}|${canvas.width}|${canvas.height}`;
     if (!force && key === _lastCullKey) return;
     _lastCullKey = key;
 
     const view = getViewRectLocal();
-    const want = visibleChunkSet(view);
-
-    for (const key of want) {
-      const ch = chunks.get(key) || getChunk(...key.split(',').map(Number));
-      if (!ch.sprite && !ch.building) enqueueBuild(ch.cx, ch.cy);
-      if (ch.sprite) { ch.sprite.visible = true; ch.lastUsed = ++tickCounter; }
+    for (const ch of _chunks) {
+      ch.sprite.visible = rectsIntersect(ch.aabb, view);
     }
-    for (const [key, ch] of chunks) if (!want.has(key) && ch.sprite) ch.sprite.visible = false;
-    if (buildQueue.length) pumpBuilder();
   }
 
-  /* ── Overlays ──────────────────────────────────────── */
+  // ---- Overlays ----
   let _lastHover = null, _lastSelected = null;
 
-  function outline(gfx, tx, ty, color=0xffd700, thickness=2) {
-    gfx.clear(); if (tx == null || ty == null) return;
+  function outline(gfx, tx, ty, color = 0xffd700, thickness = 2) {
+    gfx.clear();
+    if (tx == null || ty == null) return;
     const p = isoToScreen(tx, ty);
-    const s = world.scale.x || 1;
-    const th = Math.max(1, Math.round(thickness * Math.min(1, s)));
-    gfx.lineStyle(th, color, 1);
+    gfx.lineStyle(thickness, color, 1);
     gfx.moveTo(p.x, p.y - _tileH);
     gfx.lineTo(p.x + _tileW, p.y);
     gfx.lineTo(p.x, p.y + _tileH);
     gfx.lineTo(p.x - _tileW, p.y);
     gfx.closePath();
   }
-  function setHover(tile){ _lastHover = tile || null; if (!tile) hoverG.clear(); else outline(hoverG,  tile.x, tile.y, 0xf5e58c, 2); }
-  function setSelected(tile){ _lastSelected = tile || null; if (!tile) selectG.clear(); else outline(selectG, tile.x, tile.y, 0xff8800, 2); }
-
+  function setHover(tile) {
+    _lastHover = tile || null;
+    if (!tile) { hoverG.clear(); return; }
+    outline(hoverG, tile.x, tile.y, 0xf5e58c, 2);
+  }
+  function setSelected(tile) {
+    _lastSelected = tile || null;
+    if (!tile) { selectG.clear(); return; }
+    outline(selectG, tile.x, tile.y, 0xff8800, 2);
+  }
   function drawPlayer() {
     playerG.clear();
-    if (playerPos.x == null || playerPos.y == null) return;
+    if (playerPos.x == null) return;
     const p = isoToScreen(playerPos.x, playerPos.y);
-    const s = world.scale.x || 1;
-    const th = Math.max(1, Math.round(2 * Math.min(1, s)));
-
-    // soft drop shadow
-    playerG.beginFill(0x000000, 0.22);
-    playerG.drawCircle(p.x, p.y + 2, Math.max(2, Math.round(3 * Math.min(1, s))));
+    // shadow
+    playerG.beginFill(0x000000, 0.25);
+    playerG.drawCircle(p.x, p.y + 2, 4);
     playerG.endFill();
-
-    // diamond exactly one tile
-    playerG.lineStyle(th, 0x3aa0ff, 1);
-    playerG.beginFill(0xffffff, 1);
-    playerG.moveTo(p.x,          p.y - _tileH);
-    playerG.lineTo(p.x + _tileW, p.y);
-    playerG.lineTo(p.x,          p.y + _tileH);
-    playerG.lineTo(p.x - _tileW, p.y);
+    // rune/diamond
+    playerG.beginFill(0xffffff);
+    playerG.lineStyle(2, 0x3aa0ff, 1);
+    playerG.moveTo(p.x, p.y - _tileH * 0.8);
+    playerG.lineTo(p.x + _tileW * 0.6, p.y);
+    playerG.lineTo(p.x, p.y + _tileH * 0.8);
+    playerG.lineTo(p.x - _tileW * 0.6, p.y);
     playerG.closePath();
     playerG.endFill();
   }
 
-  /* ── Public API & lifecycle ────────────────────────── */
+  // ---- Public API ----
   function setPlayer(tx, ty) { playerPos.x = tx; playerPos.y = ty; drawPlayer(); }
-
-  function setShard(newShard) {
-    shard = newShard;
-    for (const [_k, ch] of chunks) { ch.sprite?.destroy({ texture:true, baseTexture:true }); ch.tex?.destroy(true); }
-    chunks.clear(); buildQueue = []; building.clear();
-    updateCulling(true);
-    if (_lastHover) setHover(_lastHover);
-    if (_lastSelected) setSelected(_lastSelected);
-    drawPlayer();
-  }
-
+  function setShard(newShard) { shard = newShard; rebuildChunks(); }
   function setOrigin(o) {
-    const nx = o?.originX ?? o?.x ?? _origin.x;
-    const ny = o?.originY ?? o?.y ?? _origin.y;
-    const dx = Math.round(nx - _origin.x);
-    const dy = Math.round(ny - _origin.y);
-    _origin = { x: _origin.x + dx, y: _origin.y + dy };
-
-    for (const [_k, ch] of chunks) {
-      ch.roundX += dx; ch.roundY += dy;
-      ch.aabb.x0 += dx; ch.aabb.x1 += dx; ch.aabb.y0 += dy; ch.aabb.y1 += dy;
-      if (ch.sprite) { ch.sprite.x = ch.roundX; ch.sprite.y = ch.roundY; }
+    const newO = { x: o?.originX ?? o?.x ?? _origin.x, y: o?.originY ?? o?.y ?? _origin.y };
+    const dx = newO.x - _origin.x;
+    const dy = newO.y - _origin.y;
+    _origin = newO;
+    // Shift all chunk sprites + their AABBs by delta (no rebuild needed)
+    for (const ch of _chunks) {
+      ch.sprite.x += dx;
+      ch.sprite.y += dy;
+      ch.aabb.x0 += dx; ch.aabb.x1 += dx;
+      ch.aabb.y0 += dy; ch.aabb.y1 += dy;
     }
+    // Re-stroke overlays at new origin
     if (_lastHover) setHover(_lastHover);
     if (_lastSelected) setSelected(_lastSelected);
-    drawPlayer();
+    if (playerPos.x != null) drawPlayer();
     updateCulling(true);
   }
-
   function resize() { app.renderer.resize(canvas.width, canvas.height); updateCulling(true); }
-
   function centerOn(tx, ty, canvasW, canvasH) {
     const s = world.scale.x || 1;
-    const p = isoToScreen(tx, ty);
-    world.position.set(Math.round(canvasW/2 - p.x * s), Math.round(canvasH/2 - p.y * s));
+    const p = isoToScreen(tx, ty); // pre-scale coords
+    world.position.set(canvasW/2 - p.x * s, canvasH/2 - p.y * s);
     updateCulling(true);
   }
 
-  /* ── Pan & Zoom ────────────────────────────────────── */
+  // ---- Pan/Zoom ----
   world.eventMode = 'static';
-  world.hitArea   = app.screen;
+  world.hitArea = app.screen;
 
-  let dragging = false, dragStart = { x:0, y:0 }, worldStart = { x:0, y:0 };
+  // Drag
+  let dragging = false, dragStart = { x: 0, y: 0 }, worldStart = { x: 0, y: 0 };
   app.view.addEventListener('pointerdown', (e) => {
     dragging = true;
     dragStart.x = e.clientX; dragStart.y = e.clientY;
@@ -357,70 +273,74 @@ export function createPixiRenderer({
   window.addEventListener('pointerup', () => { dragging = false; });
   app.view.addEventListener('pointermove', (e) => {
     if (!dragging) return;
-    world.position.set(
-      Math.round(worldStart.x + (e.clientX - dragStart.x)),
-      Math.round(worldStart.y + (e.clientY - dragStart.y))
-    );
+    const dx = e.clientX - dragStart.x, dy = e.clientY - dragStart.y;
+    world.position.set(worldStart.x + dx, worldStart.y + dy);
     updateCulling();
   });
 
-  const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
-  function setZoom(newScale, anchorX, anchorY) {
+  // Wheel zoom
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+  function setZoom(newScale, anchorX, anchorY){
     const old = world.scale.x || 1;
-    const s   = clamp(newScale, 0.25, 3);
+    const s = clamp(newScale, 0.25, 3); // allow farther zoom-out for huge shards
     if (s === old) return;
     const mx = anchorX, my = anchorY;
     const wx = (mx - world.position.x) / old;
     const wy = (my - world.position.y) / old;
     world.scale.set(s);
-    world.position.set(
-      Math.round(mx - wx * s),
-      Math.round(my - wy * s)
-    );
+    world.position.set(mx - wx * s, my - wy * s);
     updateCulling(true);
   }
-
   app.view.addEventListener('wheel', (e) => {
     e.preventDefault();
     const dir = e.deltaY < 0 ? 1.1 : 0.9;
     setZoom((world.scale.x || 1) * dir, e.offsetX, e.offsetY);
-  }, { passive:false });
+  }, { passive: false });
 
-  // Pinch zoom (mobile)
+  // Pinch zoom (two fingers)
   let pinch = null;
-  const tpts = (e) => { const r = app.view.getBoundingClientRect(); return Array.from(e.touches).map(t=>({ x:t.clientX-r.left, y:t.clientY-r.top })); };
-  const dist = (a,b)=>Math.hypot(a.x-b.x, a.y-b.y);
-  const mid  = (a,b)=>({ x:(a.x+b.x)/2, y:(a.y+b.y)/2 });
+  function tpts(e){
+    const r = app.view.getBoundingClientRect();
+    return Array.from(e.touches).map(t=>({ x: t.clientX - r.left, y: t.clientY - r.top }));
+  }
+  function dist(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return Math.hypot(dx,dy); }
+  function mid(a,b){ return { x:(a.x+b.x)/2, y:(a.y+b.y)/2 }; }
 
   app.view.addEventListener('touchstart', (e) => {
     if (e.touches.length < 2) { pinch = null; return; }
     const pts = tpts(e);
     pinch = { lastM: mid(pts[0], pts[1]), lastD: dist(pts[0], pts[1]) };
-  }, { passive:true });
+  }, { passive: true });
 
   app.view.addEventListener('touchmove', (e) => {
     if (!pinch || e.touches.length < 2) return;
     e.preventDefault();
+
     const pts = tpts(e);
     const m = mid(pts[0], pts[1]);
     const d = dist(pts[0], pts[1]);
-    setZoom((world.scale.x || 1) * (d / pinch.lastD), m.x, m.y);
-    world.position.x = Math.round(world.position.x + (m.x - pinch.lastM.x));
-    world.position.y = Math.round(world.position.y + (m.y - pinch.lastM.y));
+
+    const now = (world.scale.x || 1) * (d / pinch.lastD);
+    setZoom(now, m.x, m.y);
+
+    const dx = m.x - pinch.lastM.x;
+    const dy = m.y - pinch.lastM.y;
+    world.position.x += dx;
+    world.position.y += dy;
+
     pinch.lastM = m; pinch.lastD = d;
     updateCulling();
-  }, { passive:false });
+  }, { passive: false });
 
-  app.view.addEventListener('touchend', () => { pinch = null; }, { passive:true });
+  app.view.addEventListener('touchend', () => { pinch = null; }, { passive: true });
 
-  // Start
-  updateCulling(true);
+  // Initial build
+  if (shard) rebuildChunks();
 
   return {
-    app, world, map,
-    setShard, setOrigin, resize, centerOn,
-    setHover, setSelected, setPlayer,
+    app, stage, world, map,
+    setShard, setOrigin, setHover, setSelected,
+    setPlayer, centerOn, resize,
     isoToScreen,
-    getOrigin: () => ({ x: _origin.x, y: _origin.y }),
   };
 }

@@ -1,0 +1,40 @@
+/* static/src/dev/editor/shard-editor.css (v2)
+   Design goals:
+   - Readable, dark theme for long editing sessions.
+   - Panels are collapsible so the viewport stays maximized.
+   - Editor styles are isolated from the game.
+*/
+:root{ --bg:#0b0f14; --fg:#d9e1ee; --panel:#121821; --muted:#97a6ba; --accent:#8bb9ff; --btn:#1d2734; }
+*{ box-sizing:border-box; }
+html,body{ height:100%; margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif; }
+#app{ display:flex; flex-direction:column; min-height:100%; }
+.topbar{ display:flex; align-items:center; gap:12px; padding:10px; background:#0f1520; border-bottom:1px solid #141b27; }
+.title{ font-weight:600; letter-spacing:.5px; }
+.spacer{ flex:1; }
+.toolbar{ display:flex; align-items:center; gap:8px; }
+.toolbar input#fetchUrl{ width:460px; background:#0f1520; color:var(--fg); border:1px solid #223046; border-radius:8px; padding:6px 10px; }
+.toolbar button,.toolbar .file-btn span,.zoomBtn{ background:var(--btn); color:var(--fg); border:1px solid #223046; border-radius:8px; padding:6px 10px; cursor:pointer; }
+.toolbar .file-btn{ position:relative; overflow:hidden; }
+.toolbar .file-btn input{ position:absolute; inset:0; opacity:0; cursor:pointer; }
+main{ display:flex; flex:1; min-height:0; }
+.left{ flex:1; position:relative; display:flex; flex-direction:column; min-width:0; }
+.canvasWrap{ position:relative; flex:1; min-height:0; }
+#grid{ width:100%; height:100%; display:block; background:#0b0f14; }
+#tooltip{ position:absolute; pointer-events:none; background:#101725; color:#d3e0ff; border:1px solid #2c3b58; border-radius:6px; padding:4px 6px; font-size:12px; transform:translate(8px,8px); }
+.banner{ position:absolute; left:12px; top:12px; background:#311; color:#fbb; border:1px solid #633; border-radius:6px; padding:6px 8px; }
+.banner.hidden{ display:none; }
+.zoomOverlay{ position:absolute; right:12px; top:12px; display:flex; flex-direction:column; gap:8px; }
+.status{ border-top:1px solid #141b27; padding:6px 10px; font-size:12px; color:var(--muted); }
+.right{ width:360px; padding:10px; overflow:auto; background:linear-gradient(90deg, rgba(10,15,22,0) 0%, #0f1520 20%); border-left:1px solid #141b27; }
+.panel{ background:var(--panel); border:1px solid #1a2331; border-radius:10px; padding:10px; margin-bottom:10px; }
+.panelTitle{ font-weight:600; cursor:pointer; }
+.panelSub{ margin:8px 0 0 0; font-size:12px; color:var(--muted); }
+.grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.grid2 label{ display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--muted); }
+.grid2 input,.grid2 select{ background:#0f1520; color:var(--fg); border:1px solid #223046; border-radius:8px; padding:6px 8px; }
+.hint{ margin-top:8px; font-size:12px; color:var(--muted); }
+.btnRow{ display:flex; gap:10px; margin-top:8px; }
+details.panel > summary{ list-style:none; }
+details.panel > summary::-webkit-details-marker{ display:none; }
+details.panel[open] > summary.panelTitle::after{ content:"▾"; float:right; color:var(--muted); }
+details.panel:not([open]) > summary.panelTitle::after{ content:"▸"; float:right; color:var(--muted); }
