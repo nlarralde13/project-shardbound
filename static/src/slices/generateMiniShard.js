@@ -1,17 +1,9 @@
-// -----------------------------------------------------------------------------
-// generateMiniShard.js  (DROP-IN)
+// /static/src/slices/generateMiniShard.js
 // Deterministic 4×4 miniShard generator with fog-of-war + room state persistence.
-// Emits:
-//   - "slice:open"   { detail: sliceData }
-//   - "slice:update" { detail: { key, roomX, roomY, patch } }
-//   - "slice:closed" { detail: { key } }
-// -----------------------------------------------------------------------------
-
 import { rngFrom } from "../utils/rng.js";
 import { rollMobArchetypes, rollResource, rollHazard } from "../data/encounterTables.js";
 import { rollSliceLoot } from "../data/lootTables.js";
 
-// --------------------------- Config & constants -------------------------------
 const SLICE_W = 4;
 const SLICE_H = 4;
 const STORE_KEY = "sb_slice_state_v1";
@@ -21,23 +13,12 @@ const BIOME_DANGER_WEIGHT = {
   mountains: 0.25, volcanic_rim: 0.30, wetlands: 0.22, coast: 0.10
 };
 
-// --------------------------- Local persistence --------------------------------
-function _loadStore(){
-  try { return JSON.parse(localStorage.getItem(STORE_KEY) || "{}"); }
-  catch { return {}; }
-}
-function _saveStore(obj){
-  localStorage.setItem(STORE_KEY, JSON.stringify(obj));
-}
-function _sliceKey({ worldSeed, shardId, tileX, tileY }){
-  return `w:${worldSeed}|s:${shardId}|tx:${tileX}|ty:${tileY}`;
-}
+function _loadStore(){ try { return JSON.parse(localStorage.getItem(STORE_KEY) || "{}"); } catch { return {}; } }
+function _saveStore(obj){ localStorage.setItem(STORE_KEY, JSON.stringify(obj)); }
+function _sliceKey({ worldSeed, shardId, tileX, tileY }){ return `w:${worldSeed}|s:${shardId}|tx:${tileX}|ty:${tileY}`; }
 function _loadSliceByKey(key){ return _loadStore()[key] || null; }
-function _saveSliceByKey(key, data){
-  const store = _loadStore(); store[key] = data; _saveStore(store);
-}
+function _saveSliceByKey(key, data){ const s=_loadStore(); s[key]=data; _saveStore(s); }
 
-// ---------------------------- Danger level ------------------------------------
 function _computeRoomDL({ biome, roomX, roomY, rng }){
   const base = BIOME_DANGER_WEIGHT[biome] ?? 0.05;
   const posNudge = ((roomX + roomY) % 2 === 0) ? 0.03 : 0.0;
@@ -45,7 +26,6 @@ function _computeRoomDL({ biome, roomX, roomY, rng }){
   return Math.max(0, Math.min(5, Math.floor(score * 6)));
 }
 
-// ---------------------------- Content builders --------------------------------
 function _decideRoomKind(r){
   if (r < 0.45) return "mob";
   if (r < 0.80) return "resource";
@@ -54,10 +34,7 @@ function _decideRoomKind(r){
 }
 
 function _buildRoom({ biome, roomX, roomY, worldSeed, shardId, tileX, tileY, playerId }){
-  const rng = rngFrom({
-    worldSeed, shardId, tileX, tileY, roomX, roomY, playerId, systemTag: "SPAWN"
-  });
-
+  const rng = rngFrom({ worldSeed, shardId, tileX, tileY, roomX, roomY, playerId, systemTag: "SPAWN" });
   const DL = _computeRoomDL({ biome, roomX, roomY, rng });
   const kind = _decideRoomKind(rng.float());
 
@@ -67,23 +44,30 @@ function _buildRoom({ biome, roomX, roomY, worldSeed, shardId, tileX, tileY, pla
   }
   if (kind === "resource"){
     const node = rollResource({ biome, rng });
-    const lootId = rollSliceLoot(Math.max(DL, 1), biome, rng); // no junk for nodes
+    const lootId = rollSliceLoot({
+      worldSeed, shardId, tileX, tileY, roomX, roomY, playerId,
+      biome, dangerLevel: Math.max(DL, 1), forNode: true
+    });
     return { kind, DL, node, resolved: false, revealed: false, loot: lootId };
   }
   if (kind === "hazard"){
     const hazard = rollHazard({ biome, rng });
     return { kind, DL, hazard, resolved: false, revealed: false, loot: null };
   }
-  // chest (+ bonus roll handled by consumer if desired)
-  const chestLoot = rollSliceLoot(DL, biome, rng);
-  const bonus = rollSliceLoot(DL, biome, rng);
+  // chest (+ optional bonus handled by overlay/consumer)
+  const chestLoot = rollSliceLoot({
+    worldSeed, shardId, tileX, tileY, roomX, roomY, playerId,
+    biome, dangerLevel: DL
+  });
+  const bonus = rollSliceLoot({
+    worldSeed, shardId, tileX, tileY, roomX, roomY, playerId,
+    biome, dangerLevel: DL
+  });
   return { kind: "chest", DL, chest: true, resolved: false, revealed: false, loot: chestLoot, bonus };
 }
 
 function _pickEntryExit({ worldSeed, shardId, tileX, tileY, playerId }){
-  const rng = rngFrom({
-    worldSeed, shardId, tileX, tileY, playerId, systemTag: "EXIT_PICK"
-  });
+  const rng = rngFrom({ worldSeed, shardId, tileX, tileY, playerId, systemTag: "EXIT_PICK" });
   const edges = [
     {x:0, y:rng.int(0, SLICE_H-1)},
     {x:SLICE_W-1, y:rng.int(0, SLICE_H-1)},
@@ -91,7 +75,6 @@ function _pickEntryExit({ worldSeed, shardId, tileX, tileY, playerId }){
     {x:rng.int(0, SLICE_W-1), y:SLICE_H-1}
   ];
   const entry = edges[rng.int(0, edges.length-1)];
-  // farthest edge from entry
   let best = edges[0], bestD = -1;
   for (const e of edges){
     const d = Math.abs(e.x-entry.x) + Math.abs(e.y-entry.y);
@@ -101,33 +84,16 @@ function _pickEntryExit({ worldSeed, shardId, tileX, tileY, playerId }){
 }
 
 // ---------------------------- Public API --------------------------------------
-
-/**
- * Generate (or load) a deterministic 4×4 miniShard for a tile.
- * Persists fog and room resolution in localStorage.
- *
- * @param {object} params
- *   worldSeed, shardId, tileX, tileY, biome, tileType, playerId,
- *   options: { fogOfWar: true }
- *
- * Emits: "slice:open" { detail: sliceData }
- */
 export async function generateMiniShard(params){
-  const {
-    worldSeed, shardId, tileX, tileY, biome="plains", tileType="wild",
-    playerId="localDevPlayer", options = { fogOfWar: true }
-  } = params || {};
-
+  const { worldSeed, shardId, tileX, tileY, biome="plains", tileType="wild", playerId="localDevPlayer", options = { fogOfWar: true } } = params || {};
   const key = _sliceKey({ worldSeed, shardId, tileX, tileY });
 
-  // Load existing slice (persisted)
   const existing = _loadSliceByKey(key);
   if (existing) {
     window.dispatchEvent(new CustomEvent("slice:open", { detail: existing }));
     return existing;
   }
 
-  // Fresh build
   const { entry, exit } = _pickEntryExit({ worldSeed, shardId, tileX, tileY, playerId });
 
   const rooms = [];
@@ -135,36 +101,23 @@ export async function generateMiniShard(params){
     const row = [];
     for (let x=0; x<SLICE_W; x++){
       const room = _buildRoom({ biome, roomX:x, roomY:y, worldSeed, shardId, tileX, tileY, playerId });
-      if (x === entry.x && y === entry.y) room.revealed = true; // reveal entry
+      if (x === entry.x && y === entry.y) room.revealed = true;
       row.push(room);
     }
     rooms.push(row);
   }
 
-  const sliceData = {
-    key, shardId, tileX, tileY, biome, tileType,
-    width: SLICE_W, height: SLICE_H,
-    entry, exit,
-    rooms,
-    options
-  };
-
+  const sliceData = { key, shardId, tileX, tileY, biome, tileType, width: SLICE_W, height: SLICE_H, entry, exit, rooms, options };
   _saveSliceByKey(key, sliceData);
   window.dispatchEvent(new CustomEvent("slice:open", { detail: sliceData }));
   return sliceData;
 }
 
-/**
- * Get the current miniShard object without emitting events (helper).
- */
 export function getMiniShard({ worldSeed, shardId, tileX, tileY }){
   const key = _sliceKey({ worldSeed, shardId, tileX, tileY });
   return _loadSliceByKey(key);
 }
 
-/**
- * Reveal a room (lift fog), persist, and emit a patch event.
- */
 export function revealRoom({ worldSeed, shardId, tileX, tileY, roomX, roomY }){
   const key = _sliceKey({ worldSeed, shardId, tileX, tileY });
   const slice = _loadSliceByKey(key);
@@ -178,17 +131,12 @@ export function revealRoom({ worldSeed, shardId, tileX, tileY, roomX, roomY }){
   return slice;
 }
 
-/**
- * Resolve a room (e.g., mob defeated, node harvested).
- * Optionally override loot (e.g., use combat summary).
- */
 export function resolveRoom({ worldSeed, shardId, tileX, tileY, roomX, roomY, loot = undefined }){
   const key = _sliceKey({ worldSeed, shardId, tileX, tileY });
   const slice = _loadSliceByKey(key);
   if (!slice) return null;
   const r = slice.rooms?.[roomY]?.[roomX];
   if (!r) return null;
-
   r.resolved = true;
   r.revealed = true;
   if (loot !== undefined) r.loot = loot;
@@ -200,17 +148,10 @@ export function resolveRoom({ worldSeed, shardId, tileX, tileY, roomX, roomY, lo
   return slice;
 }
 
-/**
- * markRoomCleared — compatibility alias used by some UIs.
- * Marks the room as cleared/resolved. Pass optional loot to set final rewards.
- */
 export function markRoomCleared({ worldSeed, shardId, tileX, tileY, roomX, roomY, loot = undefined }){
   return resolveRoom({ worldSeed, shardId, tileX, tileY, roomX, roomY, loot });
 }
 
-/**
- * Clear a saved slice (e.g., when a quest changes the tile or for debugging).
- */
 export function clearMiniShard({ worldSeed, shardId, tileX, tileY }){
   const key = _sliceKey({ worldSeed, shardId, tileX, tileY });
   const store = _loadStore();

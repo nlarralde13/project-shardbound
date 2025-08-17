@@ -1,4 +1,6 @@
+// /static/src/data/lootTables.js
 // Loot tiers & rolls for ambush and slice. Biome-aware item maps kept small; extend later.
+import { rngFrom } from "../utils/rng.js";
 
 export const TIERS = { T0:"T0", T1:"T1", T2:"T2", T3:"T3", T4:"T4" };
 
@@ -70,7 +72,7 @@ const biomeItems = {
 };
 
 export const NON_RARE_SET = new Set([
-  // All T0 + T1 across biomes (subset; add more as you expand)
+  // Common loss-safe items across biomes (subset)
   "scrap_bone","torn_pelt","broken_fang","twig_bundle","bug_chitin","sand_shard","dried_scale",
   "cracked_claw","shale_chunk","dented_plate","dusty_pelt","ash_flake","scorched_fiber","charred_bone",
   "frost_scrap","brittle_bone","frayed_fur","mire_mud","reedy_twine","bog_chitin","shell_chipped",
@@ -80,16 +82,16 @@ export const NON_RARE_SET = new Set([
   "herb_kelp","herb_basil"
 ]);
 
-// Ambush tier weights by DL (table 4.2)
+// Ambush tier weights by DL
 const AMB_TIER_WEIGHTS = {
   0: { T0:55, T1:40, T2:5,  T3:0, T4:0 },
   1: { T0:45, T1:45, T2:9,  T3:1, T4:0 },
   2: { T0:35, T1:50, T2:13, T3:2, T4:0 },
   3: { T0:25, T1:55, T2:17, T3:3, T4:0 },
-  4: { T0:20, T1:55, T2:20, T3:5, T4:0 },
-  5: { T0:15, T1:55, T2:22, T3:7, T4:1 }
+  4: { T0:20, T1:55, T2:20, T3:5,  T4:0 },
+  5: { T0:15, T1:55, T2:22, T3:7,  T4:1 }
 };
-// Slice tier weights by room DL (table 4.3)
+// Slice tier weights by room DL
 const SLICE_TIER_WEIGHTS = {
   0: { T0:40, T1:45, T2:13, T3:2,  T4:0 },
   1: { T0:30, T1:50, T2:17, T3:3,  T4:0 },
@@ -99,24 +101,72 @@ const SLICE_TIER_WEIGHTS = {
   5: { T0:8,  T1:52, T2:27, T3:11, T4:2 },
 };
 
-function weightedPick(weights, rngFloat){
-  const entries = Object.entries(weights);
-  const total = entries.reduce((a, [,w]) => a + w, 0);
-  let r = rngFloat()*total;
-  for (const [tier, w] of entries){ if ((r -= w) <= 0) return tier; }
-  return entries[entries.length-1][0];
+// ---------------- Helpers ----------------
+function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+
+function weightsObjToArray(obj){
+  // => [['T0', 0.55], ['T1', 0.40], ...] normalized 0..1
+  const entries = Object.entries(obj).map(([k,v]) => [k, Number(v)]);
+  const sum = entries.reduce((s, [,w]) => s + w, 0) || 1;
+  return entries.map(([k,w]) => [k, w / sum]);
 }
 
+export function weightedPick(weightsArray, randf){
+  // weightsArray must be [['key', weightNormalized], ...]
+  const r = randf(); // 0..1
+  let acc = 0;
+  for (const [key, w] of weightsArray) {
+    acc += w;
+    if (r <= acc) return key;
+  }
+  return weightsArray[weightsArray.length - 1][0];
+}
+
+function poolFor(biome){
+  return biomeItems[biome] || biomeItems.plains;
+}
+function pickItemFromTier(tier, biome, randf){
+  const pool = poolFor(biome)[tier] || poolFor("plains")[tier];
+  const items = Array.isArray(pool) ? pool : [];
+  if (!items.length) return null;
+  const idx = Math.floor(randf() * items.length);
+  return items[Math.min(idx, items.length - 1)];
+}
+function getSliceTierTable(biome, roomDL){
+  const obj = SLICE_TIER_WEIGHTS[clamp(roomDL|0, 0, 5)] || SLICE_TIER_WEIGHTS[0];
+  return weightsObjToArray(obj);
+}
+
+// ---------------- Ambush / Slice rolls ----------------
 export function rollAmbushLoot(DL, biome, rng){
-  const tier = weightedPick(AMB_TIER_WEIGHTS[Math.max(0,Math.min(5,DL))], rng.float());
-  const pool = (biomeItems[biome] || biomeItems["plains"])[tier];
-  return rng.pick(pool);
+  const weights = weightsObjToArray(AMB_TIER_WEIGHTS[clamp(DL|0,0,5)]);
+  const tier = weightedPick(weights, () => rng.float());
+  return rng.pick(poolFor(biome)[tier]);
 }
-export function rollSliceLoot(roomDL, biome, rng){
-  const tier = weightedPick(SLICE_TIER_WEIGHTS[Math.max(0,Math.min(5,roomDL))], rng.float());
-  const pool = (biomeItems[biome] || biomeItems["plains"])[tier];
-  return rng.pick(pool);
+
+/**
+ * rollSliceLoot
+ * ctx = {
+ *   worldSeed, shardId, tileX, tileY, roomX, roomY, playerId,
+ *   biome, dangerLevel, forNode?: boolean
+ * }
+ */
+export function rollSliceLoot(ctx){
+  const rng = rngFrom({ ...ctx, systemTag: "LOOT" });
+  const randf = () => rng.float();
+
+  const tierWeights = getSliceTierTable(ctx.biome, ctx.dangerLevel);
+  let tier = weightedPick(tierWeights, randf);
+
+  // Resource nodes shouldn't return junk
+  if (ctx.forNode && tier === TIERS.T0) tier = TIERS.T1;
+
+  return pickItemFromTier(tier, ctx.biome, randf);
 }
-export function rollSliceChestBonus(roomDL, biome, rng){
-  return rollSliceLoot(roomDL, biome, rng);
+
+// Optional: bonus chest roll helper (same ctx with maybe higher DL if you want)
+export function rollSliceChestBonus(ctx){
+  return rollSliceLoot(ctx);
 }
+
+export { biomeItems };
