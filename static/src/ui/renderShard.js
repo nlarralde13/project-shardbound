@@ -146,6 +146,12 @@ export function initShardRenderer({
     }
   }
 
+  function getPOIsAt(x, y) {
+    const list = Array.isArray(shardData.pois) ? shardData.pois : [];
+    return list.filter(p => p.x === x && p.y === y);
+  }
+
+
   function drawPlayer() {
     const pos = getPlayerPosition();
     overlayCtx.save();
@@ -245,13 +251,33 @@ export function initShardRenderer({
   window.addEventListener('resize', onResize);
 
   overlayCanvas.addEventListener('mousemove', (e) => {
-    hover = screenToTile(e);
-    drawOverlays();
+  hover = screenToTile(e);
+  // NEW: publish hover info to tooltip listeners
+  if (hover.x >= 0 && hover.y >= 0) {
+    const cell = getCell(hover.x, hover.y);
+    const poisHere = getPOIsAt(hover.x, hover.y);
+    window.dispatchEvent(new CustomEvent('map:hoverTile', {
+      detail: {
+        x: hover.x,
+        y: hover.y,
+        biome: cell?.biome ?? 'ocean',
+        pois: poisHere   // array of POIs on this tile (could be empty)
+      }
+    }));
+  }
+  drawOverlays();
   });
+
+
   overlayCanvas.addEventListener('mouseleave', () => {
-    hover = { x: -1, y: -1 };
-    drawOverlays();
+  hover = { x: -1, y: -1 };
+  // NEW: clear tooltip
+  window.dispatchEvent(new CustomEvent('map:hoverTile', { detail: null }));
+  drawOverlays();
   });
+
+
+
   overlayCanvas.addEventListener('click', (e) => {
     selected = screenToTile(e);
     if (selected.x >= 0) {
@@ -262,19 +288,39 @@ export function initShardRenderer({
   });
 
   function onKeyDown(e) {
-    if (e.key === '+' || e.key === '=') { camera.zoomIn(); fullRedraw(); }
-    else if (e.key === '-' || e.key === '_') { camera.zoomOut(); fullRedraw(); }
-    else if (['ArrowUp','ArrowRight','ArrowDown','ArrowLeft'].includes(e.key)) {
-      const map = { ArrowUp:'N', ArrowRight:'E', ArrowDown:'S', ArrowLeft:'W' };
-      const res = tryMoveCardinal(map[e.key]);
-      if (res.ok) {
-        drawOverlays();
-      } else {
-        logBoth('move', `blocked: ${res.reason}`);
-      }
+  // don't trap keys while typing in inputs/textareas
+  const tag = document.activeElement?.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
+
+  const handled = ['+','=', '-', '_', 'ArrowUp','ArrowRight','ArrowDown','ArrowLeft'];
+  if (!handled.includes(e.key)) return;
+
+  // lock the event to the game (prevents page scroll)
+  e.preventDefault();
+  e.stopPropagation();
+
+  if (e.key === '+' || e.key === '=') {
+    camera.zoomIn(); 
+    fullRedraw();
+    return;
+  }
+  if (e.key === '-' || e.key === '_') {
+    camera.zoomOut(); 
+    fullRedraw();
+    return;
+  }
+
+  // movement
+  const map = { ArrowUp:'N', ArrowRight:'E', ArrowDown:'S', ArrowLeft:'W' };
+  const res = tryMoveCardinal(map[e.key]);
+  if (res.ok) {
+    drawOverlays();
+  } else {
+    logBoth('move', `blocked: ${res.reason}`);
     }
   }
-  window.addEventListener('keydown', onKeyDown);
+
+  window.addEventListener('keydown', onKeyDown, { passive: false });
 
   // Initialize position once from state (no stamina change)
   (function initPos() {
