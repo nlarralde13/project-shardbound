@@ -84,12 +84,15 @@ html, body {
   background: #0b0e13;
   border-top: 1px solid var(--border);
   padding: 8px 12px;
+  padding-bottom: 20px; /* ensure ~20px bottom padding off window edge */
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
   color: #cfe8ff;
   min-height: 80px;
   max-height: 30vh;
-  overflow: auto;
+  overflow: auto; /* independent scroll */
   white-space: pre-wrap;
+  box-sizing: border-box;
+  /* extra safety so console scroll doesn't push map height */
 }
 
 .console .dim { color: var(--muted); }
@@ -98,6 +101,7 @@ html, body {
   display: inline-block;
   margin-right: 10px;
 }
+
 /* Mini-shard overlay */
 .miniOverlay {
   position: fixed;
@@ -143,6 +147,7 @@ html, body {
   border-radius: 8px;
 }
 .miniLegend { color: var(--muted); font-size: 12px; }
+
 /* Combat overlay elements inside .miniPanel */
 .combatPanel { display: grid; grid-template-rows: auto 1fr auto; gap: 10px; }
 .combatStats { display: flex; gap: 16px; align-items: baseline; color: var(--text); }
@@ -159,5 +164,3 @@ html, body {
   color: #cfe8ff;
 }
 .combatActions { display: flex; gap: 8px; }
-
-

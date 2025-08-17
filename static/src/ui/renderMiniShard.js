@@ -46,6 +46,13 @@ export function openMiniShardOverlay(input) {
     canvas.height = Math.floor(cssH * dpr);
   }
 
+  // Wheel trap: prevent page scroll while hovering mini overlay
+  canvas.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // No zoom for mini overlay (MVP); future: implement zoom level here if desired.
+  }, { passive: false });
+
   // Drawing utils
   function drawMultilineText(ctx, text, x, y, maxWidth) {
     const lines = text.split("\n");
@@ -90,9 +97,9 @@ export function openMiniShardOverlay(input) {
         const gx = x * cellW;
         const gy = y * cellH;
 
-        // Determine cleared/revealed from our simple room structure
+        // Determine cleared/revealed
         const cleared = r.state?.cleared === true || r.resolved === true;
-        const revealed = r.revealed !== false; // show all for MVP; change to (r.revealed===true) when fog gating
+        const revealed = r.revealed !== false;
 
         // Cell background
         ctx.fillStyle = cleared ? "#1a222c" : (revealed ? "#1e2a3a" : "#131922");
@@ -103,7 +110,7 @@ export function openMiniShardOverlay(input) {
         ctx.lineWidth = 1 * dpr;
         ctx.strokeRect(gx + 0.5, gy + 0.5, cellW - 1, cellH - 1);
 
-        // Labels (robust to varying room shapes)
+        // Labels
         const mobs = Array.isArray(r.mobs) ? r.mobs.length : 0;
         const hasNode = !!r.node;
         const isChest = r.kind === "chest";

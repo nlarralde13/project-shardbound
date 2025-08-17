@@ -22,11 +22,28 @@ function saveRaw(obj) {
 
 // ------------------------------ Default state --------------------------------
 const DEFAULT_STATE = {
+  // identity
+  name: "Adventurer",
+
   // world position in shard coords
   position: { x: 0, y: 0 },
 
-  // core stats
+  // combat stats (current)
   stats: { hp: 100, maxHp: 100 },
+
+  // NEW: base (RPG) stats used by Character Panel + derivations
+  baseStats: {
+    level: 1,
+    str: 10, agi: 10, int: 10, sta: 10, spirit: 10,
+    armor: 0, power: 0, crit: 0.05, dodge: 0.02
+  },
+
+  // NEW: equipment slots (simple objects with {name, bonuses:{...}})
+  equipment: {
+    head:null, neck:null, shoulders:null, back:null, chest:null, wrists:null, hands:null,
+    waist:null, legs:null, feet:null, ring1:null, ring2:null, trinket1:null, trinket2:null,
+    mainHand:null, offHand:null
+  },
 
   // NEW: magic points
   mp: 100,
@@ -64,10 +81,15 @@ let _state = (() => {
     ...DEFAULT_STATE,
     ...fromDisk,
     stats: { ...DEFAULT_STATE.stats, ...(fromDisk.stats || {}) },
+
+    // Ensure new fields exist after migration
+    baseStats: { ...DEFAULT_STATE.baseStats, ...(fromDisk.baseStats || {}) },
+    equipment: { ...DEFAULT_STATE.equipment, ...(fromDisk.equipment || {}) },
+
     lastAmbushes: Array.isArray(fromDisk.lastAmbushes)
       ? fromDisk.lastAmbushes.slice(-5)
       : [...DEFAULT_STATE.lastAmbushes],
-    // Ensure new fields exist after migration
+
     mp: typeof fromDisk.mp === "number" ? fromDisk.mp : DEFAULT_STATE.mp,
     maxMp: typeof fromDisk.maxMp === "number" ? fromDisk.maxMp : DEFAULT_STATE.maxMp,
     stamina: typeof fromDisk.stamina === "number" ? fromDisk.stamina : DEFAULT_STATE.stamina,
@@ -99,7 +121,7 @@ export const playerState = {
   },
   healFull() { _state.stats.hp = _state.stats.maxHp; persist(); redraw(); return _state.stats.hp; },
 
-  // ----- MP (NEW)
+  // ----- MP
   getMP() { return _state.mp ?? 100; },
   setMP(value) {
     _state.mp = clamp(value, 0, _state.maxMp ?? 100);
@@ -111,7 +133,7 @@ export const playerState = {
 
   // ----- stamina
   getStamina() { return _state.stamina; },
-  getMaxStamina() { return _state.maxStamina ?? 100; }, // NEW explicit getter
+  getMaxStamina() { return _state.maxStamina ?? 100; },
   changeStamina(delta) {
     _state.stamina = clamp(_state.stamina + delta, 0, _state.maxStamina);
     persist(); redraw();
@@ -120,7 +142,7 @@ export const playerState = {
   fullRest() {
     _state.stats.hp = _state.stats.maxHp;
     _state.stamina = _state.maxStamina;
-    _state.mp = _state.maxMp;                 // also refill MP on full rest
+    _state.mp = _state.maxMp;
     persist(); redraw();
   },
   useFieldRation(amount = 20) {
@@ -152,21 +174,41 @@ export const playerState = {
   setLastTownTile(x, y) { _state.lastTownTile = { x, y }; persist(); },
   getLastTownTile() { return _state.lastTownTile ? { ..._state.lastTownTile } : null; },
 
-  // ----- identity
+  // ----- identity & RPG base
   getPlayerId() { return _state.playerId; },
-  setPlayerId(id) { _state.playerId = String(id || "localDevPlayer"); persist(); }
+  setPlayerId(id) { _state.playerId = String(id || "localDevPlayer"); persist(); },
+
+  getName() { return _state.name ?? "Adventurer"; },
+  setName(n) { _state.name = String(n || "Adventurer"); persist(); redraw(); },
+
+  getBaseStats() { return { ..._state.baseStats }; },
+  setBaseStat(key, value) {
+    if (_state.baseStats.hasOwnProperty(key)) {
+      _state.baseStats[key] = value;
+      if (key === 'level') _state.baseStats.level = Math.max(1, Math.floor(value || 1));
+      persist(); redraw();
+    }
+    return { ..._state.baseStats };
+  },
+
+  getEquipment() { return { ..._state.equipment }; },
+  setEquipmentSlot(slot, itemOrNull) {
+    if (_state.equipment.hasOwnProperty(slot)) {
+      _state.equipment[slot] = itemOrNull ?? null;
+      persist(); redraw();
+    }
+    return { ..._state.equipment };
+  }
 };
 
 // ----------------------------- Named Shim Exports -----------------------------
-// Keep these stable to avoid churn in combatEngine/combatOverlay/etc.
-
 // Snapshot for HUD/combat
 export function getPlayer() {
   return {
     hp: _state.stats.hp,
     maxHp: _state.stats.maxHp,
-    mp: _state.mp ?? 100,           // NEW
-    maxMp: _state.maxMp ?? 100,     // NEW
+    mp: _state.mp ?? 100,
+    maxMp: _state.maxMp ?? 100,
     inventory: Array.isArray(_state.inventory) ? [..._state.inventory] : [],
     position: { ..._state.position }
   };
@@ -199,7 +241,7 @@ export function setPositionAndSave(x, y) { playerState.setPosition(x, y); }
 export function getHP() { return playerState.getHP(); }
 export function setHP(v) { return playerState.setHP(v); }
 export function getStamina() { return playerState.getStamina(); }
-export function getMaxStamina() { return playerState.getMaxStamina(); } // NEW explicit export
+export function getMaxStamina() { return playerState.getMaxStamina(); }
 export function changeStamina(delta) { return playerState.changeStamina(delta); }
 export function pushAmbushResult(h) { return playerState.pushAmbushResult(h); }
 export function getLastAmbushes() { return playerState.getLastAmbushes(); }
@@ -218,11 +260,18 @@ export function setMP(v) { return playerState.setMP(v); }
 export function changeMP(delta) { return playerState.changeMP(delta); }
 export function getMaxMP() { return playerState.getMaxMP(); }
 
+// NEW: Character panel helpers
+export function getEquipment() { return playerState.getEquipment(); }
+export function setEquipmentSlot(slot, item) { return playerState.setEquipmentSlot(slot, item); }
+export function getBaseStats() { return playerState.getBaseStats(); }
+export function setBaseStat(key, value) { return playerState.setBaseStat(key, value); }
+export function getPlayerLevel() { return playerState.getBaseStats().level ?? 1; }
+export function getPlayerName() { return playerState.getName(); }
+
 // Allow other modules to register a UI redraw hook
 export function setRedraw(fn) { playerState.setRedraw(fn); }
 
 // ------------------------------- Debug helpers --------------------------------
-// Expose a hard reset for dev mode (not used in production)
 export function __devResetPlayerState() {
   _state = { ...DEFAULT_STATE };
   persist(); redraw();
