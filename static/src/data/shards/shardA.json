@@ -18,5 +18,14 @@
     [{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"volcano"},{"biome":"volcano"},{"biome":"volcano"},{"biome":"volcano"}],
     [{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"volcano"},{"biome":"volcano"},{"biome":"volcano"},{"biome":"volcano"}],
     [{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"ocean"},{"biome":"volcano"},{"biome":"volcano"},{"biome":"volcano"},{"biome":"volcano"}]
-  ]
+  ],
+
+   "pois": [
+    { "x": 10, "y": 8, "type": "town" },
+    { "x": 12, "y": 10, "type": "town" },
+    { "x": 11, "y": 12, "type": "town" },
+    { "x": 12, "y": 11, "type": "port" },
+    { "x": 9,  "y": 9,  "type": "port" }
+   ]
 }
+
