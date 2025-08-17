@@ -1,23 +1,41 @@
-// static/src/dev/editor/shardEditorState.js (v2)
-/*
-  Undo/Redo
-  ---------
-  - Stores small per-tile diffs: { x, y, prev, next }
-  - Batching groups many ops (e.g., painting with a big brush) into a single history entry.
-  - Extendable to rectangle-apply: open a batch, push ops for each tile, commit.
-*/
+// editor1.2 — staging + undo/redo
 export class EditorState {
   constructor(){
-    this.undoStack = [];
-    this.redoStack = [];
-    this.batch = null;
-    this.selected = null;
-    this.brush = { biome: 'land/grassland', size: 1 };
+    this.selected = null;             // {x,y}
+    this.brush = { biome: 'land/grassland', size: 1, enabled: false };
+    this.staged = null;               // {x,y, meta:{}}
+    this._batch = null;
+    this._ops = [];                   // history stack of {x,y, prev, next}
+    this._idx = -1;
   }
-  beginBatch(type='batch'){ this.batch = { type, ops: [] }; }
-  pushOp(op){ (this.batch ? this.batch.ops : this.undoStack).push(this.batch ? op : { type:'single', ops:[op] }); this.redoStack.length = 0; }
-  commitBatch(){ if (this.batch && this.batch.ops.length) this.undoStack.push(this.batch); this.batch = null; }
-  _applyOps(shard, ops, useNext){ for (const op of ops){ const t = shard.tiles[op.y][op.x]; shard.tiles[op.y][op.x] = { ...t, ...(useNext?op.next:op.prev) }; } }
-  undo(shard){ const item = this.undoStack.pop(); if (!item) return false; this._applyOps(shard, item.ops, false); this.redoStack.push(item); return true; }
-  redo(shard){ const item = this.redoStack.pop(); if (!item) return false; this._applyOps(shard, item.ops, true);  this.undoStack.push(item); return true; }
+  setBrushEnabled(on){ this.brush.enabled = !!on; }
+  setBrushBiome(b){ if (b) this.brush.biome = b; }
+  setBrushSize(n){ this.brush.size = Math.max(1, Math.min(9, n|0)); }
+
+  stage(x,y,meta){ this.staged = { x,y, meta: structuredClone(meta||{}) }; }
+  clearStage(){ this.staged = null; }
+
+  beginBatch(label){ this._batch = { label, ops: [] }; }
+  pushOp(op){ (this._batch ? this._batch.ops : this._ops).push(op); }
+  commitBatch(){
+    if (!this._batch) return;
+    // Truncate redo tail
+    this._ops.splice(this._idx+1);
+    this._ops.push(...this._batch.ops);
+    this._idx = this._ops.length - 1;
+    this._batch = null;
+  }
+  undo(shard){
+    if (this._idx < 0) return false;
+    const op = this._ops[this._idx--];
+    shard.tiles[op.y][op.x] = structuredClone(op.prev);
+    return true;
+  }
+  redo(shard){
+    if (this._idx >= this._ops.length-1) return false;
+    const op = this._ops[++this._idx];
+    shard.tiles[op.y][op.x] = structuredClone(op.next);
+    return true;
+  }
 }
+export default EditorState;

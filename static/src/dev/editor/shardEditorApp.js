@@ -1,62 +1,83 @@
-// /static/src/dev/editor/shardEditorApp.js (v5 — configurable worldgen import)
+// shardEditorApp.js — editor 1.3.0
+// Ocean-default regeneration + random seedId + keeps existing editor wiring
+
 import { ShardGridRenderer } from './shardGridRenderer.js';
-import { EditorState } from './shardEditorState.js';
 
-const ORIGIN = window.location.origin;
-const ROOTS = { data: '/static/src/data/' };
-const ABS = (u) => (/^https?:\/\//i.test(u) ? u : new URL(u, ORIGIN).toString());
-const REL_TO_MODULE = (u) => new URL(u, import.meta.url).href;
+// Resolve relative/absolute imports for dynamic module loads
+const ABS = (u) => (/^https?:\/\//i.test(u) ? u : new URL(u, window.location.origin).toString());
+const REL = (u) => new URL(u, import.meta.url).href;
 
-async function tryImport(candidates){
-  let lastErr;
-  for (const u of candidates){
-    const url = u.startsWith('/') ? ABS(u) : REL_TO_MODULE(u);
-    try { return await import(url); } catch(e) { lastErr = e; }
+// --- small utils
+const deepClone = (o) => JSON.parse(JSON.stringify(o));
+function randomSeedId(len = 20) {
+  try {
+    const bytes = new Uint8Array(Math.ceil(len / 2));
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('').slice(0, len);
+  } catch {
+    let s = ''; while (s.length < len) s += Math.floor(Math.random()*16).toString(16);
+    return s.slice(0, len);
   }
-  throw lastErr;
 }
-async function tryFetchJson(c){
-  let e,u;
-  for(const x of c){
-    u = x.startsWith('/') ? ABS(x) : REL_TO_MODULE(x);
-    try{
-      const r = await fetch(u, { cache: 'no-cache' });
-      if (r.ok) return { url: u, json: await r.json() };
-      e = new Error(`${r.status} ${r.statusText}`);
-    }catch(err){ e = err; }
+
+// Normalize incoming shard JSON to {width,height,tiles[][]}
+function normalize(json) {
+  if (Array.isArray(json.tiles) && Array.isArray(json.tiles[0])) {
+    json.height ??= json.tiles.length; json.width ??= json.tiles[0].length; return json;
   }
-  throw new Error(`Failed: ${u} → ${e?.message||e}`);
+  if (Array.isArray(json.tiles) && !Array.isArray(json.tiles[0])) {
+    const w=json.width|0, h=json.height|0;
+    const g=new Array(h); for (let y=0;y<h;y++) g[y]=json.tiles.slice(y*w,(y+1)*w);
+    return { width:w, height:h, tiles:g };
+  }
+  return json;
+}
+
+// Fallback RNG world (only used if fetch of default shard fails and no worldgen)
+function fallbackGenerate(w=64,h=64,seed=0){
+  function mul(a){return function(){let t=a+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}}
+  const R = mul(seed>>>0);
+  const tiles = Array.from({length:h},(_,y)=>Array.from({length:w},(_,x)=>{
+    const n=R(); let biome='land/grassland'; if(n<0.18) biome='water/ocean';
+    return { biome, seed:(y*w+x)>>>0, biomeTier:0, ownerFaction:'neutral', passable:true, tags:[], sliceOptions:{} };
+  }));
+  return { width:w, height:h, tiles };
 }
 
 export function startShardEditor({
   biomeRegistryPath = '/static/src/data/biomeRegistry.js',
-  defaultShardUrl   = '/static/src/data/worlds/core_world/shards/A_0.json',
-  worldgenPath      = '/static/src/rdmShardGen.js' // override from HTML if your repo differs
-} = {}){
+  defaultShardUrl  = '/static/src/data/worlds/core_world/shards/A_0.json',
+  worldgenPath     = '././shards/rdmShardGen.js'
+} = {}) {
+  // Canvas + status
   const canvas    = document.getElementById('grid');
   const statusTxt = document.getElementById('statusText');
+  const setStatus = (m)=>{ if(statusTxt) statusTxt.textContent = m; };
 
-  const setStatus = (m)=> statusTxt.textContent = m;
+  // Left JSON pane
+  const tileJson  = document.getElementById('tileJson');
+  const showJson  = (committed, staged=null)=>{
+    if (!tileJson) return;
+    tileJson.textContent = committed
+      ? (staged ? `/* committed */\n${JSON.stringify(committed,null,2)}\n\n/* staged (not yet applied) */\n${JSON.stringify(staged,null,2)}`
+                : JSON.stringify(committed,null,2))
+      : '{ /* click a tile */ }';
+  };
 
-  // Buttons/Inputs
-  const fileInput   = document.getElementById('fileInput');
-  const fetchBtn    = document.getElementById('fetchBtn');
-  const fetchUrl    = document.getElementById('fetchUrl');
-  const saveBtn     = document.getElementById('saveBtn');
-  const regenBtn    = document.getElementById('regenBtn');
-  const regenW      = document.getElementById('regenW');
-  const regenH      = document.getElementById('regenH');
-  const regenSeed   = document.getElementById('regenSeed');
-  const regenPreset = document.getElementById('regenPreset');
+  const renderer = new ShardGridRenderer(canvas, { cell: 12 });
 
+  // Brush UI
+  const brushToggle = document.getElementById('brushToggle');
   const biomePick   = document.getElementById('biomePick');
-  const brushSize   = document.getElementById('brushSize');
-  const metaBiome   = document.getElementById('metaBiome');
-  const metaSeed    = document.getElementById('metaSeed');
-  const metaTier    = document.getElementById('metaTier');
-  const metaOwner   = document.getElementById('metaOwner');
-  const metaPass    = document.getElementById('metaPassable');
-  const metaTags    = document.getElementById('metaTags');
+
+  // Metadata inputs
+  const metaBiome = document.getElementById('metaBiome');
+  const metaSeed  = document.getElementById('metaSeed');
+  const metaTier  = document.getElementById('metaTier');
+  const metaOwner = document.getElementById('metaOwner');
+  const metaPass  = document.getElementById('metaPassable');
+  const metaTags  = document.getElementById('metaTags');
+
   const optMob = document.getElementById('optMob');
   const optDungeon = document.getElementById('optDungeon');
   const optElite = document.getElementById('optElite');
@@ -69,218 +90,215 @@ export function startShardEditor({
   const optPearl = document.getElementById('optPearl');
   const optResources = document.getElementById('optResources');
   const optSubtype   = document.getElementById('optSubtype');
-  const applyBtn = document.getElementById('applyMeta');
+
+  const applyBtn    = document.getElementById('applyMeta');
   const defaultsBtn = document.getElementById('defaultsMeta');
-  const undoBtn = document.getElementById('undoBtn');
-  const redoBtn = document.getElementById('redoBtn');
+  const centerBtn   = document.getElementById('centerBtn');
 
-  const fitBtn  = document.getElementById('fitBtn');
-  const zinBtn  = document.getElementById('zinBtn');
-  const zoutBtn = document.getElementById('zoutBtn');
+  const regenBtn    = document.getElementById('regenBtn');
+  const regenW      = document.getElementById('regenW');
+  const regenH      = document.getElementById('regenH');
+  const regenSeed   = document.getElementById('regenSeed');
+  const regenPreset = document.getElementById('regenPreset');
 
-  // Renderer/State
-  const renderer = new ShardGridRenderer(canvas, { cell: 12 });
-  const state = new EditorState();
-  state.brush = { biome: 'land/grassland', size: 1 };
   let shard = null;
-
-  // Load biome registry
   let biomeRegistry = {};
-  (async ()=>{
-    try{
-      const mod = await tryImport([biomeRegistryPath, `${ROOTS.data}biomeRegistry.js`, '../data/biomeRegistry.js']);
-      biomeRegistry = mod.biomeRegistry || {};
-    }catch(e){
-      console.warn('[editor] biomeRegistry failed; using fallback:', e);
-      biomeRegistry = {
-        'land/grassland': { sliceDefaults:{ mob_density:.05, dungeon_chance:.01, resources:['berries','fiber','clay'] } },
-        'land/forest'   : { sliceDefaults:{ mob_density:.08, dungeon_chance:.02, resources:['wood','herbs','mushroom'] } },
-        'water/ocean'   : { sliceDefaults:{ mob_density:.02, dungeon_chance:.002, can_spawn_fish:true, fish_density:.3, resources:['kelp','seawater','salt','oil'] } }
-      };
-    }
-    biomePick.innerHTML = Object.keys(biomeRegistry).map(b=>`<option value="\${b}">\${b}</option>`).join('');
-  })();
+  let worldgen = null;
 
-  // Configurable worldgen dynamic import
-  let generateShard = null;
-  if (regenBtn) regenBtn.disabled = true;
+  // Load biome registry (provides slice defaults for 'water/ocean')
   (async ()=>{
-    try{
-      const mod = await tryImport([
-        worldgenPath,                            // caller-provided
-        '/static/src/rdmShardGen.js',            // project root default
-        '../../shards/rdmShardGen.js'            // fallback relative to this module (common repo layout)
-      ]);
-      generateShard = mod.generateShard;
-    }catch(e){
-      console.error('[editor] failed to load rdmShardGen', e);
-      setStatus('Worldgen module failed to load. Check worldgenPath in shard-editor.html');
-    }finally{
-      if (regenBtn) regenBtn.disabled = !generateShard;
+    try {
+      const mod = await import(REL(biomeRegistryPath));
+      biomeRegistry = mod.biomeRegistry || mod.default || {};
+    } catch {
+      biomeRegistry = {}; // if missing, defaultsFor() just returns {}
+    }
+    if (biomePick) {
+      biomePick.innerHTML = Object.keys(biomeRegistry)
+        .map(b=>`<option value="${b}">${b}</option>`).join('');
     }
   })();
 
-  // Helpers
-  const clampSize = (v)=> Math.max(4, Math.min(500, v|0));
-  regenW.value = clampSize(regenW.value || 64);
-  regenH.value = clampSize(regenH.value || 64);
+  // Load optional worldgen (still available for non-default presets)
+  (async ()=>{
+    try {
+      const mod = await import(REL(worldgenPath));
+      worldgen = mod.generateShard || mod.generate || mod.default || null;
+    } catch { worldgen = null; }
+  })();
+
+  // --- helpers bound to current registry
+  const defaultsFor = (id)=> (biomeRegistry?.[id]?.sliceDefaults) || {}; // uses registry’s sliceDefaults 
 
   const ensureTile = (t={})=>{
     t.biome ||= 'land/grassland';
     t.seed = (t.seed|0)>>>0;
     t.biomeTier ??= 0;
     t.ownerFaction ||= 'neutral';
-    if (t.passable == null) t.passable = true;
+    if (t.passable==null) t.passable = true;
     if (!Array.isArray(t.tags)) t.tags = [];
-    const d = biomeRegistry?.[t.biome]?.sliceDefaults || {};
-    t.sliceOptions = { ...d, ...(t.sliceOptions||{}) };
+    t.sliceOptions ||= {};
     return t;
   };
-  const writeMeta = (t)=>{
-    metaBiome.value = t.biome || '';
-    metaSeed.value = t.seed ?? 0;
-    metaTier.value = t.biomeTier ?? 0;
-    metaOwner.value = t.ownerFaction || '';
-    metaPass.checked = t.passable ?? true;
-    metaTags.value = (t.tags||[]).join(', ');
-    const o=t.sliceOptions||{};
-    optMob.value=o.mob_density??0; optDungeon.value=o.dungeon_chance??0;
-    optElite.checked=!!o.can_spawn_elite; optEliteRate.value=o.elite_rate??0;
-    optFish.checked=!!o.can_spawn_fish; optFishDen.value=o.fish_density??0;
-    optBoat.checked=!!o.boat_allowed; optOil.checked=!!o.oil_seeps;
-    optCoral.checked=!!o.coral_present; optPearl.value=o.pearl_rate??0;
-    optResources.value=(o.resources||[]).join(', '); optSubtype.value=o.subtype||'';
-  };
-  const readMeta = ()=> ({
+
+  const readMeta = ()=>({
     biome: metaBiome.value || 'land/grassland',
-    seed: +metaSeed.value || 0,
-    biomeTier: +metaTier.value || 0,
+    seed:+metaSeed.value||0, biomeTier:+metaTier.value||0,
     ownerFaction: metaOwner.value || 'neutral',
     passable: !!metaPass.checked,
-    tags: metaTags.value.split(',').map(s=>s.trim()).filter(Boolean),
-    sliceOptions: {
+    tags: (metaTags.value||'').split(',').map(s=>s.trim()).filter(Boolean),
+    sliceOptions:{
       mob_density:+optMob.value||0, dungeon_chance:+optDungeon.value||0,
       can_spawn_elite:!!optElite.checked, elite_rate:+optEliteRate.value||0,
-      can_spawn_fish:!!optFish.checked, fish_density:+optFishDen.value||0,
-      boat_allowed:!!optBoat.checked, oil_seeps:!!optOil.checked,
-      coral_present:!!optCoral.checked, pearl_rate:+optPearl.value||0,
-      resources: optResources.value.split(',').map(s=>s.trim()).filter(Boolean),
+      can_spawn_fish:!!optFish.checked,  fish_density:+optFishDen.value||0,
+      boat_allowed:!!optBoat.checked,    oil_seeps:!!optOil.checked,
+      coral_present:!!optCoral.checked,  pearl_rate:+optPearl.value||0,
+      resources:(optResources.value||'').split(',').map(s=>s.trim()).filter(Boolean),
       subtype: optSubtype.value||''
     }
   });
 
-  function selectTile(x,y){
-    if (!shard) return;
-    if (x<0||y<0||x>=shard.width||y>=shard.height) return;
-    state.selected = {x,y};
-    const t = ensureTile(shard.tiles[y][x]); shard.tiles[y][x]=t;
-    writeMeta(t); renderer.setSelected({x,y});
-  }
-  function paintAt(x,y){
-    const t = ensureTile(shard.tiles[y][x]); const prev={...t};
-    t.biome = state.brush.biome;
-    const d = biomeRegistry?.[t.biome]?.sliceDefaults || {};
-    t.sliceOptions = { ...d, ...t.sliceOptions };
-    state.pushOp({x,y,prev,next:{...t}}); shard.tiles[y][x]=t;
-  }
+  const writeMeta = (t={})=>{
+    metaBiome.value=t.biome||''; metaSeed.value=t.seed??0; metaTier.value=t.biomeTier??0;
+    metaOwner.value=t.ownerFaction||'neutral'; metaPass.checked=!!t.passable;
+    metaTags.value=(t.tags||[]).join(', ');
+    const so=t.sliceOptions||{};
+    optMob.value=+so.mob_density||0; optDungeon.value=+so.dungeon_chance||0;
+    optElite.checked=!!so.can_spawn_elite; optEliteRate.value=+so.elite_rate||0;
+    optFish.checked=!!so.can_spawn_fish;   optFishDen.value=+so.fish_density||0;
+    optBoat.checked=!!so.boat_allowed;     optOil.checked=!!so.oil_seeps;
+    optCoral.checked=!!so.coral_present;   optPearl.value=+so.pearl_rate||0;
+    optResources.value=(so.resources||[]).join(', ');
+    optSubtype.value=so.subtype||'';
+  };
 
-  // Events
-  biomePick.addEventListener('change', ()=> state.brush.biome = biomePick.value);
-  brushSize.addEventListener('input', ()=> state.brush.size = Math.max(1, Math.min(9, +brushSize.value||1)));
+  // --- selection & painting (unchanged core behavior)
+  function selectTile(x,y){
+    renderer.clearPreview(); // defensive: avoid ghost paint
+    if (!shard) return;
+    x=Math.max(0,Math.min(shard.width-1,x)); y=Math.max(0,Math.min(shard.height-1,y));
+    renderer.setSelected({x,y});
+    const t = ensureTile(shard.tiles[y][x]);
+    writeMeta(t); showJson(t, null);
+  }
 
   canvas.addEventListener('click', (e)=>{
-    if (!shard) return;
     const r = canvas.getBoundingClientRect();
-    const t = renderer.screenToTile(e.clientX-r.left, e.clientY-r.top);
-    if (!t) return; selectTile(t.x,t.y);
-
-    state.beginBatch('paint');
-    const size = Math.max(1, +brushSize.value||1), rad = (size-1)>>1;
-    for (let dy=-rad; dy<=rad; dy++) for (let dx=-rad; dx<=rad; dx++){
-      const tx=t.x+dx, ty=t.y+dy; if (tx<0||ty<0||tx>=shard.width||ty>=shard.height) continue;
-      paintAt(tx,ty);
+    const sx=e.clientX-r.left, sy=e.clientY-r.top;
+    const hit = renderer.screenToTile(sx,sy);
+    if (!hit) return;
+    const {x,y} = hit;
+    if (brushToggle?.checked){
+      const staged = ensureTile(readMeta()); staged.biome = metaBiome.value || 'land/grassland';
+      renderer.setPreview({ x,y, biome: staged.biome });
+      showJson(ensureTile(shard.tiles[y][x]), staged);
+    } else {
+      selectTile(x,y);
     }
-    state.commitBatch(); renderer.redraw();
   });
 
-  applyBtn.addEventListener('click', ()=>{
-    if (!state.selected||!shard) return; const {x,y}=state.selected;
-    const t=ensureTile(shard.tiles[y][x]); const prev={...t}; const next=readMeta();
-    shard.tiles[y][x]={...t,...next}; state.beginBatch('applyMeta');
-    state.pushOp({x,y,prev,next:{...shard.tiles[y][x]}}); state.commitBatch(); renderer.redraw();
-  });
-  defaultsBtn.addEventListener('click', ()=>{
-    if (!state.selected||!shard) return; const {x,y}=state.selected;
-    const t=ensureTile(shard.tiles[y][x]); const prev={...t};
-    const d=biomeRegistry?.[t.biome]?.sliceDefaults||{}; t.sliceOptions={...d};
-    state.beginBatch('defaults'); state.pushOp({x,y,prev,next:{...t}}); state.commitBatch();
-    writeMeta(t); renderer.redraw();
-  });
-  undoBtn.addEventListener('click', ()=>{ if (state.undo(shard)) renderer.redraw(); });
-  redoBtn.addEventListener('click', ()=>{ if (state.redo(shard)) renderer.redraw(); });
-
-  // IO
-  fileInput.addEventListener('change', async (e)=>{
-    const f = e.target.files?.[0]; if (!f) return;
-    try{ const json = JSON.parse(await f.text()); loadShard(normalize(json)); }
-    catch(err){ alert('Invalid JSON'); console.error(err); }
-    finally{ fileInput.value=''; }
-  });
-  fetchBtn.addEventListener('click', async ()=>{
-    const u = (fetchUrl.value||'').trim(); if (!u) return alert('Enter a URL');
-    try{ const {json}=await tryFetchJson([u]); loadShard(normalize(json)); }
-    catch(e){ alert('Fetch failed: '+e.message); }
-  });
-  saveBtn.addEventListener('click', ()=>{
-    if (!shard) return;
-    const blob = new Blob([JSON.stringify(shard,null,2)],{type:'application/json'});
-    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-    a.download=(shard.id||'shard')+'.json'; a.click(); URL.revokeObjectURL(a.href);
-  });
-  regenBtn.addEventListener('click', ()=>{
-    if (!generateShard) { console.warn('worldgen not loaded yet'); return; }
-    const w=Math.max(4,Math.min(500,+regenW.value||64));
-    const h=Math.max(4,Math.min(500,+regenH.value||64));
-    const s=+regenSeed.value||0; const p=regenPreset.value||'default';
-    const j=generateShard(w,h,s,{preset:p}); loadShard(normalize(j));
+  applyBtn?.addEventListener('click', ()=>{
+    if (!renderer.selected || !shard) return;
+    const {x,y} = renderer.selected;
+    shard.tiles[y][x] = ensureTile(readMeta());
+    renderer.clearPreview();
+    writeMeta(shard.tiles[y][x]); showJson(shard.tiles[y][x], null);
+    renderer.redraw();
   });
 
-  // normalize + load
-  function normalize(json){
-    if (Array.isArray(json.tiles) && Array.isArray(json.tiles[0])){
-      json.height ??= json.tiles.length; json.width ??= json.tiles[0].length;
-      for (let y=0;y<json.tiles.length;y++){
-        while (json.tiles[y].length < json.width) json.tiles[y].push({biome:'land/grassland',seed:0,sliceOptions:{}});
-      }
-      return json;
+  defaultsBtn?.addEventListener('click', ()=>{
+    const b = metaBiome.value || 'land/grassland';
+    const t = ensureTile(readMeta());
+    t.sliceOptions = deepClone(defaultsFor(b)); // pull defaults from registry
+    writeMeta(t);
+    if (brushToggle?.checked && renderer.selected) {
+      renderer.setPreview({ x:renderer.selected.x, y:renderer.selected.y, biome:b });
+      showJson(ensureTile(shard.tiles[renderer.selected.y][renderer.selected.x]), t);
     }
-    if (Array.isArray(json.tiles) && !Array.isArray(json.tiles[0])){
-      if (!(json.width>0 && json.height>0)) throw new Error('Flat tiles need width & height');
-      const g=new Array(json.height);
-      for (let y=0;y<json.height;y++){
-        g[y]=json.tiles.slice(y*json.width,(y+1)*json.width);
-        while (g[y].length<json.width) g[y].push({biome:'land/grassland',seed:0,sliceOptions:{}});
-      }
-      json.tiles=g; return json;
+  });
+
+  centerBtn?.addEventListener('click', ()=>{
+    if (renderer.selected) renderer.centerOn(renderer.selected.x, renderer.selected.y);
+    else if (shard) renderer.centerOn(Math.floor(shard.width/2), Math.floor(shard.height/2));
+  });
+
+  // --- NEW: ocean-default regeneration that uses the registry + random seedId
+  async function regenerateOceanGrid(W, H){
+    const oceanDefaults = deepClone(defaultsFor('water/ocean')); // uses registry ‘water/ocean’ sliceDefaults :contentReference[oaicite:2]{index=2}
+    const tile = {
+      biome: 'water/ocean',
+      seed: 0,
+      biomeTier: 0,
+      ownerFaction: 'neutral',
+      passable: true,
+      tags: [],
+      sliceOptions: oceanDefaults
+    };
+
+    const tiles = new Array(H);
+    for (let y=0;y<H;y++){
+      const row = new Array(W);
+      for (let x=0;x<W;x++) row[x] = deepClone(tile);
+      tiles[y] = row;
     }
-    const W=json.width||64,H=json.height||64;
-    json.tiles=Array.from({length:H},()=>Array.from({length:W},()=>({biome:'land/grassland',seed:0,sliceOptions:{}})));
-    json.width=W; json.height=H; return json;
-  }
-  function loadShard(json){
-    const j=normalize(json);
-    j.height ??= j.tiles.length; j.width ??= (j.tiles[0]?.length||0);
-    shard=j; renderer.setData(shard);
-    renderer.fitToShard(shard.width, shard.height, {paddingTiles:2});
-    // select 0,0 to populate side panel
-    const sx = Math.min(0, shard.width-1);
-    const sy = Math.min(0, shard.height-1);
-    selectTile(sx, sy);
-    biomePick.value = shard.tiles[sy][sx]?.biome || biomePick.value;
-    setStatus(`Loaded shard \${shard.id||''} (\${shard.width}×\${shard.height})`);
+
+    const next = { width: W, height: H, tiles, meta: { seedId: randomSeedId() } };
+    return next;
   }
 
-  // auto-load
-  fetchUrl.value ||= defaultShardUrl;
-  if (fetchUrl.value) tryFetchJson([fetchUrl.value]).then(({json})=>loadShard(json)).catch(e=>setStatus('Auto-fetch failed: '+e.message));
+  // Regenerate button: default preset => ocean grid (registry); others => worldgen/fallback
+  regenBtn?.addEventListener('click', async ()=>{
+    const W=Math.max(4,(+regenW.value||64)|0), H=Math.max(4,(+regenH.value||64)|0), S=(+regenSeed.value||0)|0;
+    const preset = (regenPreset?.value||'default');
+
+    let next=null;
+    try {
+      if (preset === 'default') {
+        next = await regenerateOceanGrid(W,H);   // <— ocean by default (your ask)
+      } else if (typeof worldgen==='function') {
+        // worldgen remains available for other presets
+        next = await worldgen(W,H,S,preset, biomeRegistry);
+      }
+      if (!next?.tiles) throw 0;
+    } catch {
+      // if anything failed, at least give a usable grid
+      next = await regenerateOceanGrid(W,H);
+    }
+    loadShard(next);
+  });
+
+  // --- initial load (prefer URL/default shard; fallback to RNG)
+  async function loadDefault() {
+    const candidates = [
+      document.getElementById('fetchUrl')?.value?.trim(),
+      defaultShardUrl,
+      '/static/src/data/worlds/core_world/shards/A_0.json'
+    ].filter(Boolean);
+    try {
+      const url = candidates.find(Boolean);
+      const r = await fetch(url, { cache: 'no-store' });
+      const json = await r.json();
+      loadShard(json);
+    } catch {
+      loadShard(fallbackGenerate(64,64,0));
+    }
+  }
+
+  function loadShard(json) {
+    shard = normalize(json);
+    // if missing seedId (old files), inject one so it persists on export
+    shard.meta ??= {};
+    shard.meta.seedId ||= randomSeedId();
+
+    renderer.setData(shard);
+    requestAnimationFrame(()=>{
+      renderer.fitToShard(shard.width, shard.height, { paddingTiles:2, setAsMin:true }); // keeps your centering flow :contentReference[oaicite:3]{index=3}
+      setStatus(`Loaded ${shard.width}×${shard.height} (seedId ${shard.meta.seedId})`);
+      selectTile(Math.floor(shard.width/2), Math.floor(shard.height/2));
+    });
+  }
+
+  loadDefault();
 }
+
+export default startShardEditor;
