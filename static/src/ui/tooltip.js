@@ -1,74 +1,39 @@
-// static/src/ui/tooltip.js
-// Thin wrapper that wires hover/click using the unified mapUtils.
-// Duplicated math has been removed.
+// Lightweight tooltip that asks the renderer to map screen→tile.
+export function attachTooltip(container, renderer, { mode = 'auto' } = {}) {
+  const el = document.createElement('div');
+  el.style.position = 'absolute';
+  el.style.pointerEvents = 'none';
+  el.style.background = 'rgba(0,0,0,0.7)';
+  el.style.color = '#fff';
+  el.style.padding = '6px 8px';
+  el.style.font = '12px/14px system-ui, sans-serif';
+  el.style.borderRadius = '6px';
+  el.style.transform = 'translate(8px, 8px)';
+  el.style.whiteSpace = 'nowrap';
+  el.style.display = 'none';
+  container.appendChild(el);
 
-import { TILE_WIDTH, TILE_HEIGHT } from '../config/mapConfig.js';
-import { getTileUnderMouseIso, updateDevStatsPanel } from '../utils/mapUtils.js';
+  function show(text, x, y) {
+    el.textContent = text;
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+    el.style.display = 'block';
+  }
 
-/**
- * Initialize hover + click handlers for the map.
- * Everything uses mapUtils.getTileUnderMouseIso().
- *
- * @param {Object} opts
- * @param {HTMLCanvasElement} opts.canvas
- * @param {{width:number,height:number,tiles:any[][]}} opts.shardData
- * @param {number} opts.originX
- * @param {number} opts.originY
- * @param {CanvasRenderingContext2D} [opts.ctx]         // optional, for redraw calls
- * @param {Function} [opts.redraw]                      // optional, to re-render outlines
- * @param {Function} [opts.onHover]                     // optional, (tile|null) => void
- * @param {Function} [opts.onClick]                     // optional, (tile) => void
- */
-export function initTileClick({
-  canvas,
-  shardData,
-  originX,
-  originY,
-  ctx,
-  redraw,
-  onHover,
-  onClick
-}) {
-  const origin = { originX, originY };
-  let lastHover = null;
+  function hide() { el.style.display = 'none'; }
 
-  // Hover highlight
-  canvas.addEventListener('mousemove', e => {
-    const rect = canvas.getBoundingClientRect();
-    const tile = getTileUnderMouseIso(
-      e.clientX - rect.left,
-      e.clientY - rect.top,
-      canvas,
-      shardData,
-      origin,
-      TILE_WIDTH,
-      TILE_HEIGHT
-    );
+  container.addEventListener('mousemove', (e) => {
+    const { x, y } = renderer.screenToTile(e);
+    if (x < 0) { hide(); return; }
 
-    if (tile?.x !== lastHover?.x || tile?.y !== lastHover?.y) {
-      lastHover = tile || null;
-      onHover?.(lastHover);
-      redraw?.();
-    }
+    const devMode = mode === 'auto' ? renderer.isDevMode() : mode === 'dev';
+    const basic = `Tile (${x}, ${y})`;
+    const extra = devMode ? ` — dev: hover` : '';
+    show(`${basic}${extra}`, e.clientX - container.getBoundingClientRect().left + 8,
+         e.clientY - container.getBoundingClientRect().top + 8);
   });
 
-  // Click select
-  canvas.addEventListener('click', e => {
-    const rect = canvas.getBoundingClientRect();
-    const tile = getTileUnderMouseIso(
-      e.clientX - rect.left,
-      e.clientY - rect.top,
-      canvas,
-      shardData,
-      origin,
-      TILE_WIDTH,
-      TILE_HEIGHT
-    );
-    if (!tile) return;
+  container.addEventListener('mouseleave', hide);
 
-    // Update dev/info panels if you’re in dev mode
-    updateDevStatsPanel(tile);
-    onClick?.(tile);
-    redraw?.();
-  });
+  return { destroy: () => container.removeChild(el) };
 }
