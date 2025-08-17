@@ -1,53 +1,44 @@
-// Deterministic RNG helpers (xmur3 hash → mulberry32 PRNG)
-// Seed with any string; stable across sessions.
-
-function xmur3(str) {
-  let h = 1779033703 ^ str.length;
-  for (let i = 0; i < str.length; i++) {
-    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
-    h = (h << 13) | (h >>> 19);
+// Deterministic RNG seeded by a combined key per spec.
+// Uses cyrb128 + sfc32 for stable, fast float PRNG.
+function cyrb128(str) {
+  let h1 = 1779033703, h2 = 3144134277, h3 = 1013904242, h4 = 2773480762;
+  for (let i = 0, k; i < str.length; i++) {
+    k = str.charCodeAt(i);
+    h1 = h2 ^ Math.imul(h1 ^ k, 597399067);
+    h2 = h3 ^ Math.imul(h2 ^ k, 2869860233);
+    h3 = h4 ^ Math.imul(h3 ^ k, 951274213);
+    h4 = h1 ^ Math.imul(h4 ^ k, 2716044179);
   }
-  return () => {
-    h = Math.imul(h ^ (h >>> 16), 2246822507);
-    h = Math.imul(h ^ (h >>> 13), 3266489909);
-    h ^= h >>> 16;
-    return h >>> 0;
-  };
+  h1 = Math.imul(h3 ^ (h1 >>> 18), 597399067);
+  h2 = Math.imul(h4 ^ (h2 >>> 22), 2869860233);
+  h3 = Math.imul(h1 ^ (h3 >>> 17), 951274213);
+  h4 = Math.imul(h2 ^ (h4 >>> 19), 2716044179);
+  return [(h1^h2)>>>0, (h3^h4)>>>0, (h1^h3)>>>0, (h2^h4)>>>0];
 }
-
-function mulberry32(seed) {
-  return () => {
-    let t = (seed += 0x6d2b79f5);
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+function sfc32(a,b,c,d){
+  return function() {
+    a >>>= 0; b >>>= 0; c >>>= 0; d >>>= 0; 
+    let t = (a + b) | 0;
+    a = b ^ (b >>> 9);
+    b = c + (c << 3) | 0;
+    c = (c << 21 | c >>> 11);
+    d = d + 1 | 0;
+    t = t + d | 0;
+    c = c + t | 0;
+    return (t >>> 0) / 4294967296;
+  }
 }
-
-export function seededRNG(...parts) {
-  const seedStr = parts.map(String).join('|');
-  const seedFn = xmur3(seedStr);
-  const rnd = mulberry32(seedFn());
+export function rngFrom({ worldSeed, shardId, tileX, tileY, roomX=null, roomY=null, playerId, systemTag }) {
+  const parts = [
+    `w:${worldSeed}`, `s:${shardId}`, `tx:${tileX}`, `ty:${tileY}`,
+    roomX==null?"" : `rx:${roomX}`, roomY==null?"" : `ry:${roomY}`,
+    `p:${playerId}`, `tag:${systemTag}`
+  ].join("|");
+  const [a,b,c,d] = cyrb128(parts);
+  const rand = sfc32(a,b,c,d);
   return {
-    random: () => rnd(),
-    int: (min, max) => Math.floor(rnd() * (max - min + 1)) + min,
-    pick: (arr) => arr[Math.floor(rnd() * arr.length)],
-    pickWeighted(weights) {
-      // weights: [{id, weight}]
-      const total = weights.reduce((s, w) => s + w.weight, 0);
-      let r = rnd() * total;
-      for (const w of weights) {
-        if ((r -= w.weight) <= 0) return w.id;
-      }
-      return weights[weights.length - 1].id;
-    },
-    shuffle(arr) {
-      const a = arr.slice();
-      for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(rnd() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
-      }
-      return a;
-    },
+    float: () => rand(),
+    int: (min, max) => Math.floor(rand() * (max - min + 1)) + min,
+    pick: (arr) => arr[Math.floor(rand()*arr.length)]
   };
 }

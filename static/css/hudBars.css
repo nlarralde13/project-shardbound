@@ -1,0 +1,41 @@
+/* Root lives INSIDE the shard container, which is already position:relative */
+#hudBars {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: grid;
+  gap: 8px;
+  z-index: 2000;          /* above map & overlays, below global nav */
+  pointer-events: none;   /* clicks pass through to the map */
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+.hud-row {
+  width: 260px;
+  height: 18px;
+  background: #151515;
+  border: 1px solid #333;
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(0,0,0,.35);
+}
+
+.hud-fill { height: 100%; width: 0%; transition: width 120ms linear; }
+.hud-label {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: #eaeaea;
+  mix-blend-mode: difference; pointer-events: none; user-select: none;
+}
+
+/* Color tokens */
+.hud-hp  { background: #c43b3b; }
+.hud-mp  { background: #3b66c4; }
+.hud-sta { background: #2e9f4e; }
+
+/* Optional: compact on narrow viewports */
+@media (max-width: 720px) {
+  .hud-row { width: 200px; height: 16px; }
+  .hud-label { font-size: 11px; }
+}

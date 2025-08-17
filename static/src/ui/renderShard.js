@@ -3,6 +3,27 @@ import { getBiomeColor, uiColors } from '../utils/colorUtils.js';
 import { Camera } from './camera.js';
 import { drawGrid, drawSelection, drawHover } from './mapOverlay.js';
 
+import { TravelConfig } from '../config/travelConfig.js';
+import {
+  getPlayerPosition, setPlayerPosition,
+  getStamina, getMaxStamina, changeStamina,
+} from '../state/playerState.js';
+
+// ---------- dual logger (on-screen console + DevTools) ----------
+function logBoth(tag, msg) {
+  const line = `[${tag}] ${msg}`;
+  // DevTools
+  console.log(line);
+  // On-screen console
+  const pane = document.getElementById('console');
+  if (pane) {
+    const div = document.createElement('div');
+    div.textContent = line;
+    pane.appendChild(div);
+    pane.scrollTop = pane.scrollHeight;
+  }
+}
+
 function createCanvas(className) {
   const c = document.createElement('canvas');
   c.className = className;
@@ -26,10 +47,10 @@ function isOcean(cell) { return (cell?.biome ?? 'ocean') === 'ocean'; }
 
 export function initShardRenderer({
   container,
-  shardData,              // { tiles: 2D array [y][x] of {biome,...}, pois?: [{x,y,type:'town'|'port'}], worldSeed, shardId }
+  shardData,              // { tiles: 2D [y][x] of { biome, ... }, pois?:[], spawn? }
   onTileClick = () => {},
   overlay = { grid: true },
-  player = { x: 0, y: 0, spriteLand: null, spriteWater: null }, // NEW
+  player = { spriteLand: null, spriteWater: null },
 }) {
   container.style.position = 'relative';
   container.style.background = BACKDROP_COLOR;
@@ -57,7 +78,8 @@ export function initShardRenderer({
   let hover = { x: -1, y: -1 };
   let selected = { x: -1, y: -1 };
   let overlayFlags = { grid: !!overlay.grid };
-  let playerState = { ...player };
+
+  const spriteRefs = { spriteLand: player.spriteLand, spriteWater: player.spriteWater };
 
   function getCell(x, y) {
     if (y < 0 || y >= SHARD_ROWS || x < 0 || x >= SHARD_COLS) return null;
@@ -93,22 +115,22 @@ export function initShardRenderer({
       }
     }
 
-    // coast overlay: draw thin beach strips on land edges adjacent to ocean
-    const s = Math.max(2, Math.floor(TILE_WIDTH * 0.18)); // strip thickness
+    // coast overlay on land edges next to ocean
+    const s = Math.max(2, Math.floor(TILE_WIDTH * 0.18));
     baseCtx.fillStyle = getBiomeColor('beach');
     for (let y = 0; y < SHARD_ROWS; y++) {
       for (let x = 0; x < SHARD_COLS; x++) {
         const c = getCell(x,y);
-        if (!c || isOcean(c)) continue; // only draw on land tiles
+        if (!c || isOcean(c)) continue;
         const px = x*TILE_WIDTH, py = y*TILE_HEIGHT;
-        if (isOcean(getCell(x, y-1))) baseCtx.fillRect(px, py, TILE_WIDTH, s);                 // north edge
-        if (isOcean(getCell(x+1, y))) baseCtx.fillRect(px+TILE_WIDTH-s, py, s, TILE_HEIGHT);   // east edge
-        if (isOcean(getCell(x, y+1))) baseCtx.fillRect(px, py+TILE_HEIGHT-s, TILE_WIDTH, s);   // south edge
-        if (isOcean(getCell(x-1, y))) baseCtx.fillRect(px, py, s, TILE_HEIGHT);                // west edge
+        if (isOcean(getCell(x, y-1))) baseCtx.fillRect(px, py, TILE_WIDTH, s);
+        if (isOcean(getCell(x+1, y))) baseCtx.fillRect(px+TILE_WIDTH-s, py, s, TILE_HEIGHT);
+        if (isOcean(getCell(x, y+1))) baseCtx.fillRect(px, py+TILE_HEIGHT-s, TILE_WIDTH, s);
+        if (isOcean(getCell(x-1, y))) baseCtx.fillRect(px, py, s, TILE_HEIGHT);
       }
     }
 
-    // POIs (town/port markers)
+    // POIs
     const pois = shardData.pois || [];
     for (const poi of pois) {
       const { x, y, type } = poi;
@@ -125,16 +147,16 @@ export function initShardRenderer({
   }
 
   function drawPlayer() {
-    if (playerState.x < 0) return;
+    const pos = getPlayerPosition();
     overlayCtx.save();
     camera.apply(overlayCtx);
 
-    const cell = getCell(playerState.x, playerState.y);
+    const cell = getCell(pos.x, pos.y);
     const onWater = isOcean(cell);
-    const img = onWater ? playerState.spriteWater : playerState.spriteLand;
+    const img = onWater ? spriteRefs.spriteWater : spriteRefs.spriteLand;
 
-    const px = playerState.x*TILE_WIDTH + TILE_WIDTH/2;
-    const py = playerState.y*TILE_HEIGHT + TILE_HEIGHT/2;
+    const px = pos.x*TILE_WIDTH + TILE_WIDTH/2;
+    const py = pos.y*TILE_HEIGHT + TILE_HEIGHT/2;
 
     if (img && img.complete) {
       const scale = Math.min(TILE_WIDTH, TILE_HEIGHT) / Math.max(img.width, img.height) * 0.9;
@@ -142,7 +164,6 @@ export function initShardRenderer({
       const h = img.height * scale;
       overlayCtx.drawImage(img, px - w/2, py - h/2, w, h);
     } else {
-      // fallback: diamond
       overlayCtx.fillStyle = '#ffffff';
       overlayCtx.globalAlpha = 0.9;
       overlayCtx.beginPath();
@@ -160,15 +181,12 @@ export function initShardRenderer({
   function drawOverlays() {
     overlayCtx.setTransform(1,0,0,1,0,0);
     overlayCtx.clearRect(0,0,overlayCanvas.width,overlayCanvas.height);
-
     camera.apply(overlayCtx);
     if (overlayFlags.grid) {
       drawGrid(overlayCtx, { cols: SHARD_COLS, rows: SHARD_ROWS, tileW: TILE_WIDTH, tileH: TILE_HEIGHT });
     }
     drawSelection(overlayCtx, { ...selected, tileW: TILE_WIDTH, tileH: TILE_HEIGHT });
     drawHover(overlayCtx, { ...hover, tileW: TILE_WIDTH, tileH: TILE_HEIGHT });
-
-    // player is on overlay too
     drawPlayer();
   }
 
@@ -178,6 +196,48 @@ export function initShardRenderer({
     camera._recalc();
     drawBase();
     drawOverlays();
+  }
+
+  // --------- Movement (A/B) with detailed logging ----------
+  function tryMoveCardinal(dir) {
+    const DIRS = { N:[0,-1], E:[1,0], S:[0,1], W:[-1,0] };
+    const delta = DIRS[dir]; 
+    if (!delta) { logBoth('move', `reject BAD_DIR "${dir}"`); return { ok:false, reason:'BAD_DIR' }; }
+
+    const pos = getPlayerPosition();
+    const [dx, dy] = delta;
+    const target = { x: pos.x + dx, y: pos.y + dy };
+
+    logBoth('move', `intent ${dir}: from (${pos.x},${pos.y}) → (${target.x},${target.y})`);
+
+    // Clamp to bounds
+    const nx = Math.min(Math.max(target.x, 0), SHARD_COLS-1);
+    const ny = Math.min(Math.max(target.y, 0), SHARD_ROWS-1);
+    if (nx !== target.x || ny !== target.y) {
+      logBoth('move', `clamped to bounds: (${nx},${ny})`);
+    }
+    if (nx === pos.x && ny === pos.y) {
+      logBoth('move', `blocked OUT_OF_BOUNDS (no tile change)`);
+      return { ok:false, reason:'OUT_OF_BOUNDS' };
+    }
+
+    const cost = (TravelConfig?.STAMINA?.COST_TRAVEL ?? 1);
+    const before = getStamina();
+    logBoth('stamina', `before=${before}, cost=${cost}, max=${getMaxStamina()}`);
+
+    if (before < cost) {
+      logBoth('stamina', `NO_STAMINA: need ${cost}, have ${before}`);
+      return { ok:false, reason:'NO_STAMINA' };
+    }
+
+    // Deduct + move
+    const after = changeStamina(-cost);
+    setPlayerPosition(nx, ny);
+
+    logBoth('stamina', `after=${after}`);
+    logBoth('move', `moved to (${nx},${ny})`);
+
+    return { ok:true };
   }
 
   // Events
@@ -204,16 +264,24 @@ export function initShardRenderer({
   function onKeyDown(e) {
     if (e.key === '+' || e.key === '=') { camera.zoomIn(); fullRedraw(); }
     else if (e.key === '-' || e.key === '_') { camera.zoomOut(); fullRedraw(); }
-    // Optional: arrows move player one tile
     else if (['ArrowUp','ArrowRight','ArrowDown','ArrowLeft'].includes(e.key)) {
-      const dir = { ArrowUp:[0,-1], ArrowRight:[1,0], ArrowDown:[0,1], ArrowLeft:[-1,0] }[e.key];
-      const nx = Math.min(Math.max(playerState.x + dir[0], 0), SHARD_COLS-1);
-      const ny = Math.min(Math.max(playerState.y + dir[1], 0), SHARD_ROWS-1);
-      playerState.x = nx; playerState.y = ny;
-      drawOverlays();
+      const map = { ArrowUp:'N', ArrowRight:'E', ArrowDown:'S', ArrowLeft:'W' };
+      const res = tryMoveCardinal(map[e.key]);
+      if (res.ok) {
+        drawOverlays();
+      } else {
+        logBoth('move', `blocked: ${res.reason}`);
+      }
     }
   }
   window.addEventListener('keydown', onKeyDown);
+
+  // Initialize position once from state (no stamina change)
+  (function initPos() {
+    const start = getPlayerPosition();
+    setPlayerPosition(start.x ?? 0, start.y ?? 0);
+    logBoth('init', `spawn at (${start.x ?? 0},${start.y ?? 0})`);
+  })();
 
   // Initial draw
   fullRedraw();
@@ -230,8 +298,12 @@ export function initShardRenderer({
     },
     get camera() { return camera; },
     isDevMode,
-    // NEW:
-    setPlayer(pos) { playerState = { ...playerState, ...pos }; drawOverlays(); },
-    getPlayer() { return { ...playerState }; },
+    setPlayer(pos) {
+      if (typeof pos.x === 'number' && typeof pos.y === 'number') setPlayerPosition(pos.x, pos.y);
+      if ('spriteLand' in pos)  spriteRefs.spriteLand  = pos.spriteLand;
+      if ('spriteWater' in pos) spriteRefs.spriteWater = pos.spriteWater;
+      drawOverlays();
+    },
+    getPlayer() { return { ...getPlayerPosition(), ...spriteRefs }; },
   };
 }
