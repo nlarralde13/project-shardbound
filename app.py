@@ -22,5 +22,10 @@ def rng_test():
 def mvp1():
     return render_template('mvp1.html')
 
+#MVP 2 ROUTE
+@app.route('/mvp2')
+def mvp2():
+    return render_template('mvp2.html')
+
 if __name__ == '__main__':
     app.run(debug=True)
