@@ -1,28 +1,35 @@
+# app/__init__.py
 from flask import Flask
-from .db import db, migrate
-from flask_login import LoginManager
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 
-login_manager = LoginManager()
+db = SQLAlchemy()
+migrate = Migrate()
 
-def create_app():
-    app = Flask(__name__)
-    app.config.from_mapping(
-        SECRET_KEY="dev-change-me",
-        SQLALCHEMY_DATABASE_URI="postgresql+psycopg://user:pass@localhost:5432/projectmmo",
-        SQLALCHEMY_TRACK_MODIFICATIONS=False,
-    )
+def create_app(config_object=None):
+    app = Flask(__name__, static_folder="../static", template_folder="../templates")
 
+    # --- Config ---
+    # Use env vars in real use; this keeps it simple for now
+    app.config.setdefault("SQLALCHEMY_DATABASE_URI", "sqlite:///app.db")
+    app.config.setdefault("SQLALCHEMY_TRACK_MODIFICATIONS", False)
+    app.config.setdefault("SECRET_KEY", "dev-secret")
+
+    if config_object:
+        app.config.from_object(config_object)
+
+    # --- Extensions ---
     db.init_app(app)
     migrate.init_app(app, db)
-    login_manager.init_app(app)
 
+    # --- Blueprints / Routes ---
     from .api.routes import api_bp
-    from .auth.routes import auth_bp
     app.register_blueprint(api_bp, url_prefix="/api")
-    app.register_blueprint(auth_bp, url_prefix="/auth")
 
-    @app.route("/mvp2")
-    def mvp2():
+    # If you want a simple landing route here too:
+    @app.get("/")
+    def root():
+        # serve your MVP2 page by default
         from flask import render_template
         return render_template("mvp2.html")
 
