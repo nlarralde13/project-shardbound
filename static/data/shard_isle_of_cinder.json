@@ -1,0 +1,35 @@
+{
+  "name": "Isle of Cinder",
+  "size": [16, 16],
+  "spawn": [12, 7],
+  "grid": [
+    ["Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast"],
+    ["Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast"],
+    ["Coast","Coast","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Coast","Coast"],
+    ["Coast","Plains","Forest","Forest","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Forest","Plains","Plains","Coast"],
+    ["Coast","Plains","Forest","Forest","Forest","Plains","Plains","Plains","Plains","Plains","Plains","Forest","Forest","Plains","Plains","Coast"],
+    ["Coast","Plains","Plains","Forest","Forest","Forest","Plains","Plains","Plains","Plains","Forest","Forest","Plains","Plains","Plains","Coast"],
+    ["Coast","Plains","Plains","Plains","Forest","Forest","Forest","Plains","Plains","Forest","Forest","Plains","Plains","Plains","Plains","Coast"],
+    ["Coast","Plains","Plains","Plains","Plains","Forest","Forest","Forest","Plains","Forest","Plains","Plains","Plains","Plains","Plains","Coast"],
+    ["Coast","Plains","Plains","Plains","Forest","Forest","Forest","Volcano","Forest","Forest","Plains","Plains","Plains","Plains","Plains","Coast"],
+    ["Coast","Plains","Plains","Plains","Forest","Forest","Forest","Forest","Forest","Plains","Plains","Plains","Plains","Plains","Plains","Coast"],
+    ["Coast","Plains","Plains","Plains","Plains","Forest","Forest","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Coast"],
+    ["Coast","Plains","Plains","Forest","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Forest","Plains","Coast"],
+    ["Coast","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Coast","Coast"],
+    ["Coast","Coast","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Coast","Coast","Coast"],
+    ["Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast"],
+    ["Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast","Coast"]
+  ],
+  "sites": [
+    { "type": "volcano",    "name": "Basalt Crown",     "pos": [8, 8] },
+
+    { "type": "settlement", "name": "Gull Point",       "pos": [11, 6] },
+    { "type": "settlement", "name": "Mirewatch",        "pos": [5, 4] },
+    { "type": "settlement", "name": "Cinder Ford",      "pos": [3, 11] },
+    { "type": "settlement", "name": "Greenreach",       "pos": [12, 11] },
+
+    { "type": "port",       "name": "West Jetty",       "pos": [2, 13] },
+    { "type": "port",       "name": "South Break",      "pos": [7, 12] },
+    { "type": "port",       "name": "East Pier",        "pos": [14, 7] }
+  ]
+}
