@@ -1,29 +1,19 @@
 /* =======================================================================
-   Shardbound — MVP2 (wide layout, shorter room height)
+   Shardbound — MVP2 (wide layout, shorter room height + POI + inventory)
    ======================================================================= */
 :root{
-  --bg: #0c1218;
-  --bg-2: #0f1620;
-  --panel: #111925;
-  --panel-2: #0b121a;
-  --glass: rgba(14,21,30,.78);
-  --text: #dfe7f5; --muted: #a8b2c5; --border: rgba(255,255,255,.08);
-  --shadow: 0 10px 30px rgba(0,0,0,.45);
-
+  --bg:#0c1218; --bg-2:#0f1620; --panel:#111925; --panel-2:#0b121a;
+  --glass:rgba(14,21,30,.78); --text:#dfe7f5; --muted:#a8b2c5; --border:rgba(255,255,255,.08);
+  --shadow:0 10px 30px rgba(0,0,0,.45);
   --hp:#e15a5a; --mp:#79a5ff; --sta:#63c27b;
-
   --btn:#1b2636; --btn-hover:#223146; --btn-ghost:transparent; --btn-border:rgba(255,255,255,.12);
 
-  /* Wider by default; height set via ratio (not square anymore) */
-  --card-w: 1020px;            /* JS will clamp responsively */
-  --card-ratio: 0.55;         /* 0.82x height (≈ 5:4 look, less tall) */
-  --card-pad: 14px;
-  --radius-xl: 18px; --radius: 12px; --radius-sm: 8px;
+  --card-w:1020px;         /* JS clamps responsively */
+  --card-ratio:0.55;       /* shorter than width (w * ratio) */
+  --card-pad:14px;
+  --radius-xl:18px; --radius:12px; --radius-sm:8px;
 
-  /* viewport-aware */
-  --topbar-h: 56px;
-  --v-gap: 22px;              /* room ↔ console gap */
-  --console-h: 220px;         /* set by JS */
+  --topbar-h:56px; --v-gap:22px; --console-h:220px; /* console set by JS */
 }
 
 *{box-sizing:border-box}
@@ -38,7 +28,7 @@ body.app{
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:8px}
 ::-webkit-scrollbar-track{background:transparent}
 
-/* Top */
+/* Top bar */
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 20px}
 .topbar .title{font-weight:700;font-size:18px;color:#e8f0ff;text-shadow:0 1px 0 rgba(0,0,0,.35)}
 .hud{display:flex;gap:12px;align-items:center}
@@ -51,7 +41,7 @@ nav.actions{display:flex;gap:8px}
 .btn:hover{background:var(--btn-hover)} .btn:active{transform:translateY(1px)} .btn.ghost{background:var(--btn-ghost);border:1px solid var(--btn-border)}
 .btn.small{padding:6px 10px;font-size:12px}
 
-/* Main */
+/* Main & room */
 .main{max-width:1400px;margin:0 auto;padding:14px 18px 60px;min-height:calc(100vh - var(--topbar-h));display:flex;flex-direction:column;align-items:center}
 .room{width:100%;display:flex;flex-direction:column;align-items:center}
 .room-header{display:flex;align-items:center;justify-content:center;gap:10px;margin:6px 2px 12px;text-align:center}
@@ -59,30 +49,19 @@ nav.actions{display:flex;gap:8px}
 .tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:3px 9px;border-radius:999px;color:#cfe0ff;background:#0b121a;border:1px solid var(--border)}
 .tag::before{content:"";width:8px;height:8px;border-radius:50%;display:inline-block;background:#4ea3ff}
 
-/* Room card */
 .room-card{width:var(--card-w);margin:0 auto;padding:var(--card-pad);background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,0));border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow)}
 .room-stage{position:relative}
 .room-art{
   width:100%;
-  height:calc(var(--card-w) * var(--card-ratio)); /* shorter than width */
+  height:calc(var(--card-w) * var(--card-ratio));
   border-radius:calc(var(--radius-xl) - 6px);
   background:#09111a center/contain no-repeat;
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);
 }
 
-/* Console below card — uses grid so log scrolls, buttons never cut off */
-.console-wrap{
-  width:var(--card-w);
-  margin:12px auto 0;
-  height:var(--console-h);
-  display:grid;
-  grid-template-rows:minmax(0,1fr) auto auto; /* log | input | actions */
-  gap:8px;
-}
-.console{
-  background:var(--glass);border:1px solid var(--border);border-radius:var(--radius);
-  padding:12px 14px;overflow:auto;box-shadow:var(--shadow);min-height:120px
-}
+/* Console BELOW the card (grid: log | input | actions) */
+.console-wrap{width:var(--card-w);margin:12px auto 0;height:var(--console-h);display:grid;grid-template-rows:minmax(0,1fr) auto auto;gap:8px}
+.console{background:var(--glass);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;overflow:auto;box-shadow:var(--shadow);min-height:120px}
 .console .line{padding:2px 0} .console .dim{color:var(--muted)}
 .console-input{display:flex;gap:8px;align-items:center}
 .console-input input{flex:1;min-height:36px;background:#0d1622;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
@@ -92,12 +71,34 @@ nav.actions{display:flex;gap:8px}
 .console-actions .hint{color:var(--muted);font-size:12px}
 .console-actions .btns{display:flex;gap:8px;flex-wrap:wrap}
 
-/* Map / Character overlays */
+/* Overlays (Map, Character, Inventory) */
 .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(5,8,12,.55);backdrop-filter:blur(2px);z-index:1000}
 .overlay.hidden{display:none}
 .panel{width:min(900px,92vw);background:var(--panel);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow);overflow:hidden}
 .panel-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--panel-2);border-bottom:1px solid var(--border);font-weight:600}
-.map-frame{padding:12px 14px 16px}
+.map-frame{padding:12px 14px 16px; position: relative;}
+.map-box{
+  position: relative;
+  margin: 4px auto 0;
+  width: 360px;    /* same as your .mini-grid width */
+  height: 360px;   /* same as your .mini-grid height */
+}
+
+/* make mini-grid fill the box */
+.map-box .mini-grid{
+  position: absolute; inset: 0;      /* 0,0 and same size as .map-box */
+  margin: 0;                          /* remove the old margin here */
+  width: 100%; height: 100%;
+}
+
+/* POI layer sits on top and fills the same box */
+#mapPOI{
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+
 .map-legend{display:flex;gap:14px;align-items:center;color:var(--muted);font-size:12px;margin-bottom:8px}
 .dot{width:10px;height:10px;border-radius:50%;display:inline-block;background:#86b6ff;box-shadow:0 0 0 1px rgba(255,255,255,.2) inset}
 .dot.port{background:#7fe7b0}.dot.gate{background:#ffd16b}
@@ -109,21 +110,43 @@ nav.actions{display:flex;gap:8px}
 .mini-grid .cell.here{background:rgba(255,217,94,.9);box-shadow:inset 0 0 0 2px rgba(0,0,0,.4)}
 .mini-grid .Forest{background-color:rgba(34,100,70,.22)} .mini-grid .Plains{background-color:rgba(70,120,40,.22)} .mini-grid .Coast{background-color:rgba(40,110,155,.22)} .mini-grid .Desert{background-color:rgba(180,140,60,.22)} .mini-grid .Volcano{background-color:rgba(130,50,40,.22)} .mini-grid .Tundra{background-color:rgba(90,120,160,.22)}
 
-/* Badges + console tags */
+/* POI absolute layer over the mini-grid (same dimensions) */
+#miniGrid { position: relative; z-index: 1; margin-bottom: 8px; }
+.poi{position:absolute;width:14px;height:14px;border-radius:50%;box-shadow:0 0 0 2px rgba(0,0,0,.45)}
+.poi.settlement{ border:1px solid rgba(255,255,255,.75); }
+.poi.port{ background:#ffd16b; border:1px solid rgba(0,0,0,.35); }
+.poi.volcano{ background:#ff5f4a; border:1px solid rgba(0,0,0,.5); }
+
+/* Character & Inventory */
+.char-grid{padding:12px 14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.char-col h3{margin:0 0 8px;font-size:14px;color:#eaf0ff}
+.slots,.stats{list-style:none;margin:0;padding:0}
+.slots li{display:flex;justify-content:space-between;padding:6px 8px;background:#0c1520;border:1px solid var(--border);border-radius:8px;margin-bottom:6px}
+.stats li{display:inline-block;margin:0 8px 8px 0;padding:6px 10px;background:#0c1520;border:1px solid var(--border);border-radius:999px}
+
+.inv-body{padding:12px 14px 16px}
+.inv-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.inv-list li{display:flex;justify-content:space-between;align-items:center;background:#0c1520;border:1px solid var(--border);border-radius:8px;padding:8px 10px}
+.inv-list .name{color:#eaf0ff}
+.inv-list .qty{color:#a8b2c5}
+
 .badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:2px 8px;border:1px solid var(--border);border-radius:999px;background:#0b121a;color:#cfe0ff}
 .badge .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
 .log-ok{color:#b7f7c3}.log-warn{color:#ffd27a}.log-bad{color:#ff9b9b}.log-note{color:var(--muted)}
 .hidden{display:none !important}
 
-/* Responsive tweaks */
-@media (max-width: 900px){
+/* Responsive */
+@media (max-width:900px){
   :root{ --card-w: 92vw; }
   .room-header h1{font-size:20px}
 }
-@media (max-width: 760px){
+@media (max-width:760px){
   :root{ --console-h: 200px; }
   .topbar{flex-wrap:wrap;gap:10px}
   .hud{order:3;width:100%;justify-content:flex-start;flex-wrap:wrap;gap:8px}
   nav.actions{order:2}
   .overlay .mini-grid{width:300px;height:300px}
+  #mapPOI{width:300px;height:300px}
+  .char-grid{grid-template-columns:1fr}
+  .inv-list{grid-template-columns:1fr}
 }

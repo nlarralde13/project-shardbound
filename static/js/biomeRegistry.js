@@ -101,3 +101,13 @@ export function randomTitleFor(biome) {
   const pool = BIOMES[biome]?.titlePool || [biome];
   return pool[Math.floor(Math.random() * pool.length)];
 }
+
+// Color swatches for POIs/settlements and map UI
+export const BIOME_COLORS = {
+  Forest:  '#3c8a63',
+  Plains:  '#6da444',
+  Coast:   '#2f7aa2',
+  Desert:  '#b28b4a',
+  Volcano: '#9a3e32',
+  Tundra:  '#6f8aa8'
+};

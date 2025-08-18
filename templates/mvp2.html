@@ -5,8 +5,6 @@
   <title>Shardbound — MVP2 Prototype</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/mvp2.css') }}">
-  <!-- Optional: stop favicon 404 during dev -->
-  <link rel="icon" href="data:,">
 </head>
 <body class="app">
 
@@ -28,67 +26,62 @@
 
   <!-- Main content -->
   <main class="main">
+
     <!-- Room viewport -->
     <section class="room">
-  <div class="room-header">
-    <h1 id="roomTitle">Shadowed Grove</h1>
-    <span id="roomBiome" class="tag">Forest</span>
-  </div>
+      <div class="room-header">
+        <h1 id="roomTitle">Shadowed Grove</h1>
+        <span id="roomBiome" class="tag">Forest</span>
+      </div>
 
-  <div class="room-card">
-    <!-- Stage holds the art and on-top overlays (mini grid) -->
-    <div class="room-stage">
-      <div class="room-art" id="roomArt" aria-hidden="true"></div>
-
-      <!-- 16x16 mini grid overlay -->
-      
-    </div>
-  </div>
-
-  <!-- Console is now BELOW the card -->
-  <div class="console-wrap">
-    <div id="console" class="console" aria-live="polite">
-      <div class="line dim">Console ready. Use exits or actions.</div>
-    </div>
-
-    <div class="console-input">
-      <input id="cmd" type="text"
-        placeholder="Type a command (e.g., 'move n', 'search') and press Enter…" />
-      <button id="cmdSend" class="btn">Send</button>
-    </div>
-
-    <div class="console-actions">
-      <div class="group">
-        <span class="hint">Exits</span>
-        <div class="btns">
-          <button class="btn" data-qa="moveN">N</button>
-          <button class="btn" data-qa="moveE">E</button>
-          <button class="btn" data-qa="moveS">S</button>
-          <button class="btn" data-qa="moveW">W</button>
+      <div class="room-card">
+        <div class="room-stage">
+          <!-- Shadowbox art; JS sets background per biome -->
+          <div class="room-art" id="roomArt" aria-hidden="true"></div>
         </div>
       </div>
 
-      <div class="group">
-        <span class="hint">Actions</span>
-        <div class="btns">
-          <button class="btn" data-qa="search">Search</button>
-          <button class="btn" data-qa="harvest">Harvest</button>
-          <button class="btn" data-qa="rest">Rest</button>
-          <button class="btn" data-qa="enter">Enter</button>
-          <button class="btn ghost" data-qa="help">Help</button>
+      <!-- Console BELOW the card -->
+      <div class="console-wrap">
+        <div id="console" class="console" aria-live="polite">
+          <div class="line dim">Console ready. Use exits or actions.</div>
+        </div>
+
+        <div class="console-input">
+          <input id="cmd" type="text"
+            placeholder="Type a command (e.g., 'move n', 'search') and press Enter…" />
+          <button id="cmdSend" class="btn">Send</button>
+        </div>
+
+        <div class="console-actions">
+          <div class="group">
+            <span class="hint">Exits</span>
+            <div class="btns">
+              <button class="btn" data-qa="moveN">N</button>
+              <button class="btn" data-qa="moveE">E</button>
+              <button class="btn" data-qa="moveS">S</button>
+              <button class="btn" data-qa="moveW">W</button>
+            </div>
+          </div>
+
+          <div class="group">
+            <span class="hint">Actions</span>
+            <div class="btns">
+              <button class="btn" data-qa="search">Search</button>
+              <button class="btn" data-qa="harvest">Harvest</button>
+              <button class="btn" data-qa="rest">Rest</button>
+              <button class="btn" data-qa="enter">Enter</button>
+              <button class="btn ghost" data-qa="help">Help</button>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
-</section>
-
-<!-- keep your module script at the bottom of body -->
-
+    </section>
   </main>
 
   <!-- Overlays -->
 
-  <!-- World Map (non-interactive) -->
+  <!-- World Map -->
   <div id="overlayMap" class="overlay hidden" role="dialog" aria-modal="true" aria-label="World Map">
     <div class="panel">
       <div class="panel-header">
@@ -96,24 +89,20 @@
         <button class="btn ghost" data-close="map">Close (M)</button>
       </div>
       <div class="map-frame">
-       
         <div class="map-legend">
           <span class="dot town"></span> Town
           <span class="dot port"></span> Port
           <span class="dot gate"></span> Shardgate
-
-          
         </div>
 
-        <!-- minimap -->
-        
-
-
-        <div class="map-canvas">
-           <div id="miniGrid" class="mini-grid" aria-hidden="true"></div>
+        <!-- Mini-map + POI layer -->
+        <div class="map-box">
+          <div id="miniGrid" class="mini-grid" aria-label="Mini Map (16×16)"></div>
+          <div class="map-layer" id="mapPOI"></div>
         </div>
+
         <div class="map-hint dim">
-          Orientation only. Movement is room-first (press ESC or M to close).
+          Press M or ESC to close. Arrows / buttons move the player.
         </div>
       </div>
     </div>
@@ -148,7 +137,20 @@
     </div>
   </div>
 
-  <!-- IMPORTANT: load as a module so imports work -->
+  <!-- Inventory Panel -->
+  <div id="overlayInv" class="overlay hidden" role="dialog" aria-modal="true" aria-label="Inventory">
+    <div class="panel">
+      <div class="panel-header">
+        <div>Inventory</div>
+        <button class="btn ghost" data-close="inv">Close</button>
+      </div>
+      <div class="inv-body">
+        <ul id="invList" class="inv-list"></ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ES modules -->
   <script type="module" src="{{ url_for('static', filename='js/mvp2.js') }}"></script>
 </body>
 </html>

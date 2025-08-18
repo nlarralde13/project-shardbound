@@ -1,41 +1,48 @@
-// MVP2 — wider layout, shorter room height, map mini-grid in overlay.
-import { BIOMES, randomTitleFor } from './biomeRegistry.js';
+// MVP2 — room-first controller, wide/short layout, JSON shard loader,
+// biome-colored settlements, POI overlay, inventory stub.
+import { BIOMES, randomTitleFor, BIOME_COLORS } from './biomeRegistry.js';
 import { rollRoomEvent } from './eventTables.js';
+import { SETTLEMENT_TYPES, poiClassFor } from './settlementRegistry.js';
 
 (function(){
-  // DOM
-  const consoleEl   = document.getElementById('console');
-  const cmdInput    = document.getElementById('cmd');
-  const cmdSend     = document.getElementById('cmdSend');
-  const btnWorldMap = document.getElementById('btnWorldMap');
-  const btnCharacter= document.getElementById('btnCharacter');
-  const overlayMap  = document.getElementById('overlayMap');
-  const overlayChar = document.getElementById('overlayChar');
-  const roomTitle   = document.getElementById('roomTitle');
-  const roomBiome   = document.getElementById('roomBiome');
-  const roomArt     = document.getElementById('roomArt');
-  const miniGridEl  = document.getElementById('miniGrid');
+  // ===== DOM refs =====
+  const consoleEl    = document.getElementById('console');
+  const cmdInput     = document.getElementById('cmd');
+  const cmdSend      = document.getElementById('cmdSend');
+  const btnWorldMap  = document.getElementById('btnWorldMap');
+  const btnCharacter = document.getElementById('btnCharacter');
+  const btnInventory = document.getElementById('btnInventory');
 
-  // === Shard data ===
-let shard = null;                // the parsed JSON
-function biomeAt(x, y){
-  if (!shard) return 'Forest';
-  if (y < 0 || y >= shard.size[1] || x < 0 || x >= shard.size[0]) return 'Coast';
-  return shard.grid[y][x] || 'Coast';
-}
-function siteAt(x, y){
-  if (!shard?.sites) return null;
-  return shard.sites.find(s => s.pos[0] === x && s.pos[1] === y) || null;
-}
+  const overlayMap   = document.getElementById('overlayMap');
+  const overlayChar  = document.getElementById('overlayChar');
+  const overlayInv   = document.getElementById('overlayInv');
 
+  const roomTitle    = document.getElementById('roomTitle');
+  const roomBiome    = document.getElementById('roomBiome');
+  const roomArt      = document.getElementById('roomArt');
 
-  // Simple character state
+  const miniGridEl   = document.getElementById('miniGrid');
+  const mapPOI       = document.getElementById('mapPOI');
+  const invList      = document.getElementById('invList');
+
+  // ===== Shard data & helpers =====
+  let shard = null;
+  function biomeAt(x, y){
+    if (!shard) return 'Forest';
+    if (y < 0 || y >= shard.size[1] || x < 0 || x >= shard.size[0]) return 'Coast';
+    return shard.grid[y][x] || 'Coast';
+  }
+  function siteAt(x, y){
+    if (!shard?.sites) return null;
+    return shard.sites.find(s => s.pos[0] === x && s.pos[1] === y) || null;
+  }
+  const colorForBiome = (b) => BIOME_COLORS[b] || '#a0a0a0';
+
+  // ===== Character & position =====
   const actor = { hp: 20, mp: 10, sta: 12 };
-
-  // Room cursor — start in Forest
   let pos = { x: 12, y: 7, biome: 'Forest', title: 'Shadowed Grove' };
 
-  // ===== Utilities =====
+  // ===== Console log =====
   function log(text, cls='') {
     const line = document.createElement('div');
     line.className = 'line ' + (cls || '');
@@ -45,6 +52,7 @@ function siteAt(x, y){
     if (consoleEl.children.length > 220) consoleEl.removeChild(consoleEl.firstChild);
   }
 
+  // ===== Room visuals =====
   function applyArt(biomeKey) {
     const b = BIOMES[biomeKey] || BIOMES.Forest;
     roomArt.style.background = b.tint;
@@ -57,7 +65,6 @@ function siteAt(x, y){
       roomArt.style.backgroundImage = '';
     }
   }
-
   function describe(biomeKey){
     return {
       Forest: 'Tall trunks crowd the path; spores drift like dust in a sunbeam.',
@@ -68,7 +75,6 @@ function siteAt(x, y){
       Tundra: 'Cold bites the lungs; the world speaks in pale whispers.'
     }[biomeKey] || 'You stand at a crossroads of the unknown.';
   }
-
   function setRoom(next) {
     const b = next.biome;
     roomTitle.textContent = next.title || randomTitleFor(b);
@@ -77,32 +83,23 @@ function siteAt(x, y){
     log(describe(b), 'log-note');
   }
 
-  // ===== Mini grid (16x16) in Map overlay =====
+  // ===== Mini-grid in Map overlay =====
   const GRID_W = 16, GRID_H = 16;
-  let grid = null;    // 2D array of biome keys
   let lastHere = null;
 
-  function genMiniGrid(w, h) {
-    const keys = ['Forest','Plains','Coast','Desert','Volcano','Tundra'];
-    const g = Array.from({length:h}, (_, y) =>
-      Array.from({length:w}, (_, x) => keys[(x + y) % keys.length])
-    );
-    return g;
-  }
-
-  function renderMiniGrid(g) {
+  function renderMiniGrid(gridData) {
     if (!miniGridEl) return;
     miniGridEl.innerHTML = '';
-    for (let y=0; y<g.length; y++){
-      for (let x=0; x<g[0].length; x++){
+    const h = gridData.length, w = gridData[0].length;
+    for (let y=0; y<h; y++){
+      for (let x=0; x<w; x++){
         const d = document.createElement('div');
-        d.className = `cell ${g[y][x]}`;
+        d.className = `cell ${gridData[y][x]}`;
         d.dataset.x = x; d.dataset.y = y;
         miniGridEl.appendChild(d);
       }
     }
   }
-
   function updateMiniHere(x, y) {
     if (!miniGridEl) return;
     const gx = ((x % GRID_W) + GRID_W) % GRID_W;
@@ -113,9 +110,79 @@ function siteAt(x, y){
     if (cell) { cell.classList.add('here'); lastHere = cell; }
   }
 
-  // ===== Event Roll on Arrival =====
-  const lastSeen = { resource: null, hotspot: null };
+  // ===== POI markers (settlements adopt biome color) =====
+  // Replace your current renderPOI with this version
+    function renderPOI(){
+    if (!shard || !miniGridEl || !mapPOI) return;
 
+    // If grid has no size yet (overlay hidden), try again next frame
+    const boxW = miniGridEl.clientWidth;
+    const boxH = miniGridEl.clientHeight;
+    if (!boxW || !boxH) {
+        requestAnimationFrame(renderPOI);
+        return;
+    }
+
+    // Ensure the POI layer sits exactly on top of the grid
+    const parent = miniGridEl.parentElement; // usually .map-box or .map-frame
+    if (parent) {
+        // Make the parent a positioning context
+        const parentStyle = getComputedStyle(parent);
+        if (parentStyle.position === 'static') parent.style.position = 'relative';
+
+        // Anchor POI layer over the grid's box
+        mapPOI.style.position = 'absolute';
+        mapPOI.style.left = miniGridEl.offsetLeft + 'px';
+        mapPOI.style.top  = miniGridEl.offsetTop  + 'px';
+        mapPOI.style.width  = boxW + 'px';
+        mapPOI.style.height = boxH + 'px';
+        mapPOI.style.pointerEvents = 'none';
+        mapPOI.style.zIndex = 2;
+    }
+
+    const [W, H] = shard.size; // 16x16
+    const cellW = boxW / W;
+    const cellH = boxH / H;
+
+    mapPOI.innerHTML = '';
+    (shard.sites || []).forEach(s => {
+        const [x, y] = s.pos;
+
+        const el = document.createElement('div');
+        el.className = poiClassFor(s.type);
+
+        // biome-colored settlements (keeps your MVP2.1 requirement)
+        if (s.type === 'settlement') {
+        el.style.background = colorForBiome(biomeAt(x, y));
+        }
+
+        // center inside the cell (marker is 14px, so subtract 7)
+        el.style.position = 'absolute';
+        el.style.left = `${x * cellW + (cellW / 2) - 7}px`;
+        el.style.top  = `${y * cellH + (cellH / 2) - 7}px`;
+        el.style.width = '14px';
+        el.style.height = '14px';
+        el.style.borderRadius = '50%';
+        el.title = `${s.name} (${s.type})`;
+
+        mapPOI.appendChild(el);
+    });
+    }
+
+
+    window._poiDebug = function(flag=true){
+        if (!flag) return;
+        if (!shard) return console.warn("No shard loaded");
+        console.log("Shard size:", shard.size);
+        console.log("mapPOI box:", mapPOI.clientWidth, mapPOI.clientHeight);
+        console.log("Cell size:", mapPOI.clientWidth/shard.size[0], mapPOI.clientHeight/shard.size[1]);
+        console.log("Sites:", shard.sites);
+        };
+
+
+
+  // ===== Events on entering rooms =====
+  const lastSeen = { resource: null, hotspot: null };
   function onEnterRoom(biomeKey) {
     const ev = rollRoomEvent(biomeKey);
 
@@ -148,25 +215,40 @@ function siteAt(x, y){
 
   // ===== Movement =====
   function move(dir){
-  const deltas = { N:[0,-1], E:[1,0], S:[0,1], W:[-1,0] };
-  const [dx,dy] = deltas[dir]; pos.x += dx; pos.y += dy;
+    const deltas = { N:[0,-1], E:[1,0], S:[0,1], W:[-1,0] };
+    const [dx,dy] = deltas[dir]; pos.x += dx; pos.y += dy;
 
-  // Use shard grid rather than cycling
-  pos.biome = biomeAt(pos.x, pos.y);
-  pos.title = randomTitleFor(pos.biome);
+    pos.biome = biomeAt(pos.x, pos.y);
+    pos.title = randomTitleFor(pos.biome);
 
-  setRoom({ title: pos.title, biome: pos.biome });
-  log(`You move ${dir}. (${pos.x},${pos.y}) • ${pos.title} • ${pos.biome}`, 'log-note');
+    setRoom({ title: pos.title, biome: pos.biome });
+    log(`You move ${dir}. (${pos.x},${pos.y}) • ${pos.title} • ${pos.biome}`, 'log-note');
 
-  // show site hint if present
-  const here = siteAt(pos.x, pos.y);
-  if (here) log(`You see ${here.type === 'port' ? 'a port' : here.type} — ${here.name}.`, 'log-warn');
+    // show site hint if present
+    const here = siteAt(pos.x, pos.y);
+    if (here) log(`You see ${here.type === 'port' ? 'a port' : here.type} — ${here.name}.`, 'log-warn');
 
-  lastSeen.resource = null; lastSeen.hotspot = null;
-  updateMiniHere(pos.x, pos.y);
-  onEnterRoom(pos.biome);
-}
+    lastSeen.resource = null; lastSeen.hotspot = null;
+    updateMiniHere(pos.x, pos.y);
+    onEnterRoom(pos.biome);
+  }
 
+  // ===== Inventory (stub) =====
+  const inventory = new Map();
+  function addItem(id, name, qty){
+    const ex = inventory.get(id);
+    if (ex) ex.qty += qty; else inventory.set(id, { name, qty });
+    renderInventory();
+  }
+  function renderInventory(){
+    if (!invList) return;
+    invList.innerHTML = '';
+    for (const [id, it] of inventory.entries()) {
+      const li = document.createElement('li');
+      li.innerHTML = `<span class="name">${it.name}</span><span class="qty">×${it.qty}</span>`;
+      invList.appendChild(li);
+    }
+  }
 
   // ===== Context Actions =====
   function doAction(act) {
@@ -187,6 +269,7 @@ function siteAt(x, y){
     if (act === 'harvest') {
       if (!lastSeen.resource) return log('There is nothing obvious to harvest here.', 'log-note');
       const { node, qty } = lastSeen.resource;
+      addItem(node.id, node.name, qty);   // stash items
       log(`You harvest ${node.name} ×${qty}. (+bag)`, 'log-ok');
       lastSeen.resource = null;
       actor.sta = Math.max(0, actor.sta - 1); refreshBars();
@@ -208,24 +291,21 @@ function siteAt(x, y){
     }
   }
 
-  // ===== Wide/short viewport sizing ======================================
+  // ===== Layout sizing — keep room+console on-screen =====
   function resizeLayout(){
     const cs = getComputedStyle(document.documentElement);
     const ratio = parseFloat(cs.getPropertyValue('--card-ratio')) || 1;
 
     const topbarH = (document.querySelector('.topbar')?.offsetHeight) || 56;
     const vh = window.innerHeight;
-    const vw = Math.min(window.innerWidth, 1400);    // wider container
-    const sideGutters = 64;                           // keep some margin
+    const vw = Math.min(window.innerWidth, 1400);
+    const sideGutters = 64;
     const vGap = 22;
     const minConsole = 200;
 
-    // Height budget for the card (art area)
     const heightBudget = Math.max(240, vh - topbarH - vGap - minConsole);
-
-    // Width limited by that height (invert ratio) and by viewport width
     const widthByHeight = Math.max(320, Math.floor(heightBudget / ratio));
-    const widthByViewport = Math.max(320, Math.min(vw - sideGutters, 980)); // allow it wider
+    const widthByViewport = Math.max(320, Math.min(vw - sideGutters, 980));
 
     const cardW = Math.max(320, Math.min(widthByHeight, widthByViewport));
     const consoleH = Math.max(minConsole, vh - topbarH - Math.floor(cardW * ratio) - vGap);
@@ -236,7 +316,7 @@ function siteAt(x, y){
   }
   window.addEventListener('resize', resizeLayout);
 
-  // ===== Wire buttons (exits + actions) =====
+  // ===== Wiring =====
   document.querySelectorAll('[data-qa]').forEach(b => {
     b.addEventListener('click', () => {
       const qa = b.dataset.qa;
@@ -246,7 +326,6 @@ function siteAt(x, y){
     });
   });
 
-  // ===== CLI
   function runCommand(s){
     const t = s.trim().toLowerCase(); if (!t) return;
     log(`> ${s}`, 'dim');
@@ -265,16 +344,31 @@ function siteAt(x, y){
   cmdSend.addEventListener('click', () => { runCommand(cmdInput.value); cmdInput.value=''; });
   cmdInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { runCommand(cmdInput.value); cmdInput.value=''; } });
 
-  // ===== Overlays & hotkeys
   function toggle(el, show){
     const forceClose = show === false;
     el.classList.toggle('hidden', forceClose ? true : el.classList.contains('hidden') ? false : true);
-    if (el === overlayMap && !el.classList.contains('hidden')) updateMiniHere(pos.x, pos.y);
+    if (el === overlayMap && !el.classList.contains('hidden')) {
+      updateMiniHere(pos.x, pos.y);
+      renderPOI();
+    }
   }
-  btnWorldMap.addEventListener('click', () => toggle(overlayMap));
+  // Replace your Map button toggle handler with this minor change:
+  btnWorldMap.addEventListener('click', () => {
+    toggle(overlayMap);
+    if (!overlayMap.classList.contains('hidden')) {
+      // Let the overlay paint, then measure
+      requestAnimationFrame(() => {
+        updateMiniHere(pos.x, pos.y);
+        renderPOI();
+      });
+    }
+  });
+
   btnCharacter.addEventListener('click', () => toggle(overlayChar));
+  btnInventory?.addEventListener('click', () => toggle(overlayInv));
   document.querySelectorAll('[data-close="map"]').forEach(el => el.addEventListener('click', () => toggle(overlayMap, false)));
   document.querySelectorAll('[data-close="char"]').forEach(el => el.addEventListener('click', () => toggle(overlayChar, false)));
+  document.querySelectorAll('[data-close="inv"]').forEach(el => el.addEventListener('click', () => toggle(overlayInv, false)));
 
   window.addEventListener('keydown', (e) => {
     const tag = document.activeElement?.tagName;
@@ -286,31 +380,35 @@ function siteAt(x, y){
     }
     if (e.key.toLowerCase() === 'c') { toggle(overlayChar); }
     if (e.key.toLowerCase() === 'm') { toggle(overlayMap); }
-    if (e.key === 'Escape') { toggle(overlayMap, false); toggle(overlayChar, false); }
+    if (e.key === 'Escape') { toggle(overlayMap, false); toggle(overlayChar, false); toggle(overlayInv, false); }
   }, { passive:false });
 
-  async function loadShard(url){
-  const res = await fetch(url);
-  shard = await res.json();
+  window.addEventListener('resize', () => {
+    if (!overlayMap.classList.contains('hidden')) renderPOI();
+  });
 
-  // start at shard.spawn if provided
-  if (Array.isArray(shard.spawn)) {
-    pos.x = shard.spawn[0]; pos.y = shard.spawn[1];
-    pos.biome = biomeAt(pos.x, pos.y);
-    pos.title = randomTitleFor(pos.biome);
+  // ===== Shard loader =====
+  async function loadShard(url){
+    const res = await fetch(url);
+    shard = await res.json();
+
+    // start at spawn
+    if (Array.isArray(shard.spawn)) {
+      pos.x = shard.spawn[0]; pos.y = shard.spawn[1];
+      pos.biome = biomeAt(pos.x, pos.y);
+      pos.title = randomTitleFor(pos.biome);
+    }
+
+    renderMiniGrid(shard.grid);
+    updateMiniHere(pos.x, pos.y);
+
+    resizeLayout();
+    setRoom({ title: pos.title, biome: pos.biome });
+    refreshBars();
+    log('Shard loaded: ' + (shard.name || 'Unnamed Shard'), 'log-note');
+    onEnterRoom(pos.biome);
   }
 
-  // Render the map overlay’s mini-grid using shard biomes
-  renderMiniGrid(shard.grid);      // reuse existing renderer
-  updateMiniHere(pos.x, pos.y);
-
-  setRoom({ title: pos.title, biome: pos.biome });
-  refreshBars();
-  log('Shard loaded: ' + (shard.name || 'Unnamed Shard'), 'log-note');
-  onEnterRoom(pos.biome);
-}
-
-// Call this instead of your previous hard-coded init at the bottom:
-loadShard('/static/data/shard_isle_of_cinder.json');
-
+  // ===== Init =====
+  loadShard('/static/data/shard_isle_of_cinder.json');
 })();

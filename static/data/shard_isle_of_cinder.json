@@ -11,7 +11,7 @@
     ["Coast","Plains","Plains","Forest","Forest","Forest","Plains","Plains","Plains","Plains","Forest","Forest","Plains","Plains","Plains","Coast"],
     ["Coast","Plains","Plains","Plains","Forest","Forest","Forest","Plains","Plains","Forest","Forest","Plains","Plains","Plains","Plains","Coast"],
     ["Coast","Plains","Plains","Plains","Plains","Forest","Forest","Forest","Plains","Forest","Plains","Plains","Plains","Plains","Plains","Coast"],
-    ["Coast","Plains","Plains","Plains","Forest","Forest","Forest","Volcano","Forest","Forest","Plains","Plains","Plains","Plains","Plains","Coast"],
+    ["Coast","Plains","Plains","Plains","Forest","Forest","Forest","Forest","Volcano","Forest","Plains","Plains","Plains","Plains","Plains","Coast"],
     ["Coast","Plains","Plains","Plains","Forest","Forest","Forest","Forest","Forest","Plains","Plains","Plains","Plains","Plains","Plains","Coast"],
     ["Coast","Plains","Plains","Plains","Plains","Forest","Forest","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Coast"],
     ["Coast","Plains","Plains","Forest","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Plains","Forest","Plains","Coast"],
@@ -28,8 +28,8 @@
     { "type": "settlement", "name": "Cinder Ford",      "pos": [3, 11] },
     { "type": "settlement", "name": "Greenreach",       "pos": [12, 11] },
 
-    { "type": "port",       "name": "West Jetty",       "pos": [2, 13] },
-    { "type": "port",       "name": "South Break",      "pos": [7, 12] },
+    { "type": "port",       "name": "West Jetty",       "pos": [1, 8] },
+    { "type": "port",       "name": "South Break",      "pos": [15, 12] },
     { "type": "port",       "name": "East Pier",        "pos": [14, 7] }
   ]
 }

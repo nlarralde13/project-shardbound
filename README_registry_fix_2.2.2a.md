@@ -1,1 +1,0 @@
-Patch adds named export to biomeRegistry.js
