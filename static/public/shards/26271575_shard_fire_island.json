@@ -1,0 +1,3205 @@
+{
+  "meta": {
+    "name": "26271575_shard_fire_island",
+    "displayName": "Shard Fire Island",
+    "seed": 26271575,
+    "width": 32,
+    "height": 32,
+    "createdAt": "2025-08-19T15:18:40.882419Z",
+    "version": "1.0.0"
+  },
+  "tiles": [
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "volcanic"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "volcanic"
+      },
+      {
+        "biome": "volcanic"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "volcanic"
+      },
+      {
+        "biome": "volcanic"
+      },
+      {
+        "biome": "volcanic"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "hills"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "volcanic"
+      },
+      {
+        "biome": "volcanic"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "hills"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "volcanic"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "hills"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "grassland"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "forest"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "beach"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "volcanic"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "mountain"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "hills"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "mountain"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ]
+  ],
+  "pois": [
+    {
+      "type": "volcano",
+      "name": "Cinder Crown",
+      "x": 31,
+      "y": 15,
+      "meta": {
+        "radius": 2
+      }
+    },
+    {
+      "type": "port",
+      "name": "Harbor 1",
+      "x": 12,
+      "y": 26,
+      "meta": {
+        "faction": "Neutral"
+      }
+    },
+    {
+      "type": "port",
+      "name": "Harbor 2",
+      "x": 26,
+      "y": 19,
+      "meta": {
+        "faction": "Neutral"
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 1",
+      "x": 30,
+      "y": 17,
+      "meta": {
+        "pop": 54
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 2",
+      "x": 29,
+      "y": 15,
+      "meta": {
+        "pop": 137
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 3",
+      "x": 10,
+      "y": 21,
+      "meta": {
+        "pop": 63
+      }
+    }
+  ]
+}

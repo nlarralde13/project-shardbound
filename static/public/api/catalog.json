@@ -1,0 +1,85 @@
+{
+  "service": "Shardbound Flask API",
+  "generatedAt": "2025-08-19T11:32:53.456921Z",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api-playground",
+      "acceptsJsonBody": false,
+      "sampleBody": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/shards",
+      "acceptsJsonBody": false,
+      "sampleBody": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/shards/<name>",
+      "acceptsJsonBody": false,
+      "sampleBody": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/generate_shard",
+      "acceptsJsonBody": true,
+      "sampleBody": {
+        "name": "shard_isle_of_cinder",
+        "overrides": {
+          "seed": 9999
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/player",
+      "acceptsJsonBody": false,
+      "sampleBody": null
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/player",
+      "acceptsJsonBody": true,
+      "sampleBody": {
+        "name": "Aerin II"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/inventory",
+      "acceptsJsonBody": false,
+      "sampleBody": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/inventory",
+      "acceptsJsonBody": true,
+      "sampleBody": {
+        "id": "itm-iron-ore",
+        "qty": 1
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/inventory",
+      "acceptsJsonBody": true,
+      "sampleBody": {
+        "id": "itm-iron-ore",
+        "qty": 1
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/catalog",
+      "acceptsJsonBody": false,
+      "sampleBody": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/catalog/refresh",
+      "acceptsJsonBody": true,
+      "sampleBody": null
+    }
+  ]
+}
