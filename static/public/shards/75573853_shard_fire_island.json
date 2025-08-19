@@ -1,0 +1,1103 @@
+{
+  "meta": {
+    "name": "75573853_shard_fire_island",
+    "displayName": "Shard Fire Island",
+    "seed": 75573853,
+    "width": 16,
+    "height": 16,
+    "createdAt": "2025-08-19T18:21:45.669572Z",
+    "version": "1.0.0"
+  },
+  "tiles": [
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "mountain"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "hills"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "mountain"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "mountain"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "hills"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "mountain"
+      },
+      {
+        "biome": "hills"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "mountain"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "mountain"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "hills"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "hills"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "mountain"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "mountain"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "hills"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "grassland"
+      },
+      {
+        "biome": "beach"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ]
+  ],
+  "pois": [
+    {
+      "type": "settlement",
+      "name": "Village 1",
+      "x": 0,
+      "y": 13,
+      "meta": {
+        "pop": 92
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 2",
+      "x": 3,
+      "y": 5,
+      "meta": {
+        "pop": 47
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 3",
+      "x": 10,
+      "y": 1,
+      "meta": {
+        "pop": 46
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 4",
+      "x": 1,
+      "y": 9,
+      "meta": {
+        "pop": 183
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 5",
+      "x": 9,
+      "y": 3,
+      "meta": {
+        "pop": 188
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 6",
+      "x": 1,
+      "y": 9,
+      "meta": {
+        "pop": 215
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 7",
+      "x": 1,
+      "y": 4,
+      "meta": {
+        "pop": 42
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 8",
+      "x": 11,
+      "y": 1,
+      "meta": {
+        "pop": 166
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 9",
+      "x": 1,
+      "y": 5,
+      "meta": {
+        "pop": 113
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 10",
+      "x": 11,
+      "y": 2,
+      "meta": {
+        "pop": 94
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 11",
+      "x": 3,
+      "y": 2,
+      "meta": {
+        "pop": 101
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 12",
+      "x": 0,
+      "y": 4,
+      "meta": {
+        "pop": 93
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 13",
+      "x": 4,
+      "y": 4,
+      "meta": {
+        "pop": 217
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 14",
+      "x": 0,
+      "y": 12,
+      "meta": {
+        "pop": 104
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 15",
+      "x": 0,
+      "y": 4,
+      "meta": {
+        "pop": 211
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 16",
+      "x": 7,
+      "y": 4,
+      "meta": {
+        "pop": 42
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 17",
+      "x": 0,
+      "y": 4,
+      "meta": {
+        "pop": 166
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 18",
+      "x": 1,
+      "y": 7,
+      "meta": {
+        "pop": 166
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 19",
+      "x": 1,
+      "y": 15,
+      "meta": {
+        "pop": 217
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 20",
+      "x": 1,
+      "y": 15,
+      "meta": {
+        "pop": 99
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 21",
+      "x": 3,
+      "y": 3,
+      "meta": {
+        "pop": 53
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 22",
+      "x": 1,
+      "y": 7,
+      "meta": {
+        "pop": 99
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 23",
+      "x": 0,
+      "y": 11,
+      "meta": {
+        "pop": 202
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 24",
+      "x": 6,
+      "y": 2,
+      "meta": {
+        "pop": 169
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 25",
+      "x": 10,
+      "y": 0,
+      "meta": {
+        "pop": 143
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 26",
+      "x": 7,
+      "y": 2,
+      "meta": {
+        "pop": 59
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 27",
+      "x": 1,
+      "y": 9,
+      "meta": {
+        "pop": 127
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 28",
+      "x": 6,
+      "y": 2,
+      "meta": {
+        "pop": 41
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 29",
+      "x": 4,
+      "y": 4,
+      "meta": {
+        "pop": 183
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 30",
+      "x": 3,
+      "y": 3,
+      "meta": {
+        "pop": 199
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 31",
+      "x": 2,
+      "y": 6,
+      "meta": {
+        "pop": 76
+      }
+    },
+    {
+      "type": "settlement",
+      "name": "Village 32",
+      "x": 3,
+      "y": 9,
+      "meta": {
+        "pop": 164
+      }
+    }
+  ]
+}

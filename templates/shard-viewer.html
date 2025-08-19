@@ -11,12 +11,13 @@
     body{margin:0;background:radial-gradient(1200px 800px at 20% -10%, #132217 0%, var(--bg) 50%) fixed;color:var(--text);font:14px/1.4 ui-monospace,Menlo,Consolas,"Liberation Mono",monospace}
     header{padding:16px 18px;border-bottom:1px solid var(--line);background:#0d140fdd;position:sticky;top:0;z-index:10}
     h1{margin:0;font-size:16px;color:var(--accent)}
+    /* Left pane roomy + scroll if tall */
     .wrap{display:grid;grid-template-columns:minmax(360px, 550px) 1fr;gap:16px;padding:16px}
-    .card:first-child{align-self:start; max-height:calc(100vh - 120px); overflow:auto;}
     @media (max-width:1100px){.wrap{grid-template-columns:1fr}}
     .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
     .card h2{margin:0;padding:10px 12px;background:#0f160f;border-bottom:1px solid var(--line);color:var(--muted);font-size:13px}
     .card section{padding:12px;display:grid;gap:10px}
+    .card:first-child{align-self:start;max-height:calc(100vh - 120px);overflow:auto}
     label{color:var(--muted)}
     select,input[type="text"],input[type="number"],input[type="range"],button{background:#0c110d;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
     input[type="range"]{padding:0;height:32px}
@@ -27,6 +28,7 @@
     .row.inline-3{grid-template-columns:1fr 1fr 1fr}
     .group{border:1px solid var(--line);border-radius:10px;padding:10px;background:#0a100b}
     .group h3{margin:0 0 8px 0;font-size:12px;color:var(--muted)}
+    /* IMPORTANT: no CSS scaling; JS sets pixel size */
     canvas{background:#000;border:1px solid #0f2b11;border-radius:10px;display:block}
     .viewer{display:grid;grid-template-rows:auto 1fr;gap:12px;height:calc(100vh - 112px)}
     .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
@@ -43,7 +45,6 @@
     .tooltip{position:fixed;pointer-events:none;background:#061206;color:#ccffcc;border:1px solid #1e3b27;border-radius:8px;padding:6px 8px;font-size:12px;display:none}
     .biomes{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
     .biomes label{display:flex;gap:6px;align-items:center}
-    .inline-btns{display:flex;gap:8px;align-items:center}
   </style>
 </head>
 <body>
@@ -67,44 +68,36 @@
           <h3>Generation</h3>
           <div class="row"><label>Preset</label><select id="registrySelect"></select></div>
           <div class="row"><label>Base Name</label><input id="baseName" type="text" placeholder="shard_fire_island"/></div>
-
           <div class="row inline-3">
-            <div class="inline-btns" style="grid-column:1/3">
-              <input type="checkbox" id="autoSeed" checked>
-              <label for="autoSeed">Auto‑seed (unique 8‑digit)</label>
+            <div style="grid-column:1/3;display:flex;gap:8px;align-items:center">
+              <input type="checkbox" id="autoSeed" checked><label for="autoSeed">Auto‑seed (unique 8‑digit)</label>
             </div>
-            <div class="inline-btns">
+            <div style="display:flex;gap:8px;align-items:center">
               <label for="seedId">Seed</label>
               <input id="seedId" type="number" min="10000000" max="99999999" step="1" placeholder="########" disabled>
               <button id="rerollBtn" class="secondary" style="min-width:86px">Re‑roll</button>
             </div>
           </div>
-
           <div class="row inline-2">
-            <div class="inline-btns"><label for="width">Width</label><input id="width" type="number" min="16" max="256" step="1" value="64"></div>
-            <div class="inline-btns"><label for="height">Height</label><input id="height" type="number" min="16" max="256" step="1" value="64"></div>
+            <div style="display:flex;gap:8px;align-items:center"><label for="width">Width</label><input id="width" type="number" min="16" max="256" step="1" value="64"></div>
+            <div style="display:flex;gap:8px;align-items:center"><label for="height">Height</label><input id="height" type="number" min="16" max="256" step="1" value="64"></div>
           </div>
-
           <div class="row auto">
             <label>Landmass %</label>
             <input id="landmass" type="range" min="10" max="80" step="1" value="44">
             <div class="hint"><span id="landmassVal">44%</span></div>
           </div>
-
           <div class="row inline-2">
-            <div class="inline-btns"><label for="ports">Ports</label><input id="ports" type="number" min="0" max="8" step="1" value="2"></div>
-            <div class="inline-btns"><label for="settlements">Settlements</label><input id="settlements" type="number" min="0" max="12" step="1" value="3"></div>
+            <div style="display:flex;gap:8px;align-items:center"><label for="ports">Ports</label><input id="ports" type="number" min="0" max="8" step="1" value="2"></div>
+            <div style="display:flex;gap:8px;align-items:center"><label for="settlements">Settlements</label><input id="settlements" type="number" min="0" max="12" step="1" value="3"></div>
           </div>
-
           <div class="row inline-3">
-            <div class="inline-btns" style="grid-column:1/4">
-              <input type="checkbox" id="volcanoEnabled" checked>
-              <label for="volcanoEnabled">Volcano enabled</label>
+            <div style="grid-column:1/4;display:flex;gap:8px;align-items:center">
+              <input type="checkbox" id="volcanoEnabled" checked><label for="volcanoEnabled">Volcano enabled</label>
             </div>
-            <div class="inline-btns"><label for="volMin">Min R</label><input id="volMin" type="number" min="1" max="8" step="1" value="2"></div>
-            <div class="inline-btns"><label for="volMax">Max R</label><input id="volMax" type="number" min="1" max="12" step="1" value="4"></div>
+            <div style="display:flex;gap:8px;align-items:center"><label for="volMin">Min R</label><input id="volMin" type="number" min="1" max="8" step="1" value="2"></div>
+            <div style="display:flex;gap:8px;align-items:center"><label for="volMax">Max R</label><input id="volMax" type="number" min="1" max="12" step="1" value="4"></div>
           </div>
-
           <div class="row auto">
             <div class="biomes" id="biomes">
               <label><input type="checkbox" value="forest" checked>forest</label>
@@ -113,7 +106,6 @@
               <label><input type="checkbox" value="volcanic" checked>volcanic</label>
             </div>
           </div>
-
           <div class="row"><label></label><button id="genViewBtn">Generate & View</button></div>
         </div>
 
@@ -168,8 +160,13 @@
     const biomesBox = document.getElementById('biomes');
 
     const genViewBtn = document.getElementById('genViewBtn');
-
     const ctx = canvas.getContext('2d', { alpha: false });
+
+    // ---- state (declared early to avoid TDZ issues) ----
+    let currentShard = null;
+    let currentScale = Number(scaleEl.value || 8);
+    let camX = 0, camY = 0;
+    let isDragging = false, dragStartX = 0, dragStartY = 0;
 
     // Legend
     function buildLegend(){
@@ -181,21 +178,31 @@
       });
     }
 
-    // Shard list
+    // Shard list (robust to either array of strings or objects)
     async function fetchShardList(){
       statusEl.textContent='Loading shard list…';
-      const res = await fetch('/api/shards');
-      const data = res.ok ? await res.json() : [];
-      selectEl.innerHTML='';
-      data.forEach(item=>{
-        const file=item.file; const meta=item.meta||{};
-        const friendly = meta.displayName || file.replace(/^[0-9]{8}_/,'').replace(/_/g,' ').replace(/\.json$/,'').replace(/^shard\s*/i,'').trim();
-        const opt=document.createElement('option');
-        opt.value=file.replace(/\.json$/,'');
-        opt.textContent=`${friendly} — (${file})`;
-        selectEl.appendChild(opt);
-      });
-      statusEl.textContent=`Found ${data.length} shard(s)`;
+      try {
+        const res = await fetch('/api/shards');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const raw = await res.json();
+        const items = Array.isArray(raw)
+          ? raw.map(d => (typeof d === 'string' ? { file: d, meta: {} } : d))
+          : [];
+
+        selectEl.innerHTML='';
+        items.forEach(({file, meta={}})=>{
+          const friendly = meta.displayName
+            || file.replace(/^[0-9]{8}_/,'').replace(/_/g,' ').replace(/\.json$/,'').replace(/^shard\s*/i,'').trim();
+          const opt=document.createElement('option');
+          opt.value=file.replace(/\.json$/,'');
+          opt.textContent=`${friendly} — (${file})`;
+          selectEl.appendChild(opt);
+        });
+        statusEl.textContent=`Found ${items.length} shard(s)`;
+      } catch (err) {
+        console.error('Failed to load /api/shards:', err);
+        statusEl.textContent='Failed to load shard list';
+      }
     }
 
     // Registry
@@ -220,39 +227,74 @@
       return json;
     }
 
-    // Canvas sizing
-    function resizeCanvas(w,h,scale){
-      canvas.width = Math.max(1, Math.floor(w*scale));
-      canvas.height= Math.max(1, Math.floor(h*scale));
-      canvas.style.imageRendering='pixelated';
+    // Canvas sizing — match the viewer area (viewport), not the whole world
+    function resizeCanvasToView() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const pxW = Math.max(1, Math.floor(rect.width));
+      const pxH = Math.max(1, Math.floor(rect.height));
+      canvas.width = pxW;
+      canvas.height = pxH;
+      canvas.style.imageRendering = 'pixelated';
     }
 
     function computeAutoScale(shard){
-      const w=shard.meta.width, h=shard.meta.height;
-      const rect=canvas.parentElement.getBoundingClientRect();
-      const pad=20; const maxW=rect.width-pad, maxH=rect.height-pad;
-      return Math.max(1, Math.floor(Math.min(maxW/w, maxH/h)));
+      const w = shard.meta.width, h = shard.meta.height;
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const pad = 20; const maxW = rect.width - pad, maxH = rect.height - pad;
+      return Math.max(1, Math.floor(Math.min(maxW / w, maxH / h)));
     }
 
-    // Render
+    // Render only what’s visible through the camera
     function renderShard(shard, scale, showGrid=false){
-      const w=shard.meta.width, h=shard.meta.height;
-      resizeCanvas(w,h,scale);
-      const t0=performance.now();
-      for(let y=0;y<h;y++){
-        for(let x=0;x<w;x++){
-          const biome=shard.tiles[y][x]?.biome || 'ocean';
+      resizeCanvasToView();
+
+      const w = shard.meta.width, h = shard.meta.height;
+      const viewTilesW = canvas.width / scale;
+      const viewTilesH = canvas.height / scale;
+      const maxCamX = Math.max(0, w - viewTilesW);
+      const maxCamY = Math.max(0, h - viewTilesH);
+
+      const t0 = performance.now();
+      ctx.save();
+      ctx.translate(-camX * scale, -camY * scale);
+
+      // Cull to visible range
+      const x0 = Math.max(0, Math.floor(camX));
+      const y0 = Math.max(0, Math.floor(camY));
+      const x1 = Math.min(w, Math.ceil(camX + viewTilesW));
+      const y1 = Math.min(h, Math.ceil(camY + viewTilesH));
+
+      // Tiles
+      for (let y = y0; y < y1; y++) {
+        const row = shard.tiles[y];
+        for (let x = x0; x < x1; x++) {
+          const biome = row?.[x]?.biome || 'ocean';
           ctx.fillStyle = biomeColors[biome] || '#222';
-          ctx.fillRect(x*scale,y*scale,scale,scale);
+          ctx.fillRect(x * scale, y * scale, scale, scale);
         }
       }
-      if(showGrid && scale>=4){
-        ctx.strokeStyle='rgba(0,0,0,0.25)'; ctx.lineWidth=1;
-        for(let x=0;x<=w;x++){ ctx.beginPath(); ctx.moveTo(x*scale+0.5,0); ctx.lineTo(x*scale+0.5,h*scale); ctx.stroke(); }
-        for(let y=0;y<=h;y++){ ctx.beginPath(); ctx.moveTo(0,y*scale+0.5); ctx.lineTo(w*scale,y*scale+0.5); ctx.stroke(); }
+
+      // Grid
+      if (showGrid && scale >= 4) {
+        ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+        ctx.lineWidth = 1;
+        for (let x = x0; x <= x1; x++) {
+          ctx.beginPath(); ctx.moveTo(x * scale + 0.5, y0 * scale);
+          ctx.lineTo(x * scale + 0.5, y1 * scale); ctx.stroke();
+        }
+        for (let y = y0; y <= y1; y++) {
+          ctx.beginPath(); ctx.moveTo(x0 * scale, y * scale + 0.5);
+          ctx.lineTo(x1 * scale, y * scale + 0.5); ctx.stroke();
+        }
       }
-      (shard.pois||[]).forEach(p=>drawPOI(p,scale));
-      statusEl.textContent = `Rendered in ${(performance.now()-t0).toFixed(1)} ms`;
+
+      // POIs (world coords, culled)
+      (shard.pois || []).forEach(p => {
+        if (p.x >= x0 && p.x < x1 && p.y >= y0 && p.y < y1) drawPOI(p, scale);
+      });
+
+      ctx.restore();
+      statusEl.textContent = `Rendered in ${(performance.now() - t0).toFixed(1)} ms`;
     }
 
     function drawPOI(p,s){
@@ -265,11 +307,29 @@
       ctx.restore();
     }
 
+    // Tooltip + drag handlers
+    canvas.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      isDragging = true; dragStartX = e.clientX; dragStartY = e.clientY;
+      canvas.style.cursor = 'grabbing';
+    });
+    window.addEventListener('mouseup', () => {
+      isDragging = false; canvas.style.cursor = 'default';
+    });
     canvas.addEventListener('mousemove',(e)=>{
+      if (isDragging && currentShard) {
+        const dx = (e.clientX - dragStartX) / currentScale;
+        const dy = (e.clientY - dragStartY) / currentScale;
+        dragStartX = e.clientX; dragStartY = e.clientY;
+        camX -= dx; camY -= dy;
+        renderShard(currentShard, currentScale, gridEl.checked);
+        tip.style.display='none';
+        return;
+      }
       if(!currentShard) return;
       const rect=canvas.getBoundingClientRect();
-      const x=Math.floor((e.clientX-rect.left)/currentScale);
-      const y=Math.floor((e.clientY-rect.top)/currentScale);
+      const x=Math.floor((e.clientX-rect.left)/currentScale + camX);
+      const y=Math.floor((e.clientY-rect.top)/currentScale + camY);
       const t=currentShard.tiles?.[y]?.[x];
       if(!t){ tip.style.display='none'; return; }
       const pois=(currentShard.pois||[]).filter(p=>p.x===x && p.y===y);
@@ -278,8 +338,7 @@
     });
     canvas.addEventListener('mouseleave',()=> tip.style.display='none');
 
-    let currentShard=null; let currentScale=Number(scaleEl.value);
-
+    // UI wiring
     function syncSeedUi(){
       const auto=autoSeedEl.checked;
       seedIdEl.disabled = auto;
@@ -298,11 +357,8 @@
       const template = registrySelect.value || 'shard_isle_of_cinder';
       const baseName = (baseNameInput.value || template).replace(/\s+/g,'_').toLowerCase();
       let seed = autoSeedEl.checked ? await uniqueSeed() : Number(seedIdEl.value || 0);
-      if(!autoSeedEl.checked){
-        if(!Number.isInteger(seed) || seed<10000000 || seed>99999999){
-          alert('Provide an 8‑digit seed'); return;
-        }
-      }
+      if(!autoSeedEl.checked && (!Number.isInteger(seed) || seed<10000000 || seed>99999999)){ alert('Provide an 8‑digit seed'); return; }
+
       const biomes = ['ocean','beach','grassland', ...[...biomesBox.querySelectorAll('input:checked')].map(i=>i.value)];
       const payload = {
         template,
@@ -330,34 +386,52 @@
       const shard = await loadShard(name);
       if(!shard) return;
       currentShard = shard;
+
+      // Reset/center camera on new shard
       currentScale = fitEl.checked ? computeAutoScale(shard) : Number(scaleEl.value);
-      scaleEl.value = currentScale; renderShard(shard,currentScale,gridEl.checked);
+      scaleEl.value = currentScale;
+      centerCameraForCurrentView(shard, currentScale);
+      renderShard(shard,currentScale,gridEl.checked);
     }
 
-    // Wiring
     loadBtn.addEventListener('click', async ()=>{
       const name=selectEl.value; if(!name) return;
       const shard=await loadShard(name); if(!shard) return;
-      currentShard=shard; currentScale = fitEl.checked ? computeAutoScale(shard) : Number(scaleEl.value);
-      scaleEl.value=currentScale; renderShard(shard,currentScale,gridEl.checked);
+      currentShard=shard;
+      currentScale = fitEl.checked ? computeAutoScale(shard) : Number(scaleEl.value);
+      scaleEl.value=currentScale;
+      centerCameraForCurrentView(shard, currentScale);
+      renderShard(shard,currentScale,gridEl.checked);
     });
+
     scaleEl.addEventListener('change',()=>{ if(currentShard){ currentScale=Number(scaleEl.value); renderShard(currentShard,currentScale,gridEl.checked);} });
     gridEl.addEventListener('change',()=>{ if(currentShard){ renderShard(currentShard,currentScale,gridEl.checked);} });
-    fitEl.addEventListener('change',()=>{ if(currentShard){ currentScale = fitEl.checked ? computeAutoScale(currentShard) : Number(scaleEl.value); scaleEl.value=currentScale; renderShard(currentShard,currentScale,gridEl.checked);} });
-    window.addEventListener('resize',()=>{ if(currentShard && fitEl.checked){ currentScale=computeAutoScale(currentShard); scaleEl.value=currentScale; renderShard(currentShard,currentScale,gridEl.checked);} });
+    fitEl.addEventListener('change',()=>{ if(currentShard){ currentScale = fitEl.checked ? computeAutoScale(currentShard) : Number(scaleEl.value); scaleEl.value=currentScale; centerCameraForCurrentView(currentShard,currentScale); renderShard(currentShard,currentScale,gridEl.checked);} });
+    window.addEventListener('resize',()=>{ if(currentShard){ if(fitEl.checked){ currentScale=computeAutoScale(currentShard); scaleEl.value=currentScale; } renderShard(currentShard,currentScale,gridEl.checked);} });
 
-    autoSeedEl.addEventListener('change',syncSeedUi);
+    autoSeedEl.addEventListener('change', syncSeedUi);
     rerollBtn.addEventListener('click', async ()=>{ seedIdEl.value = await uniqueSeed(); });
     landmassEl.addEventListener('input',()=> landmassVal.textContent = landmassEl.value + '%');
 
     genViewBtn.addEventListener('click', generateAndView);
 
+    function centerCameraForCurrentView(shard, scale) {
+      // center the world in the current viewport
+      const viewW = canvas.width / scale, viewH = canvas.height / scale;
+      camX = Math.max(0, (shard.meta.width  - viewW) / 2);
+      camY = Math.max(0, (shard.meta.height - viewH) / 2);
+    }
+
     // Init
-    buildLegend();
-    fetchShardList();
-    loadRegistry();
-    syncSeedUi();
-    (async ()=>{ if(seedIdEl.value===''){ seedIdEl.value = await uniqueSeed(); } })();
+    async function init(){
+      buildLegend();
+      await fetchShardList();
+      await loadRegistry();
+      syncSeedUi();
+      // optional: seed field default
+      if (seedIdEl.value === '') { seedIdEl.value = await uniqueSeed(); }
+    }
+    init();
   </script>
 </body>
 </html>

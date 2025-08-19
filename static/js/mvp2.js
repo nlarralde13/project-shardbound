@@ -410,5 +410,5 @@ import { SETTLEMENT_TYPES, poiClassFor } from './settlementRegistry.js';
   }
 
   // ===== Init =====
-  loadShard('/static/data/shard_isle_of_cinder.json');
+  loadShard('/static/data/15257034_shard_fire_island.json');
 })();
