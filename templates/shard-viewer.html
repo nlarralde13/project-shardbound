@@ -1,437 +1,590 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Shard Viewer</title>
-  <style>
-    :root { --bg:#0b0f0c; --panel:#111712; --line:#1b261f; --accent:#20c20e; --text:#d7f8d2; --muted:#8bbf85; --radius:12px; }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0;background:radial-gradient(1200px 800px at 20% -10%, #132217 0%, var(--bg) 50%) fixed;color:var(--text);font:14px/1.4 ui-monospace,Menlo,Consolas,"Liberation Mono",monospace}
-    header{padding:16px 18px;border-bottom:1px solid var(--line);background:#0d140fdd;position:sticky;top:0;z-index:10}
-    h1{margin:0;font-size:16px;color:var(--accent)}
-    /* Left pane roomy + scroll if tall */
-    .wrap{display:grid;grid-template-columns:minmax(360px, 550px) 1fr;gap:16px;padding:16px}
-    @media (max-width:1100px){.wrap{grid-template-columns:1fr}}
-    .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
-    .card h2{margin:0;padding:10px 12px;background:#0f160f;border-bottom:1px solid var(--line);color:var(--muted);font-size:13px}
-    .card section{padding:12px;display:grid;gap:10px}
-    .card:first-child{align-self:start;max-height:calc(100vh - 120px);overflow:auto}
-    label{color:var(--muted)}
-    select,input[type="text"],input[type="number"],input[type="range"],button{background:#0c110d;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
-    input[type="range"]{padding:0;height:32px}
-    button{cursor:pointer;background:var(--accent);color:#001100;border-color:#1aa10c;font-weight:700}
-    .row{display:grid;grid-template-columns:150px 1fr;gap:8px;align-items:center}
-    .row.auto{grid-template-columns:1fr}
-    .row.inline-2{grid-template-columns:1fr 1fr}
-    .row.inline-3{grid-template-columns:1fr 1fr 1fr}
-    .group{border:1px solid var(--line);border-radius:10px;padding:10px;background:#0a100b}
-    .group h3{margin:0 0 8px 0;font-size:12px;color:var(--muted)}
-    /* IMPORTANT: no CSS scaling; JS sets pixel size */
-    canvas{background:#000;border:1px solid #0f2b11;border-radius:10px;display:block}
-    .viewer{display:grid;grid-template-rows:auto 1fr;gap:12px;height:calc(100vh - 112px)}
-    .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .legend{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
-    .swatch{display:inline-flex;gap:6px;align-items:center;padding:2px 6px;background:#0b130c;border:1px solid #132416;border-radius:999px}
-    .dot{width:12px;height:12px;border-radius:2px;border:1px solid #0f2b11}
-    .hint{color:var(--muted);font-size:12px}
-    .status{font-size:12px;color:var(--muted)}
-    .poikey{display:flex;gap:8px;align-items:center}
-    .keyshape{width:10px;height:10px;border:2px solid #aaffaa;border-radius:2px}
-    .tri{width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:10px solid #aaffaa}
-    .circ{width:10px;height:10px;border:2px solid #aaffaa;border-radius:50%}
-    .gridToggle{display:flex;gap:6px;align-items:center}
-    .tooltip{position:fixed;pointer-events:none;background:#061206;color:#ccffcc;border:1px solid #1e3b27;border-radius:8px;padding:6px 8px;font-size:12px;display:none}
-    .biomes{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
-    .biomes label{display:flex;gap:6px;align-items:center}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Shard Viewer</title>
+<style>
+  :root{
+    /* Blue retro theme */
+    --bg:#0d1220;            /* page background */
+    --panel:#111829;         /* cards */
+    --line:#1c2640;          /* borders */
+    --text:#e7eefc;          /* primary text */
+    --muted:#9ab0d8;         /* secondary text */
+    --accent:#65d2ff;        /* action */
+    --accent-2:#8be9ff;      /* lighter accent */
+    --chip:#0e1530;          /* legend chips */
+
+    --radius:12px;
+    --zoom-size:30px;        /* overlay zoom btn size */
+    --map-height:680px;      /* map box height */
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 800px at 10% -20%, #0f1b32 0%, transparent 60%) no-repeat,
+      radial-gradient(900px 600px at 110% 0%, #0f1b32 0%, transparent 60%) no-repeat,
+      var(--bg);
+    color:var(--text);
+    font:14px/1.45 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+  }
+
+  header{
+    display:flex; align-items:center; gap:12px;
+    padding:12px 16px;
+    background:#0c1428cc; backdrop-filter: blur(6px);
+    border-bottom:1px solid var(--line);
+    position:sticky; top:0; z-index:10;
+  }
+  header h1{ margin:0; font-size:16px; font-weight:700; color:#aee6ff; letter-spacing:.02em }
+
+  /* Layout */
+  .wrap{ display:grid; grid-template-columns:minmax(340px, 420px) 1fr; gap:16px; padding:16px; }
+  @media (max-width:1100px){ .wrap{ grid-template-columns:1fr } }
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    overflow:hidden;
+  }
+  .card h2{
+    margin:0; padding:10px 12px;
+    background:#0e1630;
+    border-bottom:1px solid var(--line);
+    color:#b9ccf0; font-size:13px; letter-spacing:.06em; text-transform:uppercase;
+  }
+  .card section{ padding:12px; display:grid; gap:10px; }
+  .card:first-child{ align-self:start; max-height:calc(100vh - 116px); overflow:auto; }
+
+  label{ color:var(--muted) }
+  select, input, button{
+    background:#0b1228; color:var(--text);
+    border:1px solid var(--line); border-radius:8px; height:34px;
+    padding:8px 10px;
+  }
+  input[type="range"]{ height:32px; padding:0 }
+  button{ cursor:pointer; background:var(--accent); color:#02283a; border-color:#2aa9db; font-weight:700; }
+  .secondary{ background:#0b1228; color:var(--text); border-color:#2a3a62 }
+  .muted{ color:var(--muted) }
+  .row{ display:grid; grid-template-columns:130px 1fr; gap:8px; align-items:center }
+  .row.auto{ grid-template-columns:1fr }
+  .row.inline-2{ grid-template-columns:1fr 1fr }
+  .row.inline-3{ grid-template-columns:1fr 1fr 1fr }
+
+  .group{ border:1px solid var(--line); border-radius:10px; padding:10px; background:#0d1530 }
+  .group h3{ margin:0 0 8px 0; color:#a7b9e6; font-size:12px; letter-spacing:.05em; text-transform:uppercase }
+
+  /* Legend */
+  .legend{ display:flex; flex-wrap:wrap; gap:10px; font-size:12px; color:var(--muted) }
+  .swatch{ display:inline-flex; gap:6px; align-items:center; padding:2px 6px; background:var(--chip); border:1px solid var(--line); border-radius:999px }
+  .dot{ width:12px; height:12px; border-radius:2px; border:1px solid #081024 }
+
+  /* Viewer */
+  .viewer{ display:grid; grid-template-rows:auto 1fr auto; gap:10px; min-height:520px }
+  .canvas-wrap{ position:relative; width:480px; height:480px;}
+  .canvas-wrap canvas{ position:absolute; inset:0; width:100%; height:100%; display:block; image-rendering:pixelated; background:#0a0f1f; border:1px solid var(--line); border-radius:10px }
+
+  /* Overlay zoom buttons */
+  .zoomOverlay{ position:absolute; top:10px; right:10px; display:flex; flex-direction:column; gap:8px; z-index:2 }
+  .zbtn{
+    width:var(--zoom-size); height:var(--zoom-size);
+    display:grid; place-items:center;
+    font-weight:900; font-size:calc(var(--zoom-size)*.6);
+    background:#0b1430; color:#d6eeff; border:1px solid #26457a; border-radius:8px;
+    box-shadow:0 2px 0 rgba(0,0,0,.35);
+  }
+  .status{ font-size:12px; color:var(--muted) }
+
+  /* Checkbox grid for biomes */
+  .biomes{ display:grid; grid-template-columns:repeat(2,1fr); gap:6px }
+  .biomes label{ display:flex; gap:6px; align-items:center }
+</style>
 </head>
 <body>
-  <header><h1>Shard Viewer</h1></header>
+<header><h1>Shard Viewer</h1></header>
 
-  <div class="wrap">
-    <div class="card">
-      <h2>Load / Generate</h2>
-      <section>
-        <div class="row"><label>Shard</label><select id="shardSelect"></select></div>
-        <div class="row"><label></label><button id="loadBtn">Load</button></div>
+<main class="wrap">
+  <!-- LEFT: Load + Viewer + Generator -->
+  <aside class="card">
+    <h2>Load / Generate</h2>
+    <section>
 
-        <div class="group">
-          <h3>Viewer</h3>
-          <div class="row"><label>Scale</label><input id="scale" type="number" min="1" max="64" step="1" value="8"/></div>
-          <div class="row gridToggle"><input type="checkbox" id="grid" /><label for="grid">Show grid</label></div>
-          <div class="row gridToggle"><input type="checkbox" id="fit" checked/><label for="fit">Auto‑fit to view</label></div>
+      <!-- Load -->
+      <div class="row"><label>Shard</label><select id="shardSelect"></select></div>
+      <div class="row"><label></label><button id="btnLoad">Load</button></div>
+
+      <!-- Viewer -->
+      <div class="group">
+        <h3>Viewer</h3>
+        <div class="row"><label>Scale (px/tile)</label><input id="scale" type="number" min="1" max="64" value="8" /></div>
+        <div class="row"><label>Show grid</label><input id="grid" type="checkbox" checked /></div>
+        <div class="row"><label>Auto-fit</label><input id="autoFit" type="checkbox" checked /></div>
+        <div class="status" id="status">Ready.</div>
+      </div>
+
+      <!-- Generate -->
+      <div class="group">
+        <h3>Generate Shard</h3>
+        <div class="row"><label>Preset</label><select id="preset"></select></div>
+        <div class="row"><label>Base Name</label><input id="baseName" placeholder="shard_fire_island" /></div>
+
+        <div class="row inline-3">
+          <div style="grid-column:1/3;display:flex;gap:8px;align-items:center">
+            <input type="checkbox" id="autoSeed" checked />
+            <label for="autoSeed">Auto-seed (unique 8-digit)</label>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <label for="seedId">Seed</label>
+            <input id="seedId" type="number" min="10000000" max="99999999" step="1" placeholder="########" disabled />
+            <button id="btnReroll" class="secondary" style="min-width:86px" disabled>Re-roll</button>
+          </div>
         </div>
 
-        <div class="group">
-          <h3>Generation</h3>
-          <div class="row"><label>Preset</label><select id="registrySelect"></select></div>
-          <div class="row"><label>Base Name</label><input id="baseName" type="text" placeholder="shard_fire_island"/></div>
-          <div class="row inline-3">
-            <div style="grid-column:1/3;display:flex;gap:8px;align-items:center">
-              <input type="checkbox" id="autoSeed" checked><label for="autoSeed">Auto‑seed (unique 8‑digit)</label>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center">
-              <label for="seedId">Seed</label>
-              <input id="seedId" type="number" min="10000000" max="99999999" step="1" placeholder="########" disabled>
-              <button id="rerollBtn" class="secondary" style="min-width:86px">Re‑roll</button>
-            </div>
-          </div>
-          <div class="row inline-2">
-            <div style="display:flex;gap:8px;align-items:center"><label for="width">Width</label><input id="width" type="number" min="16" max="256" step="1" value="64"></div>
-            <div style="display:flex;gap:8px;align-items:center"><label for="height">Height</label><input id="height" type="number" min="16" max="256" step="1" value="64"></div>
-          </div>
-          <div class="row auto">
-            <label>Landmass %</label>
-            <input id="landmass" type="range" min="10" max="80" step="1" value="44">
-            <div class="hint"><span id="landmassVal">44%</span></div>
-          </div>
-          <div class="row inline-2">
-            <div style="display:flex;gap:8px;align-items:center"><label for="ports">Ports</label><input id="ports" type="number" min="0" max="8" step="1" value="2"></div>
-            <div style="display:flex;gap:8px;align-items:center"><label for="settlements">Settlements</label><input id="settlements" type="number" min="0" max="12" step="1" value="3"></div>
-          </div>
-          <div class="row inline-3">
-            <div style="grid-column:1/4;display:flex;gap:8px;align-items:center">
-              <input type="checkbox" id="volcanoEnabled" checked><label for="volcanoEnabled">Volcano enabled</label>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center"><label for="volMin">Min R</label><input id="volMin" type="number" min="1" max="8" step="1" value="2"></div>
-            <div style="display:flex;gap:8px;align-items:center"><label for="volMax">Max R</label><input id="volMax" type="number" min="1" max="12" step="1" value="4"></div>
-          </div>
-          <div class="row auto">
-            <div class="biomes" id="biomes">
-              <label><input type="checkbox" value="forest" checked>forest</label>
-              <label><input type="checkbox" value="mountain" checked>mountain</label>
-              <label><input type="checkbox" value="hills" checked>hills</label>
-              <label><input type="checkbox" value="volcanic" checked>volcanic</label>
-            </div>
-          </div>
-          <div class="row"><label></label><button id="genViewBtn">Generate & View</button></div>
+        <div class="row inline-2">
+          <div style="display:flex;gap:8px;align-items:center"><label for="width">Width</label><input id="width" type="number" min="16" max="2048" value="64" /></div>
+          <div style="display:flex;gap:8px;align-items:center"><label for="height">Height</label><input id="height" type="number" min="16" max="2048" value="64" /></div>
         </div>
 
-        <div class="row auto"><div class="legend" id="legend"></div></div>
-        <div class="row auto"><div class="poikey">
-          <div class="keyshape"></div><span>Settlement</span>
-          <div class="tri"></div><span>Port</span>
-          <div class="circ"></div><span>Volcano</span>
-        </div></div>
-        <div class="row auto"><div class="hint">Files are read from <code>/static/public/shards/</code>. Friendly names use <code>meta.displayName</code> when present.</div></div>
-      </section>
-    </div>
+        <div class="row">
+          <label>Landmass %</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="landmass" type="range" min="10" max="80" step="1" value="44" style="width:100%" />
+            <span id="landmassVal">44%</span>
+          </div>
+        </div>
 
-    <div class="card viewer">
-      <div class="toolbar"><span class="status" id="status">Idle</span></div>
-      <section style="padding:12px">
-        <canvas id="canvas"></canvas>
-        <div class="tooltip" id="tooltip"></div>
-      </section>
-    </div>
-  </div>
+        <div class="row inline-2">
+          <div style="display:flex;gap:8px;align-items:center"><label for="ports">Ports</label><input id="ports" type="number" min="0" max="8" value="2" /></div>
+          <div style="display:flex;gap:8px;align-items:center"><label for="settlements">Settlements</label><input id="settlements" type="number" min="0" max="12" value="3" /></div>
+        </div>
 
-  <script type="module">
-    const biomeColors = { ocean:'#0b3d91', beach:'#e4d96f', grassland:'#2a9d8f', forest:'#1b5e20', mountain:'#8d99ae', hills:'#6c757d', volcanic:'#933a16' };
+        <div class="row inline-3">
+          <div style="grid-column:1/4;display:flex;gap:8px;align-items:center">
+            <input type="checkbox" id="volcanoEnabled" checked />
+            <label for="volcanoEnabled">Volcano enabled</label>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center"><label for="volMin">Min R</label><input id="volMin" type="number" min="1" max="8" value="2" /></div>
+          <div style="display:flex;gap:8px;align-items:center"><label for="volMax">Max R</label><input id="volMax" type="number" min="1" max="12" value="4" /></div>
+        </div>
 
-    // DOM
-    const selectEl = document.getElementById('shardSelect');
-    const loadBtn = document.getElementById('loadBtn');
-    const scaleEl = document.getElementById('scale');
-    const gridEl = document.getElementById('grid');
-    const fitEl = document.getElementById('fit');
-    const statusEl = document.getElementById('status');
-    const canvas = document.getElementById('canvas');
-    const tip = document.getElementById('tooltip');
-    const legend = document.getElementById('legend');
+        <div class="row auto">
+          <div class="biomes" id="biomeChecks">
+            <!-- populated from registry -->
+          </div>
+        </div>
 
-    const registrySelect = document.getElementById('registrySelect');
-    const baseNameInput = document.getElementById('baseName');
-    const autoSeedEl = document.getElementById('autoSeed');
-    const seedIdEl = document.getElementById('seedId');
-    const rerollBtn = document.getElementById('rerollBtn');
+        <div class="row"><label></label><button id="btnGenerate">Generate & Load</button></div>
 
-    const widthEl = document.getElementById('width');
-    const heightEl = document.getElementById('height');
-    const landmassEl = document.getElementById('landmass');
-    const landmassVal = document.getElementById('landmassVal');
-    const portsEl = document.getElementById('ports');
-    const settlementsEl = document.getElementById('settlements');
-    const volcanoEnabledEl = document.getElementById('volcanoEnabled');
-    const volMinEl = document.getElementById('volMin');
-    const volMaxEl = document.getElementById('volMax');
-    const biomesBox = document.getElementById('biomes');
+        <div class="legend" id="legend"></div>
+      </div>
 
-    const genViewBtn = document.getElementById('genViewBtn');
-    const ctx = canvas.getContext('2d', { alpha: false });
+    </section>
+  </aside>
 
-    // ---- state (declared early to avoid TDZ issues) ----
-    let currentShard = null;
-    let currentScale = Number(scaleEl.value || 8);
-    let camX = 0, camY = 0;
-    let isDragging = false, dragStartX = 0, dragStartY = 0;
+  <!-- CENTER: Map Viewer -->
+  <section class="card viewer">
+    <h2>Map</h2>
 
-    // Legend
-    function buildLegend(){
-      legend.innerHTML='';
-      Object.entries(biomeColors).forEach(([k,c])=>{
-        const el=document.createElement('span'); el.className='swatch';
-        el.innerHTML=`<span class="dot" style="background:${c}"></span>${k}`;
-        legend.appendChild(el);
+    <section class="canvas-wrap" id="frame">
+      <canvas id="canvas"></canvas>
+
+      <!-- Overlay zoom buttons -->
+      <div class="zoomOverlay">
+        <button class="zbtn" id="btnFit" title="Fit (refit)">⤢</button>
+        <button class="zbtn" id="btnZoomIn" title="Zoom in">+</button>
+        <button class="zbtn" id="btnZoomOut" title="Zoom out">−</button>
+      </div>
+    </section>
+
+    <section>
+      <div class="legend" id="legend2"></div>
+    </section>
+  </section>
+</main>
+
+<script type="module">
+  import { BIOME_COLORS, ALL_BIOME_KEYS } from "/static/js/biomeRegistry.js";
+
+  // ===== DOM
+  const shardSelect = document.getElementById('shardSelect');
+  const btnLoad     = document.getElementById('btnLoad');
+  const statusEl    = document.getElementById('status');
+
+  const scaleEl     = document.getElementById('scale');
+  const gridEl      = document.getElementById('grid');
+  const autoFitEl   = document.getElementById('autoFit');
+
+  const frame       = document.getElementById('frame');
+  const canvas      = document.getElementById('canvas');
+  const ctx         = canvas.getContext('2d', { alpha:false });
+
+  const btnFit      = document.getElementById('btnFit');
+  const btnZoomIn   = document.getElementById('btnZoomIn');
+  const btnZoomOut  = document.getElementById('btnZoomOut');
+
+  const legend      = document.getElementById('legend');
+  const legend2     = document.getElementById('legend2');
+
+  // Generate inputs
+  const presetEl    = document.getElementById('preset');
+  const baseNameEl  = document.getElementById('baseName');
+  const autoSeedEl  = document.getElementById('autoSeed');
+  const seedIdEl    = document.getElementById('seedId');
+  const btnReroll   = document.getElementById('btnReroll');
+  const widthEl     = document.getElementById('width');
+  const heightEl    = document.getElementById('height');
+  const landmassEl  = document.getElementById('landmass');
+  const landmassVal = document.getElementById('landmassVal');
+  const portsEl     = document.getElementById('ports');
+  const settlementsEl = document.getElementById('settlements');
+  const volcanoEnabledEl = document.getElementById('volcanoEnabled');
+  const volMinEl    = document.getElementById('volMin');
+  const volMaxEl    = document.getElementById('volMax');
+  const biomeChecks = document.getElementById('biomeChecks');
+  const btnGenerate = document.getElementById('btnGenerate');
+
+  // ===== State
+  let shard = null;                 // normalized: { meta:{width,height}, tiles, pois }
+  let scale = 8;                    // px per tile
+  let baseScale = 8;                // "fit" scale for the current frame size
+  let camX = 0, camY = 0;           // top-left world coords (tiles)
+  let dragging = false, lastX=0, lastY=0;
+  const MIN_SCALE = 1, MAX_SCALE = 64;
+
+  // ===== Helpers
+  function setStatus(t){ statusEl.textContent = t; }
+
+  // Build legend chips
+  function drawLegend(host){
+    host.innerHTML='';
+    for (const [k, c] of Object.entries(BIOME_COLORS)){
+      const span = document.createElement('span');
+      span.className='swatch';
+      span.innerHTML = `<span class="dot" style="background:${c}"></span>${k}`;
+      host.appendChild(span);
+    }
+  }
+  drawLegend(legend2); 
+
+  // Canonicalize biome names from any variant
+  const CANON = {};
+  for (const k of ALL_BIOME_KEYS) CANON[k.toLowerCase()] = k;
+  function canonBiome(b){
+    if (!b) return 'Ocean';
+    const raw = String(b);
+    const keyA = raw.toLowerCase().replace(/\s+/g,'');
+    const keyB = raw.toLowerCase().replace(/[_-]/g,'');
+    return CANON[keyA] || CANON[keyB] || raw;
+  }
+
+  // Normalize shard JSON -> {meta, tiles, pois}
+  function normalize(json){
+    const meta = json.meta || {};
+    let tiles;
+    if (Array.isArray(json.grid)) {
+      tiles = json.grid.map(row => row.map(b => ({ biome: canonBiome(b) })));
+    } else if (Array.isArray(json.tiles)) {
+      tiles = json.tiles.map(row => row.map(cell => {
+        const b = typeof cell === 'string' ? cell : (cell?.biome || cell?.type || cell?.tag);
+        return { ...cell, biome: canonBiome(b) };
+      }));
+    } else {
+      throw new Error('No grid/tiles in shard');
+    }
+    const width  = meta.width  ?? tiles[0].length;
+    const height = meta.height ?? tiles.length;
+
+    const pois = (json.sites || json.pois || []).map(p => ({
+      x: p.x ?? p.pos?.[0] ?? 0, y: p.y ?? p.pos?.[1] ?? 0, type: p.type || 'poi', name: p.name
+    }));
+    return { meta: { ...meta, width, height }, tiles, pois };
+  }
+
+  // Resize canvas to frame and (optionally) keep "fit"
+  function resizeCanvasToFrame(){
+    const r = frame.getBoundingClientRect();
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    canvas.width = Math.round(r.width*dpr);
+    canvas.height= Math.round(r.height*dpr);
+    canvas.style.width = r.width+'px';
+    canvas.style.height= r.height+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    if (shard){
+      baseScale = Math.max(1, Math.min(r.width/shard.meta.width, r.height/shard.meta.height));
+      if (autoFitEl.checked || Math.abs(scale-baseScale)/baseScale < 0.02) {
+        scale = baseScale; // snap when near fit or auto-fit on
+        centerCamera();
+      }
+      render();
+    }
+  }
+
+  function centerCamera(){
+    const r = frame.getBoundingClientRect();
+    const vw = r.width/scale, vh = r.height/scale;
+    camX = Math.max(0, (shard.meta.width  - vw)/2);
+    camY = Math.max(0, (shard.meta.height - vh)/2);
+    clampCam();
+  }
+
+  function clampCam(){
+    const r = frame.getBoundingClientRect();
+    const vw = r.width/scale, vh = r.height/scale;
+    camX = Math.max(0, Math.min(shard.meta.width  - vw, camX));
+    camY = Math.max(0, Math.min(shard.meta.height - vh, camY));
+  }
+
+  function render(){
+    if (!shard) return;
+    const r = frame.getBoundingClientRect();
+    ctx.clearRect(0,0,r.width,r.height);
+
+    const w = shard.meta.width, h = shard.meta.height;
+    const vw = r.width/scale,   vh = r.height/scale;
+    const x0 = Math.max(0, Math.floor(camX));
+    const y0 = Math.max(0, Math.floor(camY));
+    const x1 = Math.min(w, Math.ceil(camX + vw));
+    const y1 = Math.min(h, Math.ceil(camY + vh));
+
+    // bg
+    ctx.fillStyle = '#0a0f1f';
+    ctx.fillRect(0,0,r.width,r.height);
+
+    ctx.save();
+    ctx.translate(-camX*scale, -camY*scale);
+
+    // tiles
+    for (let y=y0; y<y1; y++){
+      const row = shard.tiles[y];
+      for (let x=x0; x<x1; x++){
+        const biome = row?.[x]?.biome || 'Ocean';
+        ctx.fillStyle = BIOME_COLORS[biome] || '#222';
+        ctx.fillRect(x*scale, y*scale, scale, scale);
+      }
+    }
+
+    // grid
+    if (gridEl.checked){
+      ctx.strokeStyle = 'rgba(0,0,0,0.28)';
+      ctx.lineWidth = 1;
+      for (let x=x0; x<=x1; x++){
+        const px = x*scale + 0.5;
+        ctx.beginPath(); ctx.moveTo(px, y0*scale); ctx.lineTo(px, y1*scale); ctx.stroke();
+      }
+      for (let y=y0; y<=y1; y++){
+        const py = y*scale + 0.5;
+        ctx.beginPath(); ctx.moveTo(x0*scale, py); ctx.lineTo(x1*scale, py); ctx.stroke();
+      }
+    }
+
+    // POIs (simple circle markers)
+    ctx.lineWidth = Math.max(1, scale/6); ctx.strokeStyle = '#98f3ff';
+    for (const p of (shard.pois||[])){
+      if (p.x<x0 || p.x>=x1 || p.y<y0 || p.y>=y1) continue;
+      const px = p.x*scale + scale/2, py = p.y*scale + scale/2;
+      ctx.beginPath(); ctx.arc(px,py,Math.max(3,scale*0.35),0,Math.PI*2); ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  // Pan / zoom
+  frame.addEventListener('pointerdown', e => {
+    frame.setPointerCapture(e.pointerId);
+    dragging = true; lastX = e.clientX; lastY = e.clientY;
+  });
+  frame.addEventListener('pointermove', e => {
+    if (!dragging || !shard) return;
+    const dx = (e.clientX-lastX)/scale, dy = (e.clientY-lastY)/scale;
+    lastX = e.clientX; lastY = e.clientY;
+    camX -= dx; camY -= dy; clampCam(); render();
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(ev => frame.addEventListener(ev, ()=> dragging=false));
+
+  frame.addEventListener('wheel', e => {
+    if (!shard) return; e.preventDefault();
+    const rect = frame.getBoundingClientRect();
+    const sx = e.clientX-rect.left, sy = e.clientY-rect.top;
+    const wx = camX + sx/scale, wy = camY + sy/scale;
+    const next = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale * (e.deltaY>0 ? 1/1.2 : 1.2)));
+    if (next === scale) return;
+    scale = next;
+    camX = wx - sx/scale; camY = wy - sy/scale;
+    clampCam(); render();
+  }, { passive:false });
+
+  btnZoomIn.addEventListener('click', ()=> {
+    const rect = frame.getBoundingClientRect(), sx=rect.width/2, sy=rect.height/2;
+    const wx = camX + sx/scale, wy = camY + sy/scale;
+    scale = Math.min(MAX_SCALE, scale*1.2);
+    camX = wx - sx/scale; camY = wy - sy/scale; clampCam(); render();
+  });
+  btnZoomOut.addEventListener('click', ()=> {
+    const rect = frame.getBoundingClientRect(), sx=rect.width/2, sy=rect.height/2;
+    const wx = camX + sx/scale, wy = camY + sy/scale;
+    scale = Math.max(MIN_SCALE, scale/1.2);
+    camX = wx - sx/scale; camY = wy - sy/scale; clampCam(); render();
+  });
+  btnFit.addEventListener('click', ()=> { if(shard){ autoFitEl.checked = true; resizeCanvasToFrame(); } });
+
+  // Viewer controls
+  scaleEl.addEventListener('change', ()=> {
+    if (!shard) return;
+    const v = Math.max(1, Math.min(64, Number(scaleEl.value)||8));
+    autoFitEl.checked = false;
+    scale = v; clampCam(); render();
+  });
+  gridEl.addEventListener('change', ()=> render());
+  autoFitEl.addEventListener('change', ()=> { if(shard) resizeCanvasToFrame(); });
+
+  window.addEventListener('resize', resizeCanvasToFrame);
+
+  // ===== API: Shard list + load
+  async function listShards(){
+    const res = await fetch('/api/shards');
+    if (!res.ok) throw new Error('list failed');
+    return res.json();
+  }
+
+  function populateSelect(items){
+    shardSelect.innerHTML='';
+    for (const it of items){
+      const file = it.file || it;
+      const meta = it.meta || {};
+      const label = meta.displayName || file.replace(/^[0-9]{8}_/,'').replace(/_/g,' ').replace(/\.json$/,'');
+      const opt = document.createElement('option');
+      opt.value = (it.path || `/static/public/shards/${file}`).replace(/\.json$/,''); // value is nameNoExt
+      opt.dataset.filename = file;
+      opt.textContent = `${label} (${file})`;
+      shardSelect.appendChild(opt);
+    }
+  }
+
+  async function loadSelected(){
+    const sel = shardSelect.selectedOptions[0];
+    if (!sel) return;
+    const nameNoExt = sel.value.split('/').pop(); // tolerate path or simple name
+    setStatus('Loading…');
+    const res = await fetch(`/api/shards/${encodeURIComponent(nameNoExt)}`);
+    if (!res.ok){ setStatus('Failed to load shard'); return; }
+    const json = await res.json();
+    shard = normalize(json);
+    resizeCanvasToFrame(); // computes baseScale + (re)fits
+    setStatus(`Loaded ${json.meta?.displayName || nameNoExt}`);
+  }
+  btnLoad.addEventListener('click', loadSelected);
+  shardSelect.addEventListener('dblclick', loadSelected);
+
+  // ===== API: Registry + Generate
+  function syncSeedUI(){
+    const auto = autoSeedEl.checked;
+    seedIdEl.disabled = auto;
+    btnReroll.disabled = auto;
+  }
+  autoSeedEl.addEventListener('change', syncSeedUI);
+
+  landmassEl.addEventListener('input', ()=> landmassVal.textContent = landmassEl.value+'%');
+
+  async function uniqueSeed(){
+    // ensure unique 8-digit seed (based on filenames)
+    const list = await listShards().catch(()=>[]);
+    const used = new Set((Array.isArray(list)?list:[]).map(it=>it.file||it)
+      .map(f => { const m=/^(\d{8})_/.exec(f||''); return m?Number(m[1]):null; })
+      .filter(n=>Number.isInteger(n)));
+    let s=0; do{ s = Math.floor(10_000_000 + Math.random()*90_000_000); } while(used.has(s));
+    return s;
+    }
+  btnReroll.addEventListener('click', async ()=> seedIdEl.value = await uniqueSeed());
+
+  async function loadRegistry(){
+    try{
+      const res = await fetch('/api/registry');
+      const data = res.ok ? await res.json() : { presets:[] };
+      const presets = data.presets || [];
+      presetEl.innerHTML='';
+      presets.forEach(p => {
+        const opt=document.createElement('option');
+        opt.value=p.key; opt.textContent=p.key; presetEl.appendChild(opt);
       });
-    }
+      if (!baseNameEl.value) baseNameEl.value = 'shard_fire_island';
 
-    // Shard list (robust to either array of strings or objects)
-    async function fetchShardList(){
-      statusEl.textContent='Loading shard list…';
-      try {
-        const res = await fetch('/api/shards');
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const raw = await res.json();
-        const items = Array.isArray(raw)
-          ? raw.map(d => (typeof d === 'string' ? { file: d, meta: {} } : d))
-          : [];
-
-        selectEl.innerHTML='';
-        items.forEach(({file, meta={}})=>{
-          const friendly = meta.displayName
-            || file.replace(/^[0-9]{8}_/,'').replace(/_/g,' ').replace(/\.json$/,'').replace(/^shard\s*/i,'').trim();
-          const opt=document.createElement('option');
-          opt.value=file.replace(/\.json$/,'');
-          opt.textContent=`${friendly} — (${file})`;
-          selectEl.appendChild(opt);
-        });
-        statusEl.textContent=`Found ${items.length} shard(s)`;
-      } catch (err) {
-        console.error('Failed to load /api/shards:', err);
-        statusEl.textContent='Failed to load shard list';
-      }
-    }
-
-    // Registry
-    async function loadRegistry(){
-      try{
-        const res = await fetch('/api/registry');
-        const data = res.ok ? await res.json() : { presets:[] };
-        const presets = data.presets || [];
-        registrySelect.innerHTML='';
-        presets.forEach(p=>{ const opt=document.createElement('option'); opt.value=p.key; opt.textContent=p.key; registrySelect.appendChild(opt); });
-        if(!baseNameInput.value) baseNameInput.value='shard_fire_island';
-      }catch{}
-    }
-
-    // Load shard JSON
-    async function loadShard(nameNoExt){
-      statusEl.textContent=`Loading ${nameNoExt}…`;
-      const res = await fetch(`/api/shards/${encodeURIComponent(nameNoExt)}`);
-      if(!res.ok){ statusEl.textContent=`Failed to load: ${res.status}`; return null; }
-      const json = await res.json();
-      statusEl.textContent=`Loaded ${json.meta?.displayName || nameNoExt}`;
-      return json;
-    }
-
-    // Canvas sizing — match the viewer area (viewport), not the whole world
-    function resizeCanvasToView() {
-      const rect = canvas.parentElement.getBoundingClientRect();
-      const pxW = Math.max(1, Math.floor(rect.width));
-      const pxH = Math.max(1, Math.floor(rect.height));
-      canvas.width = pxW;
-      canvas.height = pxH;
-      canvas.style.imageRendering = 'pixelated';
-    }
-
-    function computeAutoScale(shard){
-      const w = shard.meta.width, h = shard.meta.height;
-      const rect = canvas.parentElement.getBoundingClientRect();
-      const pad = 20; const maxW = rect.width - pad, maxH = rect.height - pad;
-      return Math.max(1, Math.floor(Math.min(maxW / w, maxH / h)));
-    }
-
-    // Render only what’s visible through the camera
-    function renderShard(shard, scale, showGrid=false){
-      resizeCanvasToView();
-
-      const w = shard.meta.width, h = shard.meta.height;
-      const viewTilesW = canvas.width / scale;
-      const viewTilesH = canvas.height / scale;
-      const maxCamX = Math.max(0, w - viewTilesW);
-      const maxCamY = Math.max(0, h - viewTilesH);
-
-      const t0 = performance.now();
-      ctx.save();
-      ctx.translate(-camX * scale, -camY * scale);
-
-      // Cull to visible range
-      const x0 = Math.max(0, Math.floor(camX));
-      const y0 = Math.max(0, Math.floor(camY));
-      const x1 = Math.min(w, Math.ceil(camX + viewTilesW));
-      const y1 = Math.min(h, Math.ceil(camY + viewTilesH));
-
-      // Tiles
-      for (let y = y0; y < y1; y++) {
-        const row = shard.tiles[y];
-        for (let x = x0; x < x1; x++) {
-          const biome = row?.[x]?.biome || 'ocean';
-          ctx.fillStyle = biomeColors[biome] || '#222';
-          ctx.fillRect(x * scale, y * scale, scale, scale);
-        }
-      }
-
-      // Grid
-      if (showGrid && scale >= 4) {
-        ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-        ctx.lineWidth = 1;
-        for (let x = x0; x <= x1; x++) {
-          ctx.beginPath(); ctx.moveTo(x * scale + 0.5, y0 * scale);
-          ctx.lineTo(x * scale + 0.5, y1 * scale); ctx.stroke();
-        }
-        for (let y = y0; y <= y1; y++) {
-          ctx.beginPath(); ctx.moveTo(x0 * scale, y * scale + 0.5);
-          ctx.lineTo(x1 * scale, y * scale + 0.5); ctx.stroke();
-        }
-      }
-
-      // POIs (world coords, culled)
-      (shard.pois || []).forEach(p => {
-        if (p.x >= x0 && p.x < x1 && p.y >= y0 && p.y < y1) drawPOI(p, scale);
+      // Biome checkboxes (hide the liquid ones; generator infers ocean/coast)
+      const skip = new Set(['Ocean','Coast','River','Lake','Reef']);
+      biomeChecks.innerHTML='';
+      ALL_BIOME_KEYS.filter(k=>!skip.has(k)).forEach(k=>{
+        const id='bio_'+k;
+        const lab=document.createElement('label');
+        lab.innerHTML=`<input type="checkbox" id="${id}" value="${k}" ${['Plains','Forest','Hills','Mountains','Volcano'].includes(k)?'checked':''}/> ${k}`;
+        biomeChecks.appendChild(lab);
       });
+    }catch(e){ /* optional */ }
+  }
 
-      ctx.restore();
-      statusEl.textContent = `Rendered in ${(performance.now() - t0).toFixed(1)} ms`;
+  async function generateAndLoad(){
+    let seed = Number(seedIdEl.value||0);
+    if (autoSeedEl.checked || !Number.isInteger(seed) || seed<10000000 || seed>99999999){
+      seed = await uniqueSeed();
+      seedIdEl.value = seed; autoSeedEl.checked = true; syncSeedUI();
     }
+    const template = presetEl.value || 'shard_isle_of_cinder';
+    const nameBase = (baseNameEl.value || template).replace(/\s+/g,'_').toLowerCase();
+    const chosenBiomes = [...biomeChecks.querySelectorAll('input:checked')].map(i=>i.value);
 
-    function drawPOI(p,s){
-      const px=p.x*s+s/2, py=p.y*s+s/2;
-      ctx.save(); ctx.lineWidth=Math.max(1,s/6); ctx.strokeStyle='#aaffaa';
-      if(p.type==='settlement'){ const r=Math.max(3,s*0.4); ctx.strokeRect(px-r/2,py-r/2,r,r); }
-      else if(p.type==='port'){ const r=Math.max(4,s*0.6); ctx.beginPath(); ctx.moveTo(px,py-r/2); ctx.lineTo(px-r/2,py+r/2); ctx.lineTo(px+r/2,py+r/2); ctx.closePath(); ctx.stroke(); }
-      else if(p.type==='volcano'){ const r=Math.max(4,s*0.5); ctx.beginPath(); ctx.arc(px,py,r/2,0,Math.PI*2); ctx.stroke(); }
-      else { ctx.beginPath(); ctx.arc(px,py,Math.max(3,s*0.4),0,Math.PI*2); ctx.stroke(); }
-      ctx.restore();
-    }
-
-    // Tooltip + drag handlers
-    canvas.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      isDragging = true; dragStartX = e.clientX; dragStartY = e.clientY;
-      canvas.style.cursor = 'grabbing';
-    });
-    window.addEventListener('mouseup', () => {
-      isDragging = false; canvas.style.cursor = 'default';
-    });
-    canvas.addEventListener('mousemove',(e)=>{
-      if (isDragging && currentShard) {
-        const dx = (e.clientX - dragStartX) / currentScale;
-        const dy = (e.clientY - dragStartY) / currentScale;
-        dragStartX = e.clientX; dragStartY = e.clientY;
-        camX -= dx; camY -= dy;
-        renderShard(currentShard, currentScale, gridEl.checked);
-        tip.style.display='none';
-        return;
+    const payload = {
+      template,
+      name: nameBase,
+      seedId: seed,
+      autoSeed: true,
+      overrides: {
+        seed,
+        width: Number(widthEl.value||64),
+        height:Number(heightEl.value||64),
+        landmass_ratio: Number(landmassEl.value||44)/100,
+        biomes: chosenBiomes,
+        volcano: { enabled: volcanoEnabledEl.checked, min_radius:Number(volMinEl.value||2), max_radius:Number(volMaxEl.value||4) },
+        ports: { count: Number(portsEl.value||2) },
+        settlements: { count: Number(settlementsEl.value||3) }
       }
-      if(!currentShard) return;
-      const rect=canvas.getBoundingClientRect();
-      const x=Math.floor((e.clientX-rect.left)/currentScale + camX);
-      const y=Math.floor((e.clientY-rect.top)/currentScale + camY);
-      const t=currentShard.tiles?.[y]?.[x];
-      if(!t){ tip.style.display='none'; return; }
-      const pois=(currentShard.pois||[]).filter(p=>p.x===x && p.y===y);
-      tip.style.display='block'; tip.style.left=(e.clientX+12)+'px'; tip.style.top=(e.clientY+12)+'px';
-      tip.innerHTML=`<b>${currentShard.meta.displayName}</b><br/>(${x}, ${y}) — ${t.biome}${pois.length?`<br/>POIs: ${pois.map(p=>p.type).join(', ')}`:''}`;
-    });
-    canvas.addEventListener('mouseleave',()=> tip.style.display='none');
+    };
 
-    // UI wiring
-    function syncSeedUi(){
-      const auto=autoSeedEl.checked;
-      seedIdEl.disabled = auto;
-      rerollBtn.disabled = auto;
-    }
+    setStatus('Generating…');
+    const res = await fetch('/api/generate_shard', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    const out = await res.json();
+    if (!res.ok || !out.ok){ setStatus('Generate failed'); console.error(out); return; }
 
-    async function uniqueSeed(){
-      const listRes = await fetch('/api/shards');
-      const list = listRes.ok ? await listRes.json() : [];
-      const used = new Set(list.map(it=>it.file).map(n=>{const m=/^(\d{8})_/.exec(n);return m?Number(m[1]):null;}).filter(n=>Number.isInteger(n)));
-      let s=0; do{ s=Math.floor(10_000_000+Math.random()*90_000_000); } while(used.has(s));
-      return s;
-    }
+    // refresh list, select new file, load it
+    const items = await listShards().catch(()=>[]);
+    populateSelect(items);
+    const just = out.file.replace(/\.json$/,'');
+    // try to find option whose filename matches out.file
+    const opt = [...shardSelect.options].find(o => (o.dataset.filename||'').replace(/\.json$/,'') === just);
+    if (opt){ opt.selected = true; }
+    await loadSelected();
+  }
+  btnGenerate.addEventListener('click', generateAndLoad);
 
-    async function generateAndView(){
-      const template = registrySelect.value || 'shard_isle_of_cinder';
-      const baseName = (baseNameInput.value || template).replace(/\s+/g,'_').toLowerCase();
-      let seed = autoSeedEl.checked ? await uniqueSeed() : Number(seedIdEl.value || 0);
-      if(!autoSeedEl.checked && (!Number.isInteger(seed) || seed<10000000 || seed>99999999)){ alert('Provide an 8‑digit seed'); return; }
-
-      const biomes = ['ocean','beach','grassland', ...[...biomesBox.querySelectorAll('input:checked')].map(i=>i.value)];
-      const payload = {
-        template,
-        name: baseName,
-        seedId: seed,
-        autoSeed: autoSeedEl.checked,
-        overrides: {
-          seed,
-          width: Number(widthEl.value),
-          height: Number(heightEl.value),
-          landmass_ratio: Number(landmassEl.value)/100,
-          biomes,
-          volcano: { enabled: volcanoEnabledEl.checked, min_radius: Number(volMinEl.value), max_radius: Number(volMaxEl.value) },
-          ports: { count: Number(portsEl.value) },
-          settlements: { count: Number(settlementsEl.value) }
-        }
-      };
-
-      const res = await fetch('/api/generate_shard',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-      const out = await res.json();
-      if(!res.ok || !out.ok){ statusEl.textContent='Generate failed'; console.error(out); return; }
-
-      await fetchShardList();
-      const name = out.file.replace(/\.json$/,'');
-      const shard = await loadShard(name);
-      if(!shard) return;
-      currentShard = shard;
-
-      // Reset/center camera on new shard
-      currentScale = fitEl.checked ? computeAutoScale(shard) : Number(scaleEl.value);
-      scaleEl.value = currentScale;
-      centerCameraForCurrentView(shard, currentScale);
-      renderShard(shard,currentScale,gridEl.checked);
-    }
-
-    loadBtn.addEventListener('click', async ()=>{
-      const name=selectEl.value; if(!name) return;
-      const shard=await loadShard(name); if(!shard) return;
-      currentShard=shard;
-      currentScale = fitEl.checked ? computeAutoScale(shard) : Number(scaleEl.value);
-      scaleEl.value=currentScale;
-      centerCameraForCurrentView(shard, currentScale);
-      renderShard(shard,currentScale,gridEl.checked);
-    });
-
-    scaleEl.addEventListener('change',()=>{ if(currentShard){ currentScale=Number(scaleEl.value); renderShard(currentShard,currentScale,gridEl.checked);} });
-    gridEl.addEventListener('change',()=>{ if(currentShard){ renderShard(currentShard,currentScale,gridEl.checked);} });
-    fitEl.addEventListener('change',()=>{ if(currentShard){ currentScale = fitEl.checked ? computeAutoScale(currentShard) : Number(scaleEl.value); scaleEl.value=currentScale; centerCameraForCurrentView(currentShard,currentScale); renderShard(currentShard,currentScale,gridEl.checked);} });
-    window.addEventListener('resize',()=>{ if(currentShard){ if(fitEl.checked){ currentScale=computeAutoScale(currentShard); scaleEl.value=currentScale; } renderShard(currentShard,currentScale,gridEl.checked);} });
-
-    autoSeedEl.addEventListener('change', syncSeedUi);
-    rerollBtn.addEventListener('click', async ()=>{ seedIdEl.value = await uniqueSeed(); });
-    landmassEl.addEventListener('input',()=> landmassVal.textContent = landmassEl.value + '%');
-
-    genViewBtn.addEventListener('click', generateAndView);
-
-    function centerCameraForCurrentView(shard, scale) {
-      // center the world in the current viewport
-      const viewW = canvas.width / scale, viewH = canvas.height / scale;
-      camX = Math.max(0, (shard.meta.width  - viewW) / 2);
-      camY = Math.max(0, (shard.meta.height - viewH) / 2);
-    }
-
-    // Init
-    async function init(){
-      buildLegend();
-      await fetchShardList();
+  // ===== Init
+  (async function init(){
+    try {
+      const items = await listShards();
+      populateSelect(items);
+      // registry (optional)
       await loadRegistry();
-      syncSeedUi();
-      // optional: seed field default
-      if (seedIdEl.value === '') { seedIdEl.value = await uniqueSeed(); }
+      syncSeedUI();
+      if (!seedIdEl.value) seedIdEl.value = await uniqueSeed();
+      // auto-load first, if any
+      if (shardSelect.options.length) await loadSelected();
+    } catch (e) {
+      console.error(e);
+      setStatus('Init failed');
     }
-    init();
-  </script>
+    resizeCanvasToFrame();
+  })();
+</script>
 </body>
 </html>

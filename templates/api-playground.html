@@ -1,453 +1,192 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Shardbound API Playground</title>
+  <meta charset="utf-8" />
+  <title>API Playground • Shardbound</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root { --bg:#0b0f0c; --panel:#111712; --line:#1b261f; --accent:#20c20e; --accent-dim:#1aa10c; --text:#d7f8d2; --muted:#8bbf85; --danger:#ff6b6b; --warn:#ffc857; --radius:12px;}
-    *{box-sizing:border-box} html,body{height:100%}
-    body{margin:0;background:radial-gradient(1200px 800px at 20% -10%, #132217 0%, var(--bg) 50%) fixed;color:var(--text);font:14px/1.4 ui-monospace,Menlo,Consolas,"Liberation Mono",monospace;letter-spacing:.2px}
-    header{padding:18px 20px;border-bottom:1px solid var(--line);background:#0d140fdd;backdrop-filter:blur(5px);position:sticky;top:0;z-index:10}
-    h1{margin:0;font-size:16px;color:var(--accent);letter-spacing:1px}
-    .container{padding:16px;display:grid;gap:16px;grid-template-columns:1.2fr .8fr}
-    @media (max-width:1100px){.container{grid-template-columns:1fr}}
-    .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
-    .card h2{margin:0;font-size:13px;color:var(--muted);padding:10px 12px;border-bottom:1px solid var(--line);background:#0f160f}
-    .card section{padding:12px;display:grid;gap:10px}
-    .row{display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center}
-    .row.auto{grid-template-columns:1fr}
-    label{color:var(--muted)}
-    input,select,textarea{width:100%;background:#0c110d;color:var(--text);border:1px solid var(--line);padding:8px 10px;border-radius:8px;outline:none}
-    textarea{min-height:90px;resize:vertical}
-    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .btns{display:flex;gap:8px;flex-wrap:wrap}
-    button{background:var(--accent);color:#001100;border:1px solid var(--accent-dim);padding:8px 12px;border-radius:8px;font-weight:700;cursor:pointer}
-    button.secondary{background:transparent;color:var(--muted);border-color:var(--line)}
-    .console{background:#020502;color:#b9ffb3;min-height:240px;padding:12px;border-top:1px solid #073a06;font-size:13px;overflow:auto;white-space:pre-wrap}
-    .console .hdr{color:#7ee07d}.console .err{color:#ff8a8a}.console .muted{color:#7fa37a}
-    .statusbar{display:flex;gap:12px;align-items:center;padding:8px 12px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;background:#0a100b}
-    .kv{display:grid;grid-template-columns:1fr 1fr auto;gap:6px}
-    .kv input{padding:6px 8px}
-    .kv .remove{background:transparent;color:#ff9b9b;border-color:#522}
-    .curl{background:#061406;padding:8px;border-top:1px solid #0e2a0e;color:#9dfc96;font-size:12px;overflow-x:auto}
-    .badge{padding:2px 6px;border-radius:999px;background:#0e1d12;border:1px solid #1e3b27;color:var(--accent);font-size:11px}
-    .hint{font-size:12px;color:var(--muted)}
+    :root {
+      --bg: #0f1115; --panel: #161a22; --muted: #98a2b3; --text: #e6e8ea; --accent: #62d4ff;
+      --ok: #7dd27d; --bad: #e57373; --warn: #f8c147;
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
+    .top { display: flex; gap: 12px; align-items: center; }
+    h1 { font-size: 18px; margin: 0; }
+    .card { background: var(--panel); border: 1px solid #202634; border-radius: 10px; padding: 14px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    label { font-size: 12px; color: var(--muted); display:block; margin-bottom:6px; }
+    input, select, textarea, button {
+      background: #0f141d; color: var(--text); border: 1px solid #2a3140; border-radius: 8px; padding: 8px 10px; width: 100%;
+    }
+    textarea { min-height: 160px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+    button { width: auto; cursor: pointer; }
+    .muted { color: var(--muted); }
+    .flex { display:flex; gap:8px; align-items:center; flex-wrap: wrap;}
+    pre { background: #0c0f15; border: 1px solid #1d2331; color: #cfe3ff; padding: 10px; border-radius: 8px; overflow: auto; font-size: 12px; }
+    .chips { display:flex; flex-wrap: wrap; gap:6px; }
+    .chip { font-size:12px; padding:4px 8px; border-radius:999px; border:1px solid #2a3140; background:#121720;}
+    .ok { color: var(--ok); } .bad { color: var(--bad); } .warn { color: var(--warn); }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Shardbound API Playground <span class="badge">local</span></h1>
-  </header>
+  <div class="wrap">
+    <div class="top">
+      <h1>API Playground</h1>
+      <span class="muted">Quickly call your endpoints with canonical biomes & settlement types</span>
+    </div>
 
-  <div class="container">
-    <!-- Left: Request Builder -->
-    <div class="card">
-      <h2>Request Builder</h2>
-      <section>
-        <div class="grid-2">
-          <div class="row"><label>Base URL</label><input id="baseUrl" value="/" /></div>
-          <div class="row"><label>Preset</label><select id="presetSelect"></select></div>
+    <section class="card row">
+      <div>
+        <h3 class="muted" style="margin-top:0;">List Shards</h3>
+        <div class="flex">
+          <button id="btnList">GET /api/shards</button>
+          <button id="btnOpen">Open in Shard Viewer</button>
         </div>
+        <pre id="listOut">// results here</pre>
+      </div>
 
-        <div class="grid-2">
-          <div class="row"><label>Method</label>
-            <select id="method">
-              <option>GET</option><option>POST</option><option>PATCH</option><option>DELETE</option>
+      <div>
+        <h3 class="muted" style="margin-top:0;">Get One</h3>
+        <div class="flex">
+          <input id="getName" placeholder="nameNoExt (e.g. 12345678_shard_fire_island)" />
+          <button id="btnGet">GET /api/shards/&lt;nameNoExt&gt;</button>
+        </div>
+        <pre id="getOut">// shard JSON here</pre>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3 class="muted" style="margin-top:0;">Generate Shard (POST /api/generate_shard)</h3>
+      <div class="row">
+        <div>
+          <label>Seed (8 digits)</label>
+          <input id="seed" placeholder="e.g. 24681357" />
+          <label>Width × Height</label>
+          <div class="flex">
+            <input id="width" placeholder="64" style="max-width:110px" />
+            <input id="height" placeholder="64" style="max-width:110px" />
+          </div>
+          <label>Landmass Ratio</label>
+          <input id="land" placeholder="0.50" />
+          <div style="height:8px"></div>
+          <label class="muted">Volcano</label>
+          <div class="flex">
+            <select id="volEnabled" style="max-width:130px">
+              <option value="false">Disabled</option>
+              <option value="true">Enabled</option>
             </select>
+            <input id="volMin" placeholder="min radius (2)" style="max-width:150px" />
+            <input id="volMax" placeholder="max radius (4)" style="max-width:150px" />
           </div>
-          <div class="row"><label>Path</label><input id="path" placeholder="/api/..." /></div>
-        </div>
-
-        <!-- Shown only for POST /api/generate_shard -->
-        <div id="genControls" class="card" style="background:#0a100b; border-color:#142116; display:none;">
-          <h2>Generator Options</h2>
-          <section>
-            <div class="grid-2">
-              <div class="row">
-                <label>Registry Preset</label>
-                <select id="registrySelect"></select>
-              </div>
-              <div class="row">
-                <label>Base Name</label>
-                <input id="baseName" placeholder="shard_fire_island" />
-              </div>
-            </div>
-            <div class="row"><label></label><div class="hint">Selecting a preset auto‑fills the JSON body with a unique 8‑digit <code>seedId</code>, <code>template</code>, and defaults.</div></div>
-          </section>
-        </div>
-
-        <div class="card" style="background:#0a100b; border-color:#142116;">
-          <h2>Query Params</h2>
-          <section id="qpList"></section>
-          <section><div class="btns"><button class="secondary" id="addQP">+ Add param</button><button class="secondary" id="clearQP">Clear</button></div></section>
-        </div>
-
-        <div class="card" style="background:#0a100b; border-color:#142116;">
-          <h2>Headers</h2>
-          <section id="hdrList"></section>
-          <section><div class="btns"><button class="secondary" id="addHDR">+ Add header</button><button class="secondary" id="clearHDR">Clear</button><button class="secondary" id="hdrJSON">JSON headers</button></div></section>
-        </div>
-
-        <div class="row auto">
-          <label>JSON Body</label>
-          <textarea id="body" placeholder='{"example":"value"}'></textarea>
-        </div>
-
-        <div class="btns">
-          <button id="sendBtn">▶ Send</button>
-          <button class="secondary" id="savePresetBtn">Save as preset</button>
-          <button class="secondary" id="resetBtn">Reset</button>
-        </div>
-
-        <div class="curl" id="curlBox"></div>
-      </section>
-    </div>
-
-    <!-- Right: Response Console & Docs -->
-    <div class="card">
-      <h2>Response</h2>
-      <section>
-        <div class="statusbar"><span id="status">Ready</span><span id="timing"></span><span id="size"></span></div>
-        <div class="console" id="console">Choose a preset or build a request, then click <b>Send</b>.</div>
-      </section>
-
-      <h2>API Catalog</h2>
-      <section>
-        <div class="grid-2">
-          <div>
-            <p class="muted">Selectable presets:</p>
-            <ul>
-              <li><code>GET /api/shards</code> — list shard JSON files.</li>
-              <li><code>GET /api/shards/:name</code> — fetch a shard by name.</li>
-              <li><code>POST /api/generate_shard</code> — generate & save shard.</li>
-              <li><code>GET /api/player</code> — get player state.</li>
-              <li><code>PATCH /api/player</code> — update player fields.</li>
-              <li><code>GET /api/inventory</code> — list items.</li>
-              <li><code>POST /api/inventory</code> — add item.</li>
-              <li><code>DELETE /api/inventory</code> — remove item.</li>
-            </ul>
-          </div>
-          <div>
-            <p class="muted">Tips:</p>
-            <ul>
-              <li>Use <em>JSON headers</em> for proper <code>Content-Type</code>.</li>
-              <li>Presets are saved to <code>localStorage</code> for quick reuse.</li>
-              <li>The green console prints raw JSON or text responses.</li>
-            </ul>
+          <label class="muted">Ports / Settlements</label>
+          <div class="flex">
+            <input id="ports" placeholder="ports count (0)" style="max-width:160px" />
+            <input id="towns" placeholder="settlements count (0)" style="max-width:200px" />
           </div>
         </div>
-      </section>
-    </div>
+        <div>
+          <label>Allowed Biomes (canonical)</label>
+          <div id="biomeChips" class="chips"></div>
+          <label style="margin-top:8px;">Payload</label>
+          <textarea id="payload"></textarea>
+          <div class="flex">
+            <button id="btnGen">POST /api/generate_shard</button>
+            <span id="genStatus" class="muted"></span>
+          </div>
+        </div>
+      </div>
+      <pre id="genOut">// server response here</pre>
+    </section>
   </div>
 
-  <template id="kvRow">
-    <div class="kv"><input placeholder="key" /><input placeholder="value" /><button class="remove">✕</button></div>
-  </template>
-
   <script type="module">
-    // ---------- Presets ----------
-    const builtinPresets = [
-      { name: 'GET /api/shards', method: 'GET', path: '/api/shards' },
-      { name: 'GET /api/shards/:name', method: 'GET', path: '/api/shards/shard_isle_of_cinder' },
-      { name: 'POST /api/generate_shard', method: 'POST', path: '/api/generate_shard',
-        headers: { 'Content-Type': 'application/json' } },
-      { name: 'GET /api/player', method: 'GET', path: '/api/player' },
-      { name: 'PATCH /api/player', method: 'PATCH', path: '/api/player',
-        body: { name: 'Aerin II', level: 2 }, headers: { 'Content-Type': 'application/json' } },
-      { name: 'GET /api/inventory', method: 'GET', path: '/api/inventory' },
-      { name: 'POST /api/inventory', method: 'POST', path: '/api/inventory',
-        body: { id: 'itm-iron-ore', name: 'Iron Ore', qty: 2 }, headers: { 'Content-Type': 'application/json' } },
-      { name: 'DELETE /api/inventory', method: 'DELETE', path: '/api/inventory',
-        body: { id: 'itm-iron-ore', qty: 1 }, headers: { 'Content-Type': 'application/json' } },
-    ];
+    import { ALL_BIOME_KEYS } from "/static/js/biomeRegistry.js";
+    import { ALL_SETTLEMENT_KEYS } from "/static/js/settlementRegistry.js";
 
-    let catalogPresets = [];       // from /api/catalog
-    let registryPresets = [];      // from /api/registry
+    // ===== Helpers
+    const $ = (id) => document.getElementById(id);
+    const listOut = $('listOut'), getOut = $('getOut'), genOut = $('genOut'), genStatus = $('genStatus');
 
-    const lsKey = 'apiPlayground.presets';
-    const catalogUrl = '/api/catalog';
-    const registryUrl = '/api/registry';
+    function setOut(el, obj){ el.textContent = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2); }
 
-    // ---------- Dom refs ----------
-    const baseUrl = document.getElementById('baseUrl');
-    const presetSelect = document.getElementById('presetSelect');
-    const method = document.getElementById('method');
-    const path = document.getElementById('path');
-    const body = document.getElementById('body');
-    const curlBox = document.getElementById('curlBox');
-    const consoleEl = document.getElementById('console');
-    const statusEl = document.getElementById('status');
-    const timingEl = document.getElementById('timing');
-    const sizeEl = document.getElementById('size');
-
-    const qpList = document.getElementById('qpList');
-    const hdrList = document.getElementById('hdrList');
-    const kvRowTpl = document.getElementById('kvRow');
-
-    const addQP = document.getElementById('addQP');
-    const clearQP = document.getElementById('clearQP');
-    const addHDR = document.getElementById('addHDR');
-    const clearHDR = document.getElementById('clearHDR');
-    const hdrJSON = document.getElementById('hdrJSON');
-
-    const sendBtn = document.getElementById('sendBtn');
-    const savePresetBtn = document.getElementById('savePresetBtn');
-    const resetBtn = document.getElementById('resetBtn');
-
-    // Gen controls
-    const genControls = document.getElementById('genControls');
-    const registrySelect = document.getElementById('registrySelect');
-    const baseNameInput = document.getElementById('baseName');
-
-    // ---------- Helpers ----------
-    const toPairs = (container) =>
-      [...container.querySelectorAll('.kv')]
-        .map(row => {
-          const [kEl, vEl] = row.querySelectorAll('input');
-          const k = kEl.value.trim(); if (!k) return null;
-          return [k, vEl.value];
-        })
-        .filter(Boolean);
-
-    const pairsToObject = (pairs) => Object.fromEntries(pairs);
-
-    const objToKV = (obj, container) => {
-      container.innerHTML = '';
-      Object.entries(obj || {}).forEach(([k, v]) => addKVRow(container, k, v));
-    };
-
-    const addKVRow = (container, k = '', v = '') => {
-      const node = kvRowTpl.content.firstElementChild.cloneNode(true);
-      const [kEl, vEl, removeBtn] = node.querySelectorAll('input,button');
-      kEl.value = k; vEl.value = v;
-      removeBtn.addEventListener('click', () => node.remove());
-      container.appendChild(node);
-    };
-
-    const buildUrl = () => {
-      const base = baseUrl.value.replace(/\/$/, '');
-      const p = path.value.startsWith('/') ? path.value : '/' + path.value;
-      const qp = new URLSearchParams(pairsToObject(toPairs(qpList)));
-      const qs = qp.toString();
-      return qs ? `${base}${p}?${qs}` : `${base}${p}`;
-    };
-
-    const updateCurl = () => {
-      const url = buildUrl();
-      const hdrs = pairsToObject(toPairs(hdrList));
-      const b = body.value.trim();
-      let curl = `curl -s -X ${method.value} '${url}'`;
-      for (const [k, v] of Object.entries(hdrs)) {
-        curl += ` \\\n  -H '${k}: ${v}'`;
-      }
-      if (b) curl += ` \\\n  -d '${b.replace(/'/g, "'\\''")}'`;
-      curlBox.textContent = curl;
-    };
-
-    const print = (text, cls = '') => {
-      const line = document.createElement('div');
-      if (cls) line.className = cls;
-      line.textContent = text;
-      consoleEl.appendChild(line);
-      consoleEl.scrollTop = consoleEl.scrollHeight;
-    };
-
-    const clearConsole = () => { consoleEl.textContent = ''; };
-    const pretty = (obj) => JSON.stringify(obj, null, 2);
-
-    // ---------- Registry helpers ----------
-    async function loadRegistry() {
-      try {
-        const res = await fetch(registryUrl);
-        const data = res.ok ? await res.json() : { presets: [] };
-        registryPresets = data.presets || [];
-        registrySelect.innerHTML = '';
-        registryPresets.forEach((p, i) => {
-          const opt = document.createElement('option');
-          opt.value = p.key;
-          opt.textContent = p.key;
-          registrySelect.appendChild(opt);
-        });
-        if (!baseNameInput.value) baseNameInput.value = 'shard_fire_island';
-      } catch {
-        registryPresets = [];
-      }
+    async function doList(){
+      const r = await fetch('/api/shards'); setOut(listOut, await r.json());
+      window.__lastList = await (await fetch('/api/shards')).json();
+    }
+    async function doGet(){
+      const name = $('getName').value.trim();
+      const r = await fetch(`/api/shards/${encodeURIComponent(name)}`); setOut(getOut, await r.json());
     }
 
-    async function autoPopulateGenerateShardBody() {
-      // 1) Collect used 8-digit prefixes
-      const res = await fetch('/api/shards');
-      const list = res.ok ? await res.json() : [];
-      const used = new Set(
-        list.map(it => it.file)
-            .map(name => { const m = /^(\d{8})_/.exec(name); return m ? Number(m[1]) : null; })
-            .filter(n => Number.isInteger(n))
-      );
+    // ===== Biome chips for generator payload
+    const chosen = new Set(ALL_BIOME_KEYS); // default: allow all
+    function drawBiomeChips(){
+      const host = $('biomeChips'); host.innerHTML = '';
+      ALL_BIOME_KEYS.forEach(k => {
+        const btn = document.createElement('button');
+        btn.className = 'chip';
+        btn.textContent = chosen.has(k) ? `✓ ${k}` : k;
+        btn.style.opacity = chosen.has(k) ? '1' : '.55';
+        btn.addEventListener('click', () => { if (chosen.has(k)) chosen.delete(k); else chosen.add(k); drawBiomeChips(); buildPayload(); });
+        host.appendChild(btn);
+      });
+    }
 
-      // 2) Pick a unique 8-digit id
-      let seed = 0;
-      do { seed = Math.floor(10_000_000 + Math.random() * 90_000_000); }
-      while (used.has(seed));
-
-      // 3) Compose payload from UI controls
-      const template = registrySelect.value || (registryPresets[0]?.key ?? 'shard_isle_of_cinder');
-      const baseName = (baseNameInput.value || template).replace(/\s+/g, '_').toLowerCase();
+    function buildPayload(){
+      const seed = $('seed').value.trim();
+      const width = parseInt($('width').value || '64', 10);
+      const height = parseInt($('height').value || '64', 10);
+      const land = parseFloat($('land').value || '0.5');
+      const volEnabled = $('volEnabled').value === 'true';
+      const volMin = parseInt($('volMin').value || '2', 10);
+      const volMax = parseInt($('volMax').value || '4', 10);
+      const ports = parseInt($('ports').value || '0', 10);
+      const towns = parseInt($('towns').value || '0', 10);
 
       const payload = {
-        template,
-        name: baseName,
-        seedId: seed,
-        autoSeed: false,
-        overrides: {
-          seed,
-          width: 64,
-          height: 64,
-          landmass_ratio: 0.44,
-          volcano: { enabled: true, min_radius: 2, max_radius: 4 },
-          ports: { count: 2 },
-          settlements: { count: 3 }
-        }
+        seed,
+        width, height,
+        landmass_ratio: isFinite(land) ? land : 0.5,
+        biomes: Array.from(chosen), // canonical keys only
+        volcano: { enabled: volEnabled, min_radius: volMin, max_radius: volMax },
+        ports: { count: ports },
+        settlements: { count: towns }
       };
-
-      body.value = JSON.stringify(payload, null, 2);
-      updateCurl();
+      $('payload').value = JSON.stringify(payload, null, 2);
     }
 
-    // ---------- Preset management ----------
-    const loadPresets = () => {
-      const user = JSON.parse(localStorage.getItem(lsKey) || '[]');
-      const merged = [...builtinPresets, ...catalogPresets, ...user];
-      presetSelect.innerHTML = '';
-      merged.forEach((p, i) => {
-        const opt = document.createElement('option');
-        opt.value = String(i);
-        opt.textContent = p.name;
-        presetSelect.appendChild(opt);
-      });
-      if (presetSelect.options.length && !presetSelect.value) presetSelect.value = '0';
-    };
+    async function doGen(){
+      const body = $('payload').value.trim();
+      let parsed;
+      try { parsed = JSON.parse(body || '{}'); }
+      catch(e) { genStatus.textContent = 'Invalid JSON'; genStatus.className='bad'; return; }
 
-    const applyPreset = (preset) => {
-      method.value = preset.method || 'GET';
-      path.value = preset.path || '/';
-      objToKV(preset.query || {}, qpList);
-      objToKV(preset.headers || {}, hdrList);
-      body.value = preset.body ? pretty(preset.body) : '';
-      updateCurl();
-
-      // Toggle generator controls if needed
-      const isGen = preset.method === 'POST' && preset.path === '/api/generate_shard';
-      genControls.style.display = isGen ? '' : 'none';
-    };
-
-    presetSelect.addEventListener('change', async (e) => {
-      const idx = Number(e.target.value);
-      const user = JSON.parse(localStorage.getItem(lsKey) || '[]');
-      const all = [...builtinPresets, ...catalogPresets, ...user];
-      const chosen = all[idx] || builtinPresets[0];
-      applyPreset(chosen);
-
-      if (chosen.method === 'POST' && chosen.path === '/api/generate_shard') {
-        await loadRegistry();
-        await autoPopulateGenerateShardBody();
-      }
-    });
-
-    registrySelect.addEventListener('change', autoPopulateGenerateShardBody);
-    baseNameInput.addEventListener('input', autoPopulateGenerateShardBody);
-
-    // ---------- Save preset ----------
-    savePresetBtn.addEventListener('click', () => {
-      const user = JSON.parse(localStorage.getItem(lsKey) || '[]');
-      const preset = {
-        name: `${method.value} ${path.value}`,
-        method: method.value,
-        path: path.value,
-        query: pairsToObject(toPairs(qpList)),
-        headers: pairsToObject(toPairs(hdrList)),
-        body: (() => { try { return JSON.parse(body.value || 'null'); } catch { return body.value; } })()
-      };
-      user.push(preset);
-      localStorage.setItem(lsKey, JSON.stringify(user));
-      loadPresets();
-      presetSelect.value = String(builtinPresets.length + user.length - 1);
-    });
-
-    // ---------- KV controls ----------
-    document.getElementById('addQP').addEventListener('click', () => addKVRow(qpList));
-    document.getElementById('clearQP').addEventListener('click', () => qpList.innerHTML = '');
-    document.getElementById('addHDR').addEventListener('click', () => addKVRow(hdrList));
-    document.getElementById('clearHDR').addEventListener('click', () => hdrList.innerHTML = '');
-    document.getElementById('hdrJSON').addEventListener('click', () => { objToKV({ 'Content-Type': 'application/json' }, hdrList); updateCurl(); });
-
-    // ---------- Live updates ----------
-    [baseUrl, method, path, body].forEach(el => el.addEventListener('input', updateCurl));
-    [qpList, hdrList].forEach(el => el.addEventListener('input', updateCurl));
-
-    // ---------- Send request ----------
-    sendBtn.addEventListener('click', async () => {
-      clearConsole();
-      const url = buildUrl();
-      const hdrs = pairsToObject(toPairs(hdrList));
-      const init = { method: method.value, headers: hdrs };
-      const hasBody = ['POST','PATCH','PUT','DELETE'].includes(method.value);
-      if (hasBody && body.value.trim()) {
-        if ((hdrs['Content-Type']||'').includes('application/json')) {
-          try { init.body = JSON.stringify(JSON.parse(body.value)); } catch { init.body = body.value; }
-        } else { init.body = body.value; }
-      }
-
-      statusEl.textContent = 'Sending…'; timingEl.textContent = ''; sizeEl.textContent = '';
-      const start = performance.now();
-      try {
-        const res = await fetch(url, init);
-        const dt = performance.now() - start;
-        const text = await res.text();
-        statusEl.textContent = `Status ${res.status} ${res.statusText}`;
-        timingEl.textContent = `${dt.toFixed(1)} ms`;
-        sizeEl.textContent = `${(text.length/1024).toFixed(2)} KB`;
-
-        try { print('▼ Response JSON', 'hdr'); print(pretty(JSON.parse(text))); }
-        catch { print('▼ Response Text', 'hdr'); print(text); }
-      } catch (err) {
-        statusEl.textContent = 'Network Error'; print(String(err), 'err');
-      }
-    });
-
-    // ---------- Reset ----------
-    resetBtn.addEventListener('click', () => {
-      baseUrl.value = '/'; method.value = 'GET'; path.value = '/api/shards';
-      qpList.innerHTML = ''; hdrList.innerHTML = ''; body.value = '';
-      genControls.style.display = 'none';
-      updateCurl(); consoleEl.textContent = 'Reset. Ready.';
-    });
-
-    // ---------- Init ----------
-    async function fetchCatalog() {
-      try {
-        const res = await fetch(catalogUrl);
-        if (!res.ok) throw new Error('catalog fetch failed');
-        const cat = await res.json();
-        catalogPresets = (cat.endpoints || []).map(ep => ({
-          name: `${ep.method} ${ep.path}`,
-          method: ep.method, path: ep.path,
-          headers: ep.defaultHeaders || (ep.acceptsJsonBody ? { 'Content-Type': 'application/json' } : {}),
-          body: ep.sampleBody || undefined
-        }));
-      } catch { catalogPresets = []; }
-      finally {
-        loadPresets();
-        presetSelect.value = '0';
-        const first = [...builtinPresets, ...catalogPresets][0] || builtinPresets[0];
-        applyPreset(first);
-        if (first.method === 'POST' && first.path === '/api/generate_shard') {
-          await loadRegistry();
-          await autoPopulateGenerateShardBody();
-        }
-      }
+      genStatus.textContent = 'Sending…'; genStatus.className='muted';
+      const r = await fetch('/api/generate_shard', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(parsed) });
+      const out = await r.json(); setOut(genOut, out);
+      if (r.ok) { genStatus.textContent = 'OK'; genStatus.className='ok'; await doList(); }
+      else { genStatus.textContent = 'Error'; genStatus.className='bad'; }
     }
-    fetchCatalog();
+
+    $('btnList').addEventListener('click', doList);
+    $('btnGet').addEventListener('click', doGet);
+    $('btnOpen').addEventListener('click', () => { window.location.href = '/shard-viewer'; });
+
+    $('seed').addEventListener('input', buildPayload);
+    $('width').addEventListener('input', buildPayload);
+    $('height').addEventListener('input', buildPayload);
+    $('land').addEventListener('input', buildPayload);
+    $('volEnabled').addEventListener('change', buildPayload);
+    $('volMin').addEventListener('input', buildPayload);
+    $('volMax').addEventListener('input', buildPayload);
+    $('ports').addEventListener('input', buildPayload);
+    $('towns').addEventListener('input', buildPayload);
+    $('btnGen').addEventListener('click', doGen);
+
+    // init
+    drawBiomeChips(); buildPayload();
+    doList();
   </script>
 </body>
 </html>

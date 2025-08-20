@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Tuple
 
 @dataclass
 class ShardPOI:
-    type: str                 # "settlement" | "port" | "volcano" | "landmark"
+    type: str                 # Canonical: "Settlement" | "Port" | "Volcano" | "Shardgate" | "Landmark"
     name: str
     x: int
     y: int
@@ -29,7 +29,7 @@ class ShardMeta:
 @dataclass
 class Shard:
     meta: ShardMeta
-    tiles: List[List[dict]]   # 2D array: tiles[y][x] = { "biome": str }
+    tiles: List[List[dict]]   # 2D array: tiles[y][x] = { "biome": str } (kept for back-compat)
     pois: List[ShardPOI]
 
 # ---------- Validation & IO ----------
@@ -49,19 +49,35 @@ def save_shard(shard: "Shard", out_dir: Path) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     validate_shard(shard)
     out = out_dir / f"{shard.meta.name}.json"
+
+    # Derive canonical convenience shapes in addition to legacy ones
+    grid = [[cell["biome"] for cell in row] for row in shard.tiles]
+    sites = [{"type": p.type, "name": p.name, "pos": [p.x, p.y], "meta": p.meta} for p in shard.pois]
+
     payload = {
         "meta": asdict(shard.meta),
-        "tiles": shard.tiles,
-        "pois": [asdict(p) for p in shard.pois],
+        "tiles": shard.tiles,   # legacy
+        "pois": [asdict(p) for p in shard.pois],  # legacy
+        "grid": grid,           # canonical and simple for viewers
+        "sites": sites,
     }
     out.write_text(json.dumps(payload, indent=2))
     return out
 
-# ---------- Generation helpers ----------
+# ---------- Generation helpers (canonical keys) ----------
 
-WATER_BIOMES = {"ocean"}
-COAST_BIOME = "beach"
-DEFAULT_LAND = "grassland"
+# Canonical biome names used everywhere
+OCEAN = "Ocean"
+COAST = "Coast"
+PLAINS = "Plains"
+FOREST = "Forest"
+MOUNTAINS = "Mountains"
+HILLS = "Hills"
+VOLCANO = "Volcano"
+
+WATER_BIOMES = {OCEAN}
+COAST_BIOME = COAST
+DEFAULT_LAND = PLAINS
 
 def neighbors4(x: int, y: int, w: int, h: int):
     if x > 0: yield (x-1, y)
@@ -70,6 +86,7 @@ def neighbors4(x: int, y: int, w: int, h: int):
     if y < h-1: yield (x, y+1)
 
 # ---------- Main generator ----------
+
 def generate_shard_from_registry(
     name: str,
     registry: Dict[str, dict],
@@ -77,7 +94,7 @@ def generate_shard_from_registry(
 ) -> "Shard":
     """
     Deterministic, simple landmass + coast + interior biomes + POIs.
-    JSON-compatible with shard_isle_of_cinder.json.
+    Emits canonical biome keys and TitleCase POI types.
     """
     if name not in registry:
         raise KeyError(f"'{name}' not found in registry")
@@ -88,16 +105,15 @@ def generate_shard_from_registry(
     w = int(cfg.get("width", 64))
     h = int(cfg.get("height", 64))
     land_target = float(cfg.get("landmass_ratio", 0.5))
-    biomes: List[str] = cfg.get("biomes", ["ocean", "grassland", "forest"])
+    biomes: List[str] = cfg.get("biomes", [OCEAN, PLAINS, FOREST, HILLS, MOUNTAINS, VOLCANO])
 
     # 1) Start all ocean
-    tiles = [[{"biome": "ocean"} for _ in range(w)] for _ in range(h)]
+    tiles = [[{"biome": OCEAN} for _ in range(w)] for _ in range(h)]
 
     # 2) Grow land blobs until land coverage ~ target
     land_count_target = int(w * h * land_target)
     land_cells = 0
 
-    # seed a few land origins
     seeds = max(3, (w * h) // 600)
     frontier: List[Tuple[int, int]] = []
     for _ in range(seeds):
@@ -106,18 +122,17 @@ def generate_shard_from_registry(
         frontier.append((sx, sy))
         land_cells += 1
 
-    # random flood-fill growth
     while frontier and land_cells < land_count_target:
         x, y = frontier.pop(rng.randrange(len(frontier)))
         for nx, ny in neighbors4(x, y, w, h):
-            if tiles[ny][nx]["biome"] == "ocean" and rng.random() < 0.55:
+            if tiles[ny][nx]["biome"] in WATER_BIOMES and rng.random() < 0.55:
                 tiles[ny][nx]["biome"] = DEFAULT_LAND
                 frontier.append((nx, ny))
                 land_cells += 1
                 if land_cells >= land_count_target:
                     break
 
-    # 3) Coast ring (beach around land touching ocean)
+    # 3) Coast ring (Coast around land touching Ocean)
     for yy in range(h):
         for xx in range(w):
             if tiles[yy][xx]["biome"] == DEFAULT_LAND:
@@ -136,18 +151,18 @@ def generate_shard_from_registry(
     rng.shuffle(interior)
     for (xx, yy) in interior:
         roll = rng.random()
-        if "volcanic" in biomes and roll < 0.06:
-            tiles[yy][xx]["biome"] = "volcanic"
-        elif "forest" in biomes and roll < 0.35:
-            tiles[yy][xx]["biome"] = "forest"
-        elif "mountain" in biomes and roll < 0.45:
-            tiles[yy][xx]["biome"] = "mountain"
-        elif "hills" in biomes and roll < 0.55:
-            tiles[yy][xx]["biome"] = "hills"
+        if VOLCANO in biomes and roll < 0.06:
+            tiles[yy][xx]["biome"] = VOLCANO
+        elif FOREST in biomes and roll < 0.35:
+            tiles[yy][xx]["biome"] = FOREST
+        elif MOUNTAINS in biomes and roll < 0.45:
+            tiles[yy][xx]["biome"] = MOUNTAINS
+        elif HILLS in biomes and roll < 0.55:
+            tiles[yy][xx]["biome"] = HILLS
         else:
             tiles[yy][xx]["biome"] = DEFAULT_LAND
 
-    # 5) POIs
+    # 5) POIs — canonical, TitleCase types
     pois: List[ShardPOI] = []
 
     def pick_land():
@@ -174,20 +189,20 @@ def generate_shard_from_registry(
             for yy in range(max(0, vy - radius - 1), min(h, vy + radius + 2)):
                 for xx in range(max(0, vx - radius - 1), min(w, vx + radius + 2)):
                     if (xx - vx) ** 2 + (yy - vy) ** 2 <= r2:
-                        tiles[yy][xx]["biome"] = "volcanic"
-            pois.append(ShardPOI(type="volcano", name="Cinder Crown", x=vx, y=vy, meta={"radius": radius}))
+                        tiles[yy][xx]["biome"] = VOLCANO
+            pois.append(ShardPOI(type="Volcano", name="Cinder Crown", x=vx, y=vy, meta={"radius": radius}))
 
     port_count = int(cfg.get("ports", {}).get("count", 0))
     for i in range(port_count):
         p = pick_coast()
         if p:
-            pois.append(ShardPOI(type="port", name=f"Harbor {i+1}", x=p[0], y=p[1], meta={"faction": "Neutral"}))
+            pois.append(ShardPOI(type="Port", name=f"Harbor {i+1}", x=p[0], y=p[1], meta={"faction": "Neutral"}))
 
     town_count = int(cfg.get("settlements", {}).get("count", 0))
     for i in range(town_count):
         loc = pick_land()
         if loc:
-            pois.append(ShardPOI(type="settlement", name=f"Village {i+1}", x=loc[0], y=loc[1], meta={"pop": random.Random(seed+i).randint(40, 220)}))
+            pois.append(ShardPOI(type="Settlement", name=f"Village {i+1}", x=loc[0], y=loc[1], meta={"pop": random.Random(seed+i).randint(40, 220)}))
 
     meta = ShardMeta(
         name=name,

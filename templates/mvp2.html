@@ -16,12 +16,20 @@
       <div class="bar mp"><span>MP</span><i style="width: 60%"></i></div>
       <div class="bar sta"><span>STA</span><i style="width: 90%"></i></div>
     </div>
+
     <nav class="actions">
       <button id="btnInventory" class="btn ghost">Inventory</button>
       <button id="btnCharacter" class="btn">Character (C)</button>
       <button id="btnWorldMap" class="btn">Map (M)</button>
       <button id="btnSettings" class="btn ghost">Settings</button>
     </nav>
+
+    <div class="shard-picker" style="display:flex;gap:8px;align-items:center;margin-left:auto;">
+      <label for="shardSelect" class="dim" style="font-size:12px;">Shard</label>
+      <select id="shardSelect" class="btn ghost" style="min-width:260px;"></select>
+      <button id="btnLoadShard" class="btn">Load</button>
+      <span id="shardStatus" class="dim" style="font-size:12px;"></span>
+    </div>
   </header>
 
   <!-- Main content -->
