@@ -1,0 +1,49 @@
+{
+  "id": "hard-32",
+  "version": "1.0.0",
+  "grid": { "cols": 32, "rows": 32, "tile_size": 16 },
+
+  "biomes": { "pack": "temperate-base" },
+
+  "water": {
+    "ocean_ring": 1,
+    "coast_width": [1, 2],
+    "target_percent": 0.32
+  },
+
+  "hydrology": {
+    "rivers": { "min": 2, "max": 3 },
+    "lake_chance": 0.30,
+    "lake_size": [3, 8],
+    "merge_confluences": true
+  },
+
+  "settlements": {
+    "budget": { "city": 1, "town": 3, "village": 5, "port": 1 },
+    "rules": {
+      "city":   ["near_river_or_coast", "min_spacing_6", "avoid_swamp"],
+      "town":   ["near_road_or_river",  "min_spacing_5"],
+      "village":["near_fertile",        "min_spacing_3"],
+      "port":   ["ocean_coast_only", "prefer_river_mouth"]
+    }
+  },
+
+  "roads": {
+    "connectivity": "mst",
+    "bridge": { "max_span": 3 }
+  },
+
+  "poi": {
+    "budget": 6,
+    "min_spacing": 3,
+    "tables": ["ruins-common", "waterfront-common"]
+  },
+
+  "resources": {
+    "potentials": ["ore", "timber", "herbs", "fish"],
+    "thresholds": { "ore": 0.80, "timber": 0.74, "herbs": 0.58, "fish": 0.68 },
+    "max_nodes_per_room": 2,
+    "ambient_roll": true,
+    "respawn_seconds": { "small": 600, "medium": 1800, "large": 5400, "ambient": 86400 }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "id": "waterfront-common",
+  "version": "1.0.0",
+  "entries": [
+    { "tag": "fishing_hut",  "weight": 4, "near": "lake_shore" },
+    { "tag": "boathouse",    "weight": 3, "near": "coast" },
+    { "tag": "ferry_post",   "weight": 2, "near": "river_crossing" },
+    { "tag": "lighthouse",   "weight": 1, "near": "ocean_headland" }
+  ]
+}

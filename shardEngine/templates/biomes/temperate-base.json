@@ -1,0 +1,15 @@
+{
+  "id": "temperate-base",
+  "version": "1.0.0",
+  "edge_rules": { "force_ocean_on_border": true },
+  "coast_biomes": [
+    { "id": "coast", "weight": 3 },
+    { "id": "beach", "weight": 2 },
+    { "id": "marsh-lite", "weight": 1 }
+  ],
+  "interior_weights": {
+    "plains": 0.45,
+    "forest": 0.35,
+    "hills": 0.20
+  }
+}

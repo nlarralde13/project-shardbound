@@ -1,0 +1,15 @@
+{
+  "id": "arid-highfantasy",
+  "version": "1.0.0",
+  "edge_rules": { "force_ocean_on_border": true },
+  "coast_biomes": [
+    { "id": "coast", "weight": 2 },
+    { "id": "rocky_beach", "weight": 2 },
+    { "id": "salt_marsh", "weight": 1 }
+  ],
+  "interior_weights": {
+    "desert": 0.55,
+    "badlands": 0.20,
+    "savanna": 0.25
+  }
+}

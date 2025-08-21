@@ -1,0 +1,14 @@
+{
+  "id": "boreal-frozen",
+  "version": "1.0.0",
+  "edge_rules": { "force_ocean_on_border": true },
+  "coast_biomes": [
+    { "id": "icy_coast", "weight": 3 },
+    { "id": "shingle_beach", "weight": 1 }
+  ],
+  "interior_weights": {
+    "taiga": 0.50,
+    "tundra": 0.30,
+    "rock_fields": 0.20
+  }
+}

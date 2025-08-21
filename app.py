@@ -6,6 +6,15 @@ import re
 import random
 import json
 
+# v2 shard engine blueprint
+try:
+    from shardEngine.endpoints import bp as shard_gen_v2_bp
+    print("[v2] importing shardEngine.endpoints succeeded")
+except ImportError as e:
+    print("[v2] import failed:", e)
+    raise
+
+
 # Local modules
 from shard_gen import generate_shard_from_registry, save_shard
 from player_state import (
@@ -14,6 +23,10 @@ from player_state import (
 )
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
+app.register_blueprint(shard_gen_v2_bp, url_prefix="/api/shard-gen-v2")
+print("[v2] blueprint registered at /api/shard-gen-v2")
+
+
 
 ROOT = Path(__file__).parent.resolve()
 STATIC_SHARDS_DIR = ROOT / "static" / "public" / "shards"
@@ -169,6 +182,15 @@ def generate_shard():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
+@app.route("/debug/routes")
+def debug_routes():
+    routes = []
+    for rule in app.url_map.iter_rules():
+        methods = sorted(m for m in rule.methods if m not in {"HEAD","OPTIONS"})
+        routes.append({"path": str(rule), "methods": methods, "endpoint": rule.endpoint})
+    return jsonify(routes)
+
 # -------- Player --------
 @app.route("/api/player", methods=["GET"])
 def api_get_player():
@@ -270,6 +292,10 @@ def api_catalog_refresh():
 @app.route("/shard-viewer")
 def shard_viewer():
     return render_template("shard-viewer.html")
+
+@app.route("/shard-viewer-v2")
+def shard_viewer_v2():
+    return render_template("shard-viewer-v2.html")
 
 
 if __name__ == "__main__":

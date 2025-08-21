@@ -1,0 +1,6 @@
+{
+  "schema_version": "2.0.0",
+  "tiers": ["normal-16", "hard-32", "epic-64"],
+  "biomes": ["temperate-base", "arid-highfantasy", "boreal-frozen"],
+  "poi": ["ruins-common", "waterfront-common"]
+}

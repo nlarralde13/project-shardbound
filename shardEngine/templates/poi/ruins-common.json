@@ -1,0 +1,10 @@
+{
+  "id": "ruins-common",
+  "version": "1.0.0",
+  "entries": [
+    { "tag": "ruin_tower", "weight": 4, "near": "forest_edge" },
+    { "tag": "watchtower", "weight": 3, "near": "crossroads" },
+    { "tag": "old_bridge", "weight": 3, "near": "river" },
+    { "tag": "wayshrine",  "weight": 2, "near": "road" }
+  ]
+}

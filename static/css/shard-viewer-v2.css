@@ -1,0 +1,40 @@
+/* /static/css/shard-viewer-v2.css
+   v2: make canvases pixel-perfect and aligned */
+
+/* Create a stacking context and carry the border on the WRAP, not canvases */
+.canvas-wrap {
+  position: relative;
+  isolation: isolate;
+  /* move the “chrome” here so both canvases share the same outer box */
+  background: #0a0f1f;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+/* Both canvases: absolutely fill the wrap; no extra chrome on either */
+#canvas,
+#overlayCanvasV2 {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  image-rendering: pixelated;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+/* Keep overlay above base */
+#canvas { z-index: 2; }
+#overlayCanvasV2 { z-index: 5; pointer-events: none; }
+
+/* Optional: scanline veneer still works via .canvas-wrap.crt::after; keep it above base, below overlay */
+.canvas-wrap.crt::after {
+  content:"";
+  position:absolute; inset:0; pointer-events:none;
+  background: repeating-linear-gradient(to bottom, rgba(255,255,255,.04), rgba(255,255,255,.04) 1px, transparent 2px);
+  border-radius:10px;
+  z-index: 3;
+  mix-blend-mode: overlay;
+}
