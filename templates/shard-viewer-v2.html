@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Shard Viewer v2</title>
 
-  <!-- Reuse your existing styles so it looks/behaves like v1 -->
+  <!-- Base styles + v2 overlay styles -->
   <link rel="stylesheet" href="/static/css/shard-viewer.css" />
   <link rel="stylesheet" href="/static/css/shard-viewer-v2.css" />
 
@@ -29,7 +29,7 @@
     <aside class="card pane-left">
       <h2>Load / Generate</h2>
       <section>
-        <!-- existing loader compatible with shard-viewer.js -->
+        <!-- loader -->
         <div class="row">
           <label>Shard</label>
           <select id="shardSelect"></select>
@@ -45,36 +45,10 @@
           <div class="row"><label>Show grid</label><input id="grid" type="checkbox" checked /></div>
           <div class="row"><label>Auto-fit</label><input id="autoFit" type="checkbox" checked /></div>
           <div class="row"><label>CRT scanlines</label><input id="crtMode" type="checkbox" /></div>
-          <div class="muted" id="status" aria-live="polite">Ready.</div>
-        </div>
-
-        <!-- NEW: v2 layers panel (progressive enhancement via shard-viewer-v2.js) -->
-        <div class="group">
-          <h3>Layers <span class="overlay-chip">v2</span></h3>
-
-          <div class="row inline-3">
-            <div><label>Biomes</label><input id="layerBiomes" type="checkbox" checked /></div>
-            <div><label>Rivers</label><input id="layerRivers" type="checkbox" /></div>
-            <div><label>Lakes</label><input id="layerLakes" type="checkbox" /></div>
-          </div>
-
-          <div class="row inline-3">
-            <div><label>Roads</label><input id="layerRoads" type="checkbox" /></div>
-            <div><label>Bridges</label><input id="layerBridges" type="checkbox" /></div>
-            <div><label>POIs</label><input id="layerPOI" type="checkbox" /></div>
-          </div>
-
-          <div class="row inline-3">
-            <div><label>Settlements</label><input id="layerSettlements" type="checkbox" /></div>
-            <div><label>Ports</label><input id="layerPorts" type="checkbox" /></div>
-            <div><label>Resources</label><input id="layerResources" type="checkbox" /></div>
-          </div>
-
           <div class="row">
             <label>Overlay opacity</label>
             <input id="overlayOpacity" type="range" min="0" max="100" value="85" />
           </div>
-
           <div class="row">
             <label>Palette</label>
             <select id="palette">
@@ -84,50 +58,46 @@
               <option value="noir">Noir</option>
             </select>
           </div>
-
+          <div class="muted" id="status" aria-live="polite">Ready.</div>
           <div class="muted small">Tip: hold <span class="kbd">Alt</span> to temporarily hide overlays while dragging.</div>
         </div>
 
-        <!-- NEW: quick v2 planning utility (UI only; we’ll wire actions next) -->
+        <!-- Layers -->
         <div class="group">
-          <h3>Plan <span class="overlay-chip">/api/shard-gen-v2/plan</span></h3>
-          <div class="row inline-2">
-            <div style="display:flex;gap:8px;align-items:center">
-              <label for="v2Template">Template</label>
-              <select id="v2Template">
-                <option value="normal-16">normal-16</option>
-                <option value="hard-32">hard-32</option>
-              </select>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center">
-              <label for="v2Name">Name</label>
-              <input id="v2Name" placeholder="blue_coast" />
-            </div>
+          <h3>Layers <span class="overlay-chip">v2</span></h3>
+          <div class="row inline-3">
+            <div><label>Biomes</label><input id="layerBiomes" type="checkbox" checked /></div>
+            <div><label>Rivers</label><input id="layerRivers" type="checkbox" /></div>
+            <div><label>Lakes</label><input id="layerLakes" type="checkbox" /></div>
           </div>
           <div class="row inline-3">
-            <div style="grid-column:1/3;display:flex;gap:8px;align-items:center">
-              <input type="checkbox" id="v2AutoSeed" checked />
-              <label for="v2AutoSeed">Auto-seed</label>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center">
-              <label for="v2Seed">Seed</label>
-              <input id="v2Seed" type="number" min="10000000" max="99999999" placeholder="########" disabled />
-            </div>
+            <div><label>Roads</label><input id="layerRoads" type="checkbox" /></div>
+            <div><label>Bridges</label><input id="layerBridges" type="checkbox" /></div>
+            <div><label>POIs</label><input id="layerPOI" type="checkbox" /></div>
           </div>
-          <div class="row inline-2">
-            <div style="display:flex;gap:8px;align-items:center">
-              <label for="v2POIBudget">POI budget</label>
-              <input id="v2POIBudget" type="number" min="0" max="64" value="3" />
-            </div>
-            <div style="display:flex;gap:8px;align-items:center">
-              <label for="v2BiomePack">Biome pack</label>
-              <input id="v2BiomePack" placeholder="(optional)" />
-            </div>
+          <div class="row inline-3">
+            <div><label>Settlements</label><input id="layerSettlements" type="checkbox" /></div>
+            <div><label>Ports</label><input id="layerPorts" type="checkbox" /></div>
+            <div><label>Resources</label><input id="layerResources" type="checkbox" /></div>
           </div>
-          <div class="row">
+        </div>
+
+        <!-- Plan / Generate -->
+        <div class="group">
+          <h3>Plan <span class="overlay-chip">/api/shard-gen-v2/plan</span></h3>
+          
+            <div style="display:flex;gap:8px;align-items:center">
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button id="btnPlanV2" class="secondary">Plan</button>
+                <button id="btnGenerateV2">Generate</button>
+              </div>
+            </div>
+        </div>
+           <div class="row">
             <label></label>
-            <button id="btnPlanV2" class="secondary">Plan</button>
-          </div>
+            
+               
+         
           <pre class="muted small" id="planOut" style="max-height:140px;overflow:auto;"></pre>
         </div>
 
@@ -155,12 +125,8 @@
     </section>
   </main>
 
-  <!-- Load the current viewer for immediate functionality -->
-  <!-- <script type="module" src="/static/js/shard-viewer.js"></script> -->
-  <!-- Then load v2 progressive enhancements (we’ll implement next) -->
+  <!-- Minimal bootstrap (seed toggle + quick plan preview) -->
   <script type="module">
-    // Small inline bootstrap so the page is useful even before shard-viewer-v2.js exists
-    // - Toggle seed enable/disable
     const v2AutoSeed = document.getElementById('v2AutoSeed');
     const v2Seed     = document.getElementById('v2Seed');
     const planOut    = document.getElementById('planOut');
@@ -175,15 +141,14 @@
       v2AutoSeed.addEventListener('change', sync); sync();
     }
 
-    // Optional: quick /plan caller (minimal; replace with full /static/js/shard-viewer-v2.js soon)
     async function callPlan() {
       const body = {
         templateId: v2Template.value || 'normal-16',
         name: (v2Name.value || 'blue_coast'),
         autoSeed: v2AutoSeed.checked,
         seed: v2AutoSeed.checked ? undefined : Number(v2Seed.value || 0),
-        biomePack: v2BiomePack.value || undefined,
-        overrides: { poi: { budget: Number(v2POIBudget.value || 0) } }
+        overrides: { poi: { budget: Number(v2POIBudget.value || 0) } },
+        biomePack: v2BiomePack.value || undefined
       };
       try {
         const res = await fetch('/api/shard-gen-v2/plan', {
@@ -202,10 +167,8 @@
     }
     btnPlanV2?.addEventListener('click', (e) => { e.preventDefault(); callPlan(); });
 
-    // Progressive enhancement: load v2 overlay code if present
-    import('/static/js/shard-viewer-v2.js').catch(() => {
-      // Silently ignore if not present yet; base viewer still works.
-    });
+    // Progressive enhancement: load v2 overlay code
+    import('/static/js/shard-viewer-v2.js').catch(() => {});
   </script>
 </body>
 </html>

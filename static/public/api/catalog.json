@@ -1,85 +1,86 @@
 {
   "service": "Shardbound Flask API",
-  "generatedAt": "2025-08-19T11:32:53.456921Z",
+  "generatedAt": "2025-08-22T16:10:46Z",
   "endpoints": [
     {
       "method": "GET",
-      "path": "/api-playground",
-      "acceptsJsonBody": false,
-      "sampleBody": null
+      "path": "/api/shard-gen-v2/",
+      "acceptsJsonBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/shard-gen-v2/plan",
+      "acceptsJsonBody": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/shard-gen-v2/generate",
+      "acceptsJsonBody": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/registry",
+      "acceptsJsonBody": false
     },
     {
       "method": "GET",
       "path": "/api/shards",
-      "acceptsJsonBody": false,
-      "sampleBody": null
+      "acceptsJsonBody": false
     },
     {
       "method": "GET",
       "path": "/api/shards/<name>",
-      "acceptsJsonBody": false,
-      "sampleBody": null
+      "acceptsJsonBody": false
     },
     {
       "method": "POST",
       "path": "/api/generate_shard",
-      "acceptsJsonBody": true,
-      "sampleBody": {
-        "name": "shard_isle_of_cinder",
-        "overrides": {
-          "seed": 9999
-        }
-      }
+      "acceptsJsonBody": true
     },
     {
       "method": "GET",
       "path": "/api/player",
-      "acceptsJsonBody": false,
-      "sampleBody": null
+      "acceptsJsonBody": false
     },
     {
       "method": "PATCH",
       "path": "/api/player",
-      "acceptsJsonBody": true,
-      "sampleBody": {
-        "name": "Aerin II"
-      }
+      "acceptsJsonBody": true
     },
     {
       "method": "GET",
       "path": "/api/inventory",
-      "acceptsJsonBody": false,
-      "sampleBody": null
+      "acceptsJsonBody": false
     },
     {
       "method": "POST",
       "path": "/api/inventory",
-      "acceptsJsonBody": true,
-      "sampleBody": {
-        "id": "itm-iron-ore",
-        "qty": 1
-      }
+      "acceptsJsonBody": true
     },
     {
       "method": "DELETE",
       "path": "/api/inventory",
-      "acceptsJsonBody": true,
-      "sampleBody": {
-        "id": "itm-iron-ore",
-        "qty": 1
-      }
+      "acceptsJsonBody": true
     },
     {
       "method": "GET",
       "path": "/api/catalog",
-      "acceptsJsonBody": false,
-      "sampleBody": null
+      "acceptsJsonBody": false
     },
     {
       "method": "POST",
       "path": "/api/catalog/refresh",
-      "acceptsJsonBody": true,
-      "sampleBody": null
+      "acceptsJsonBody": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/debug/routes",
+      "acceptsJsonBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/api-playground",
+      "acceptsJsonBody": false
     }
   ]
 }

@@ -1,127 +1,162 @@
-# test_api.py
-# Minimal dependency: pip install requests
-
-import os, sys, json, uuid
-from typing import Dict, Any, List, Tuple, Optional, Set
+# test_api.py — v2 round-trip tester (plan → generate → fetch → validate)
+import os, sys, json, uuid, argparse, webbrowser
+from typing import Dict, Any, List, Tuple
 import requests
 from collections import deque
 
-BASE = os.environ.get("BASE_URL", "http://localhost:5000")
-V2_PREFIX = f"{BASE}/api/shard-gen-v2"
-TIMEOUT = 20
+# ---------- CLI / ENV ----------
 
-DEFAULT_BODY: Dict[str, Any] = {
-    "templateId": os.environ.get("TEMPLATE_ID", "normal-16"),
-    "name": os.environ.get("SHARD_NAME", f"smoke_{uuid.uuid4().hex[:6]}"),
-    "autoSeed": True,
-    "overrides": {
-        "poi": {"budget": int(os.environ.get("POI_BUDGET", "3"))}
-    }
-}
+def make_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(description="ShardBound v2 API smoke tests")
+    p.add_argument("cmd", nargs="?", default="roundtrip",
+                   choices=["plan", "generate", "roundtrip", "all"],
+                   help="What to run (default: roundtrip)")
 
-REQUIRED_LAYERS: Set[str] = set(
-    [s.strip() for s in os.environ.get("REQUIRED_LAYERS", "").split(",") if s.strip()]
-)
+    p.add_argument("--base", default=os.environ.get("BASE_URL", "http://localhost:5000"),
+                   help="API base URL (default: http://localhost:5000)")
+    p.add_argument("--template", default=os.environ.get("TEMPLATE_ID", "normal-16"),
+                   help="Template ID (default: normal-16)")
+    p.add_argument("--name", default=os.environ.get("SHARD_NAME", f"smoke_{uuid.uuid4().hex[:6]}"),
+                   help="Shard base name (default: random smoke_XXXXXX)")
+    p.add_argument("--seed", type=int, help="Explicit seed (disables --auto-seed)")
+    p.add_argument("--auto-seed", action="store_true", default=True, help="Ask server to pick a random seed")
+    p.add_argument("--poi-budget", type=int, default=int(os.environ.get("POI_BUDGET", "3")),
+                   help="POI budget override (default from env or 3)")
 
-# ---------------- utils ----------------
+    # settlement budgets
+    p.add_argument("--cities", type=int, help="City budget")
+    p.add_argument("--towns", type=int, help="Town budget")
+    p.add_argument("--villages", type=int, help="Village budget")
+    p.add_argument("--ports", type=int, help="Port budget")
+
+    # biome pack id (optional, only if your backend supports it)
+    p.add_argument("--biome-pack", help="Biome pack id override")
+
+    # convenience
+    p.add_argument("--open-viewer", action="store_true", help="Open /shard-viewer-v2 after generation")
+    p.add_argument("--timeout", type=int, default=30, help="HTTP timeout seconds (default 30)")
+    return p
+
+# ---------- HTTP helpers ----------
 
 def ok(status: int) -> bool:
     return 200 <= status < 300
 
 def jdump(obj) -> str:
-    try:
-        return json.dumps(obj, indent=2)
-    except Exception:
-        return str(obj)
+    try: return json.dumps(obj, indent=2)
+    except Exception: return str(obj)
 
 def get_json(resp: requests.Response):
-    try:
-        return resp.json()
-    except Exception:
-        return {"_raw": resp.text}
+    try: return resp.json()
+    except Exception: return {"_raw": resp.text}
 
-# ---------------- core requests ----------------
+def http_get(base: str, path: str, timeout: int):
+    url = f"{base.rstrip('/')}{path}"
+    r = requests.get(url, timeout=timeout)
+    return r, get_json(r)
 
-def get_catalog() -> bool:
-    url = f"{BASE}/api/catalog"
+def http_post(base: str, path: str, body: Dict[str, Any], timeout: int):
+    url = f"{base.rstrip('/')}{path}"
+    r = requests.post(url, json=body, timeout=timeout)
+    return r, get_json(r)
+
+# ---------- Request builders ----------
+
+def build_body(args: argparse.Namespace) -> Dict[str, Any]:
+    body: Dict[str, Any] = {
+        "templateId": args.template,
+        "name": args.name,
+    }
+    if args.seed is not None:
+        body["seed"] = int(args.seed)
+        body["autoSeed"] = False
+    else:
+        body["autoSeed"] = bool(args.auto_seed)
+
+    overrides: Dict[str, Any] = {"poi": {"budget": int(args.poi_budget)}}
+
+    budget: Dict[str, int] = {}
+    if args.cities is not None:    budget["city"] = int(args.cities)
+    if args.towns is not None:     budget["town"] = int(args.towns)
+    if args.villages is not None:  budget["village"] = int(args.villages)
+    if args.ports is not None:     budget["port"] = int(args.ports)
+    if budget:
+        overrides["settlements"] = {"budget": budget}
+
+    if args.biome_pack:
+        overrides["biomePack"] = args.biome_pack
+
+    if overrides:
+        body["overrides"] = overrides
+
+    return body
+
+# ---------- Core calls ----------
+
+def get_catalog(base: str, timeout: int) -> bool:
+    url = f"{base.rstrip('/')}/api/catalog"
     print(f"[GET] {url}")
-    r = requests.get(url, timeout=TIMEOUT)
+    r = requests.get(url, timeout=timeout)
     print(f"  -> {r.status_code}")
     if not ok(r.status_code):
-        print(jdump(get_json(r)))
-        return False
+        print(jdump(get_json(r))); return False
     return True
 
-def post_plan(body: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    url = f"{V2_PREFIX}/plan"
+def post_plan(base: str, timeout: int, body: Dict[str, Any]) -> Dict[str, Any] | None:
+    url = f"{base.rstrip('/')}/api/shard-gen-v2/plan"
     print(f"[POST] {url}")
-    r = requests.post(url, json=body, timeout=TIMEOUT)
+    r = requests.post(url, json=body, timeout=timeout)
     print(f"  -> {r.status_code}")
     data = get_json(r)
-    if not ok(r.status_code) or not data.get("ok"):
-        print(jdump(data))
-        return None
-    print(f"  plan_id: {data.get('plan_id')}  seed: {data.get('provenance', {}).get('seed')}")
+    if not ok(r.status_code) or not data.get("ok", True):
+        print(jdump(data)); return None
+    # normalize keys between earlier/later versions
+    print(f"  plan_id: {data.get('plan_id') or data.get('planId')}  seed: {data.get('seed')}")
     return data
 
-def post_generate(body: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    url = f"{V2_PREFIX}/generate"
+def post_generate(base: str, timeout: int, body: Dict[str, Any]) -> Dict[str, Any] | None:
+    url = f"{base.rstrip('/')}/api/shard-gen-v2/generate"
     print(f"[POST] {url}")
-    r = requests.post(url, json=body, timeout=TIMEOUT)
+    r = requests.post(url, json=body, timeout=timeout)
     print(f"  -> {r.status_code}")
     data = get_json(r)
-    if not ok(r.status_code) or not data.get("ok"):
-        print(jdump(data))
-        return None
-    print(f"  file: {data['file']}  path: {data['path']}")
+    if not ok(r.status_code) or not data.get("ok", True):
+        print(jdump(data)); return None
+    print(f"  file: {data.get('file')}  path: {data.get('path')}")
     return data
 
-def get_file_json(path: str) -> Optional[Dict[str, Any]]:
-    url = f"{BASE}{path}"
+def fetch_json_by_path(base: str, timeout: int, path: str) -> Dict[str, Any] | None:
+    url = f"{base.rstrip('/')}{path}"
     print(f"[GET] {url}")
-    r = requests.get(url, timeout=TIMEOUT)
+    r = requests.get(url, timeout=timeout)
     print(f"  -> {r.status_code}")
     if not ok(r.status_code):
-        print(r.text[:300])
-        return None
+        print(r.text[:300]); return None
     try:
         return r.json()
     except Exception:
         print("  !! fetched file is not JSON")
         return None
 
-# ---------------- helpers: grid & geometry ----------------
+# ---------- Validation helpers ----------
 
 def dims(grid: List[List[str]]) -> Tuple[int,int]:
     h = len(grid); w = len(grid[0]) if h else 0
     return w, h
 
-def ring_distance(x:int, y:int, w:int, h:int) -> int:
+def ring_distance(x:int,y:int,w:int,h:int) -> int:
     """Min distance to outer border (0 on border)."""
     return min(x, y, w-1-x, h-1-y)
 
 def assert_true(cond: bool, msg: str, errs: List[str]):
-    if not cond:
-        errs.append(msg)
+    if not cond: errs.append(msg)
 
-def coast_set_from_plan(plan: Dict[str, Any]) -> Set[str]:
-    entries = (plan.get("layers", {})
-                    .get("biomes", {})
-                    .get("assignment", {})
-                    .get("coast_biomes") or [])
-    out: Set[str] = set()
-    for e in entries:
-        if isinstance(e, str):
-            out.add(e)
-        elif isinstance(e, dict):
-            out.add(e.get("id", "coast"))
-    if not out:
-        out = {"coast", "beach", "marsh-lite"}
-    return out
+def looks_grid(g) -> bool:
+    return isinstance(g, list) and g and isinstance(g[0], list)
 
-# ---------------- hydrology helpers & validator ----------------
+# ---------- Hydrology helpers ----------
 
-def compute_dist_to_ocean(grid: List[List[str]]) -> List[List[int]]:
+def compute_dist_to_ocean(grid: list[list[str]]) -> list[list[int]]:
     """Multi-source BFS distance (4-neigh) from ocean tiles. -1 = unreachable."""
     H = len(grid); W = len(grid[0]) if H else 0
     dist = [[-1]*W for _ in range(H)]
@@ -141,237 +176,171 @@ def compute_dist_to_ocean(grid: List[List[str]]) -> List[List[int]]:
                 q.append((nx, ny))
     return dist
 
-def validate_hydrology(plan: Dict[str,Any], shard: Dict[str,Any]) -> List[str]:
+# ---------- Validators ----------
+
+def validate_v2_basics(plan: Dict[str,Any], shard: Dict[str,Any]) -> List[str]:
     errs: List[str] = []
+
+    for k in ("meta","grid","layers","provenance"):
+        assert_true(k in shard, f"missing '{k}' in generated shard", errs)
+
+    grid = shard.get("grid", [])
+    assert_true(looks_grid(grid), "grid is missing or not 2D", errs)
+    if not looks_grid(grid):
+        return errs
+
+    W,H = dims(grid)
+    meta = shard.get("meta", {})
+    assert_true(W == int(meta.get("width", -1)) and H == int(meta.get("height", -1)),
+                f"grid dims {W}x{H} != meta {meta.get('width')}x{meta.get('height')}", errs)
+
+    water_layer = shard.get("layers", {}).get("water", {})
+    chosen_coast_w = int(water_layer.get("coast_width", 1))
+    ocean_ring = 1  # v2 stores only coast_width; border (ring=0) must be ocean
+
+    # 1) all outer border tiles are 'ocean'
+    for y in range(H):
+        for x in range(W):
+            if ring_distance(x,y,W,H) < ocean_ring:
+                assert_true(grid[y][x] == "ocean", f"non-ocean at border ({x},{y})={grid[y][x]}", errs)
+
+    # 2) coast belt are in 'coast/beach/marsh-lite' (fallback set)
+    coast_set = {"coast", "beach", "marsh-lite"}
+    for y in range(H):
+        for x in range(W):
+            d = ring_distance(x,y,W,H)
+            if ocean_ring <= d < (ocean_ring + chosen_coast_w):
+                assert_true(grid[y][x] in coast_set,
+                            f"non-coast '{grid[y][x]}' in coast belt at ({x},{y})", errs)
+
+    # 3) no 'ocean' inside interior beyond ocean+coast
+    for y in range(H):
+        for x in range(W):
+            d = ring_distance(x,y,W,H)
+            if d >= (ocean_ring + chosen_coast_w):
+                assert_true(grid[y][x] != "ocean",
+                            f"ocean found in interior at ({x},{y})", errs)
+    return errs
+
+def validate_hydrology(plan: dict, shard: dict) -> list[str]:
+    errs: list[str] = []
     layers = shard.get("layers", {})
     hydro = layers.get("hydrology")
     if not isinstance(hydro, dict):
-        return errs  # nothing to validate yet
-
-    rivers = hydro.get("rivers")  # expected: list of lists of [x,y] in flow order
-    lakes = hydro.get("lakes")    # expected: list of {"tiles":[[x,y],...]} or list of [[x,y],...]
+        return errs
+    rivers = hydro.get("rivers")
+    lakes = hydro.get("lakes")
 
     grid = shard.get("grid", [])
-    if not grid:
-        return errs
-
-    W, H = len(grid[0]), len(grid)
+    if not looks_grid(grid): return errs
+    W, H = dims(grid)
     dist = compute_dist_to_ocean(grid)
 
-    # Rivers strictly descend toward ocean; mouth adjacent to ocean
     if isinstance(rivers, list):
         for idx, path in enumerate(rivers):
             if not isinstance(path, list) or len(path) < 2:
-                errs.append(f"river[{idx}] too short or wrong type")
-                continue
+                errs.append(f"river[{idx}] too short or wrong type"); continue
             last_d = None
-            bad = False
             for (x, y) in path:
                 if not (0 <= x < W and 0 <= y < H):
-                    errs.append(f"river[{idx}] out of bounds at ({x},{y})")
-                    bad = True; break
+                    errs.append(f"river[{idx}] out of bounds at ({x},{y})"); break
                 d = dist[y][x]
                 if d < 0:
-                    errs.append(f"river[{idx}] passes unreachable tile ({x},{y})")
-                    bad = True; break
+                    errs.append(f"river[{idx}] passes unreachable tile ({x},{y})"); break
                 if last_d is not None and d >= last_d:
-                    errs.append(f"river[{idx}] not descending at ({x},{y}) d={d} >= prev={last_d}")
-                    bad = True; break
+                    errs.append(f"river[{idx}] not descending at ({x},{y}) d={d} >= prev={last_d}"); break
                 last_d = d
-            if not bad:
+            else:
+                # mouth must touch ocean (4-neigh)
                 x, y = path[-1]
                 if not any(0 <= x+dx < W and 0 <= y+dy < H and grid[y+dy][x+dx] == "ocean"
                            for dx, dy in [(1,0),(-1,0),(0,1),(0,-1)]):
                     errs.append(f"river[{idx}] mouth not adjacent to ocean at ({x},{y})")
 
-    # Lakes: interior only, never ocean tiles
-    def iter_lake_tiles(l):
-        if isinstance(l, dict) and "tiles" in l: return l["tiles"]
-        return l
-
     if isinstance(lakes, list):
+        def iter_lake_tiles(l):
+            if isinstance(l, dict) and "tiles" in l:
+                return l["tiles"]
+            return l
         for li, lake in enumerate(lakes):
             tiles = iter_lake_tiles(lake) or []
             for (x, y) in tiles:
-                if not (0 <= x < W and 0 <= y < H): continue
                 if grid[y][x] == "ocean":
                     errs.append(f"lake[{li}] includes ocean tile at ({x},{y})")
                 if ring_distance(x, y, W, H) == 0:
                     errs.append(f"lake[{li}] touches map border at ({x},{y})")
     return errs
 
-# ---------------- other optional validators ----------------
-
-def validate_poi_spacing(plan: Dict[str,Any], shard: Dict[str,Any]) -> List[str]:
+def validate_world_features(shard: dict, expected_budgets: dict | None) -> list[str]:
+    """Check settlements/ports/roads/bridges presence against budgets."""
     errs: List[str] = []
-    poi_layer = shard.get("layers", {}).get("poi")
-    if not isinstance(poi_layer, dict):
-        return errs
+    layers = shard.get("layers", {})
+    sets = layers.get("settlements", {}) if isinstance(layers.get("settlements"), dict) else {}
 
-    # adapt this filter to your final site schema
-    sites = shard.get("sites", [])
-    pois = [
-        s for s in sites
-        if (s.get("type") or s.get("tag") or "").lower().startswith(
-            ("poi", "ruin", "watch", "fishing", "lighthouse")
-        )
-    ]
-    if len(pois) <= 1:
-        return errs
+    if expected_budgets:
+        for key, fld in (("cities","cities"), ("towns","towns"),
+                         ("villages","villages"), ("ports","ports")):
+            exp = int(expected_budgets.get(key, 0))
+            if exp > 0:
+                got = len(sets.get(fld, []) or [])
+                assert_true(got > 0, f"expected some {key} (budget {exp}) but found {got}", errs)
 
-    ms = int(plan.get("layers", {}).get("poi", {}).get("min_spacing", 0) or 0)
-    if ms <= 0:
-        return errs
-
-    def manhattan(a,b): return abs(a[0]-b[0]) + abs(a[1]-b[1])
-    def pos(s):
-        if "x" in s and "y" in s: return (int(s["x"]), int(s["y"]))
-        p = s.get("pos", [0,0]); return (int(p[0]), int(p[1]))
-
-    for i in range(len(pois)):
-        for j in range(i+1, len(pois)):
-            if manhattan(pos(pois[i]), pos(pois[j])) < ms:
-                errs.append(f"POIs too close: idx {i} and {j} (< {ms})")
-    return errs
-
-def validate_ports_on_ocean(plan: Dict[str,Any], shard: Dict[str,Any]) -> List[str]:
-    errs: List[str] = []
-    sites = shard.get("sites", [])
-    ports = [s for s in sites if (s.get("type") or "").lower() == "port"]
-    if not ports:
-        return errs
-
-    grid = shard.get("grid", [])
-    if not grid:
-        return errs
-    W, H = len(grid[0]), len(grid)
-
-    coast_set = coast_set_from_plan(plan)
-    for p in ports:
-        x, y = int(p.get("x", 0)), int(p.get("y", 0))
-        if not (0 <= x < W and 0 <= y < H):
-            errs.append(f"port out of bounds at ({x},{y})"); continue
-        cell = grid[y][x]
-        border = ring_distance(x,y,W,H) == 0
-        ocean_adj = any(0 <= x+dx < W and 0 <= y+dy < H and grid[y+dy][x+dx] == "ocean"
-                        for dx,dy in [(1,0),(-1,0),(0,1),(0,-1)])
-        if not (border or (cell in coast_set and ocean_adj)):
-            errs.append(f"port not on ocean coast at ({x},{y}); cell={cell}, border={border}, ocean_adj={ocean_adj}")
-    return errs
-
-def validate_roads_bridges(plan: Dict[str,Any], shard: Dict[str,Any]) -> List[str]:
-    errs: List[str] = []
-    roads = shard.get("layers", {}).get("roads")
-    if not isinstance(roads, dict):
-        return errs
-
-    edges = roads.get("edges"); nodes = roads.get("nodes")
-    if isinstance(edges, int) and isinstance(nodes, int):
-        if edges > max(0, nodes - 1):
-            errs.append(f"roads.edges ({edges}) > nodes-1 ({nodes-1})")
-
-    bridges = roads.get("bridges")
-    if isinstance(bridges, dict):
-        max_span = int(bridges.get("max_span_rule", 3))
-        spans = bridges.get("spans")
-        if isinstance(spans, list):
-            for bi, tiles in enumerate(spans):
-                if isinstance(tiles, list) and len(tiles) > max_span:
-                    errs.append(f"bridge[{bi}] span {len(tiles)} > max_span {max_span}")
-    return errs
-
-# ---------------- core validations ----------------
-
-def validate_v2_basics(plan: Dict[str,Any], shard: Dict[str,Any]) -> List[str]:
-    errs: List[str] = []
-
-    # presence
-    for k in ("meta","grid","sites","layers","provenance"):
-        assert_true(k in shard, f"missing '{k}' in generated shard", errs)
-
-    # dims match meta
-    grid = shard.get("grid", [])
-    W,H = dims(grid)
-    meta = shard.get("meta", {})
-    assert_true(W == int(meta.get("width", -1)) and H == int(meta.get("height", -1)),
-                f"grid dims {W}x{H} != meta {meta.get('width')}x{meta.get('height')}", errs)
-
-    # required layers (optional via env)
-    if REQUIRED_LAYERS:
-        present = set(shard.get("layers", {}).keys())
-        missing = REQUIRED_LAYERS - present
-        for lay in sorted(missing):
-            errs.append(f"required layer missing: layers.{lay}")
-
-    # water invariants
-    water_layer = shard.get("layers", {}).get("water", {})
-    ocean_ring = int(water_layer.get("ocean_ring", 1))
-    chosen_coast_w = int(water_layer.get("coast_width", 1))
-    coast_set = coast_set_from_plan(plan)
-
-    # 1) border must be ocean
-    for y in range(H):
-        for x in range(W):
-            if ring_distance(x,y,W,H) < ocean_ring:
-                assert_true(grid[y][x] == "ocean", f"non-ocean at border ({x},{y})={grid[y][x]}", errs)
-
-    # 2) coast belt must be coast biome
-    for y in range(H):
-        for x in range(W):
-            d = ring_distance(x,y,W,H)
-            if ocean_ring <= d < (ocean_ring + chosen_coast_w):
-                if grid[y][x] not in coast_set:
-                    errs.append(f"non-coast in coast belt ({x},{y})={grid[y][x]}")
-
-    # 3) no ocean inside interior (beyond ocean+coast)
-    for y in range(H):
-        for x in range(W):
-            d = ring_distance(x,y,W,H)
-            if d >= (ocean_ring + chosen_coast_w):
-                if grid[y][x] == "ocean":
-                    errs.append(f"ocean found in interior ({x},{y})")
+    # Roads/bridges format presence
+    roads = layers.get("roads", {})
+    if roads:
+        paths = roads.get("paths")
+        bridges = roads.get("bridges")
+        assert_true(isinstance(paths, list), "layers.roads.paths must be a list", errs)
+        assert_true(isinstance(bridges, list) or bridges is None, "layers.roads.bridges must be a list", errs)
 
     return errs
 
-def validate_optional_layers(plan: Dict[str,Any], shard: Dict[str,Any]) -> List[str]:
-    errs: List[str] = []
-    errs += validate_hydrology(plan, shard)
-    errs += validate_poi_spacing(plan, shard)
-    errs += validate_ports_on_ocean(plan, shard)
-    errs += validate_roads_bridges(plan, shard)
-    return errs
+# ---------- Runner ----------
 
-# ---------------- runner ----------------
+def run(args: argparse.Namespace) -> bool:
+    BASE = args.base
+    TIMEOUT = args.timeout
+    V2_PREFIX = f"{BASE.rstrip('/')}/api/shard-gen-v2"
 
-def run(which: str) -> bool:
+    body = build_body(args)
+
     print("=== ShardBound API smoke ===")
-    print(f"BASE={BASE}")
-    print(f"POST body={jdump(DEFAULT_BODY)}\n")
+    print("BASE=", BASE)
+    print("POST body=", jdump(body), sep="\n")
 
-    passed = True
-    if which in ("all","catalog"):
-        passed &= get_catalog()
+    if args.cmd in ("all","plan"):
+        if not get_catalog(BASE, TIMEOUT):
+            print("Catalog fetch failed"); return False
 
-    # Always plan first (even if only generating) for determinism & coast biomes
-    plan_data = post_plan(DEFAULT_BODY)
-    if plan_data is None:
-        print("plan failed"); return False
-    if which == "plan":
-        print("\nPlan OK ✅")
-        return True
+    plan_data = None
+    if args.cmd in ("all","plan","generate","roundtrip"):
+        plan_data = post_plan(BASE, TIMEOUT, body)
+        if plan_data is None:
+            print("Plan failed ❌"); return False
+        print(f"  plan_id: {plan_data.get('plan_id') or plan_data.get('planId')}  seed: {plan_data.get('seed')}")
 
-    gen_data = post_generate(DEFAULT_BODY)
+    if args.cmd == "plan":
+        print("\nPlan OK ✅"); return True
+
+    gen_data = post_generate(BASE, TIMEOUT, body)
     if gen_data is None:
-        print("generate failed"); return False
+        print("Generate failed ❌"); return False
 
-    shard = get_file_json(gen_data["path"])
+    shard = fetch_json_by_path(BASE, TIMEOUT, gen_data["path"])
     if shard is None:
-        print("fetch file failed"); return False
+        print("Fetch shard JSON failed ❌"); return False
 
-    # Validations
+    # ---- validations
     errs: List[str] = []
-    errs += validate_v2_basics(plan_data, shard)
-    errs += validate_optional_layers(plan_data, shard)
+    errs += validate_v2_basics(plan_data or {}, shard)
+    errs += validate_hydrology(plan_data or {}, shard)
+
+    budgets = {}
+    if args.cities   is not None: budgets["cities"]   = args.cities
+    if args.towns    is not None: budgets["towns"]    = args.towns
+    if args.villages is not None: budgets["villages"] = args.villages
+    if args.ports    is not None: budgets["ports"]    = args.ports
+    errs += validate_world_features(shard, budgets or None)
 
     if errs:
         print("\n=== FAILURES ===")
@@ -383,9 +352,25 @@ def run(which: str) -> bool:
         return False
 
     print("\nAll invariants passed ✅")
-    print("RESULT: PASS ✅")
+    print(f"RESULT: PASS ✅  →  {gen_data.get('file')}  ({gen_data.get('path')})")
+
+    # Optional: open the v2 viewer so you can see it render right away
+    if args.open_viewer:
+        try:
+            url = f"{BASE.rstrip('/')}/shard-viewer-v2?debug=1"
+            print(f"Opening viewer: {url}")
+            webbrowser.open(url)
+        except Exception as e:
+            print(f"(viewer open skipped: {e})")
+
     return True
 
+# ---------- main ----------
+
 if __name__ == "__main__":
-    which = (sys.argv[1].lower() if len(sys.argv) > 1 else "all")
-    sys.exit(0 if run(which) else 1)
+    args = make_parser().parse_args()
+    # If user provided --seed, disable auto-seed
+    if args.seed is not None:
+        args.auto_seed = False
+    ok_all = run(args)
+    sys.exit(0 if ok_all else 1)

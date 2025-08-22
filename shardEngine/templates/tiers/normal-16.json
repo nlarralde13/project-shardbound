@@ -1,7 +1,7 @@
 {
   "id": "normal-16",
   "version": "1.0.0",
-  "grid": { "cols": 16, "rows": 16, "tile_size": 16 },
+  "grid": { "cols": 64, "rows": 64, "tile_size": 16 },
 
   "biomes": { "pack": "temperate-base" },
 

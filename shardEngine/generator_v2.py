@@ -1,553 +1,571 @@
 # /app/shardEngine/generator_v2.py
 from __future__ import annotations
-from typing import Any, Dict, List
 
-from .schemas import (
-    PlanRequest, PlanResponse, GridSpec, Provenance, DiffBlock, BudgetsBlock,
-    WaterLayerPlan, HydrologyRequested, HydrologyLayerPlan, RiverSource, LakeSeed,
-    BiomeAssignment, BiomesLayerPlan, SettlementsLayerPlan, SettlementPick,
-    RoadsLayerPlan, POILayerPlan, POIPick,
-    ResourcesLayerPlan, LayersBlock,
-    TileCountsEstimate, ConnectivityMetrics, MetricsBlock,
-    WouldWriteBlock, CompatBlock,
-)
-from .registry import OverrideDiff, LoadedDoc, overrides_hash_sha1
+from typing import Any, Dict, List, Tuple, Optional
+import math
+
+from .schemas import PlanRequest
+from .registry import overrides_hash_sha1
 from .rng import KeyedRNG
 from .persistence import save_shard_v2
-from collections import deque
-from typing import Tuple, Set
+from .hydrology import generate_hydrology
 
+Coord = Tuple[int, int]
 
-# ---------- tiny utils ----------
-def _iso_now():
-    from datetime import datetime
-    return datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+# ---------- utils ----------
 
-def _ring_count(w: int, h: int, t: int) -> int:
-    if t <= 0:
-        return 0
-    iw, ih = max(0, w - 2 * t), max(0, h - 2 * t)
-    total = w * h
-    return total if iw <= 0 or ih <= 0 else total - (iw * ih)
+def _dims(grid: List[List[str]]) -> Tuple[int, int]:
+    h = len(grid) if grid else 0
+    w = len(grid[0]) if h else 0
+    return w, h
 
-def _coast_count(w: int, h: int, ocean_ring: int, coast_width: int) -> int:
-    return max(0, _ring_count(w, h, ocean_ring + coast_width) - _ring_count(w, h, ocean_ring))
+def _inb(x: int, y: int, w: int, h: int) -> bool:
+    return 0 <= x < w and 0 <= y < h
 
-def _clamp(n: int, lo: int, hi: int) -> int:
-    return max(lo, min(hi, n))
+def _n4(x: int, y: int) -> List[Coord]:
+    return [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
 
-def _weighted_pick(rng: KeyedRNG, key: str, weights: Dict[str, float], fallback: str = "plains") -> str:
-    total = sum(max(0.0, float(w)) for w in weights.values()) or 0.0
-    if total <= 0:
-        return fallback
-    r = rng.randf(key) * total
-    acc = 0.0
-    for k, w in weights.items():
-        acc += max(0.0, float(w))
-        if r <= acc:
-            return k
-    return fallback
+def _n8(x: int, y: int) -> List[Coord]:
+    out = []
+    for dy in (-1, 0, 1):
+        for dx in (-1, 0, 1):
+            if dx == 0 and dy == 0:
+                continue
+            out.append((x + dx, y + dy))
+    return out
 
-def _pick_coast_biome(rng: KeyedRNG, key: str, coast_entries: List) -> str:
-    # entries may be {"id","weight"} dicts or plain strings
-    items = []
+def _manhattan(a: Coord, b: Coord) -> int:
+    return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+def _choose_coast_biome(rng: KeyedRNG, key: str, coast_entries: List[Any]) -> str:
+    items: List[Tuple[str, float]] = []
     total = 0.0
-    for e in coast_entries:
+    for e in coast_entries or []:
         if isinstance(e, dict):
             bi = e.get("id", "coast")
             wt = float(e.get("weight", 1.0))
         else:
             bi, wt = str(e), 1.0
+        wt = max(0.0, wt)
         items.append((bi, wt))
-        total += max(0.0, wt)
-    if total <= 0:
+        total += wt
+    if total <= 0.0:
         return "coast"
     r = rng.randf(key) * total
     acc = 0.0
     for bi, wt in items:
-        acc += max(0.0, wt)
+        acc += wt
         if r <= acc:
             return bi
     return "coast"
 
-# -------------- Hydrology helpers (no elevation) -----------------
+def _weighted_pick(rng: KeyedRNG, key: str, weights: Dict[str, float], fallback: str) -> str:
+    total = 0.0
+    items: List[Tuple[str, float]] = []
+    for k, v in (weights or {}).items():
+        w = float(v)
+        if w > 0:
+            items.append((k, w))
+            total += w
+    if total <= 0:
+        return fallback
+    r = rng.randf(key) * total
+    acc = 0.0
+    for k, w in items:
+        acc += w
+        if r <= acc:
+            return k
+    return fallback
 
-def _neighbors4(x: int, y: int, W: int, H: int):
-    if x+1 < W: yield (x+1, y)
-    if x-1 >= 0: yield (x-1, y)
-    if y+1 < H: yield (x, y+1)
-    if y-1 >= 0: yield (x, y-1)
+# ---------- tiny deterministic value-noise + fBm (no external deps) ----------
 
-def _compute_dist_to_ocean(grid: List[List[str]]) -> List[List[int]]:
-    """Multi-source BFS distance (4-neigh) to the nearest ocean tile. -1 = unreachable."""
-    H = len(grid); W = len(grid[0]) if H else 0
-    dist = [[-1]*W for _ in range(H)]
-    q = deque()
-    for y in range(H):
-        for x in range(W):
-            if grid[y][x] == "ocean":
-                dist[y][x] = 0
-                q.append((x, y))
-    while q:
-        x, y = q.popleft()
-        d = dist[y][x] + 1
-        for nx, ny in _neighbors4(x, y, W, H):
-            if dist[ny][nx] == -1:
-                dist[ny][nx] = d
-                q.append((nx, ny))
-    return dist
+def _fade(t: float) -> float:
+    # smootherstep (Perlin)
+    return t * t * t * (t * (t * 6 - 15) + 10)
 
-def _pick_river_sources(rng: KeyedRNG, dist: List[List[int]], count: int, min_dist: int = 3) -> List[Tuple[int,int]]:
-    """Choose up to `count` distinct interior cells with largest distance to ocean."""
-    H = len(dist); W = len(dist[0]) if H else 0
-    candidates = [(dist[y][x], rng.randf(f"hyd.src.tie.{x}.{y}"), x, y)
-                  for y in range(H) for x in range(W) if dist[y][x] >= min_dist]
-    # Sort by (distance desc, rng tie desc) and take top-N
-    candidates.sort(key=lambda t: (t[0], t[1]), reverse=True)
-    picks: List[Tuple[int,int]] = []
-    used: Set[Tuple[int,int]] = set()
-    for _, __, x, y in candidates:
-        if (x, y) in used:
-            continue
-        picks.append((x, y))
-        used.add((x, y))
-        if len(picks) >= count:
-            break
-    return picks
+def _lerp(a: float, b: float, t: float) -> float:
+    return a + (b - a) * t
 
-def _route_river(rng: KeyedRNG, dist: List[List[int]], src: Tuple[int,int]) -> List[Tuple[int,int]]:
-    """Greedy descent along distance field until the tile is ocean-adjacent."""
-    H = len(dist); W = len(dist[0]) if H else 0
-    x, y = src
-    if not (0 <= x < W and 0 <= y < H): return []
-    if dist[y][x] <= 0: return []  # already ocean or invalid
+def _lattice(rng: KeyedRNG, ns: str, ix: int, iy: int) -> float:
+    # deterministic 0..1 per integer lattice point
+    return rng.randf(f"{ns}.{ix}.{iy}")
 
-    path: List[Tuple[int,int]] = [(x, y)]
-    prev = None
-    while True:
-        d0 = dist[y][x]
-        # stop when mouth is adjacent to ocean (neighbor with dist==0)
-        if any(dist[ny][nx] == 0 for nx, ny in _neighbors4(x, y, W, H)):
-            break
-        # choose neighbor with strictly smaller dist; tie-break by RNG
-        options = [(dist[ny][nx], nx, ny) for nx, ny in _neighbors4(x, y, W, H) if dist[ny][nx] >= 0 and dist[ny][nx] < d0]
-        if not options:
-            # dead-end (shouldn't happen with a valid distance field); bail
-            break
-        # Among minimal dist options, pick a deterministic one
-        min_d = min(o[0] for o in options)
-        min_list = [(nx, ny) for d, nx, ny in options if d == min_d]
-        if len(min_list) > 1:
-            idx = rng.randi(f"hyd.step.{x}.{y}", 0, len(min_list)-1)
-            nx, ny = min_list[idx]
-        else:
-            nx, ny = min_list[0]
+def _value_noise(rng: KeyedRNG, ns: str, x: float, y: float) -> float:
+    # bilinear interpolation of lattice values
+    ix = math.floor(x); iy = math.floor(y)
+    fx = x - ix;        fy = y - iy
+    v00 = _lattice(rng, ns, ix,   iy)
+    v10 = _lattice(rng, ns, ix+1, iy)
+    v01 = _lattice(rng, ns, ix,   iy+1)
+    v11 = _lattice(rng, ns, ix+1, iy+1)
+    ux = _fade(fx); uy = _fade(fy)
+    a = _lerp(v00, v10, ux)
+    b = _lerp(v01, v11, ux)
+    return _lerp(a, b, uy)  # 0..1
 
-        if prev is not None and (nx, ny) == prev:
-            break
-        prev = (x, y)
-        x, y = nx, ny
-        path.append((x, y))
-        # guard against runaway paths
-        if len(path) > (W*H):
-            break
-    return path
+def _fbm(rng: KeyedRNG, base_ns: str, x: float, y: float, octaves: int, lacunarity: float, gain: float) -> float:
+    """Returns approximately in [-1, 1]."""
+    amp = 0.5
+    freq = 1.0
+    total = 0.0
+    for o in range(max(1, octaves)):
+        n = _value_noise(rng, f"{base_ns}.{o}", x * freq, y * freq) * 2.0 - 1.0  # -1..1
+        total += n * amp
+        freq *= lacunarity
+        amp *= gain
+    return max(-1.0, min(1.0, total))
 
-def _grow_lake(rng: KeyedRNG, grid: List[List[str]], dist: List[List[int]], cx: int, cy: int, target_size: int) -> List[Tuple[int,int]]:
-    """Grow a compact interior lake (~diamond growth). Never include ocean or border tiles."""
-    H = len(grid); W = len(grid[0]) if H else 0
-    if not (0 <= cx < W and 0 <= cy < H): return []
-    if grid[cy][cx] == "ocean" or min(cx, cy, W-1-cx, H-1-cy) == 0:
-        return []
+# ---------- PLAN ----------
 
-    lake: Set[Tuple[int,int]] = set()
-    frontier: List[Tuple[int,int]] = [(cx, cy)]
-    while frontier and len(lake) < target_size:
-        # Slight randomness to shape
-        idx = rng.randi(f"hyd.lake.pick.{cx}.{cy}.{len(lake)}", 0, len(frontier)-1)
-        x, y = frontier.pop(idx)
-        if (x, y) in lake: continue
-        if grid[y][x] == "ocean": continue
-        if min(x, y, W-1-x, H-1-y) == 0:  # border
-            continue
-        lake.add((x, y))
-        for nx, ny in _neighbors4(x, y, W, H):
-            if (nx, ny) not in lake and grid[ny][nx] != "ocean":
-                frontier.append((nx, ny))
-    return list(lake)
-
-
-
-# ======================================================================
-# /plan — lightweight planner (no file writes)
-# ======================================================================
 def plan(
     *,
-    req: PlanRequest,
+    req,
     merged_tier: Dict[str, Any],
     tier_prov: str,
-    biome_doc: LoadedDoc,
+    biome_doc: Any,
     seed: int,
-    diff: OverrideDiff,
-) -> PlanResponse:
+    diff: Optional[Dict[str, Any]] = None,
+    **_ignored,
+) -> Dict[str, Any]:
+    width  = int(merged_tier.get("grid", {}).get("width", 16))
+    height = int(merged_tier.get("grid", {}).get("height", width))
 
-    grid_cfg = merged_tier.get("grid", {})
-    w, h = int(grid_cfg.get("cols", 16)), int(grid_cfg.get("rows", 16))
-    tile_size = int(grid_cfg.get("tile_size", 16))
+    would_name = f"{seed:08d}_{req.name}.json"
+    would_path = f"/static/public/shards/{would_name}"
 
-    water = merged_tier.get("water", {})
-    ocean_ring = int(water.get("ocean_ring", 1))
-    cw = water.get("coast_width", [1, 2])
-    cmin, cmax = (int(cw[0]), int(cw[1])) if isinstance(cw, list) and len(cw) == 2 else (1, 2)
-
-    rng = KeyedRNG(seed, namespace=f"v2.{req.templateId}")
-    coast_w = rng.randi("water.coast_width", cmin, cmax)
-
-    ocean_tiles = _ring_count(w, h, ocean_ring)
-    coast_tiles = _coast_count(w, h, ocean_ring, coast_w)
-    interior = w * h - ocean_tiles - coast_tiles
-
-    hyd = merged_tier.get("hydrology", {})
-    rmin = int(hyd.get("rivers", {}).get("min", 0))
-    rmax = int(hyd.get("rivers", {}).get("max", 0))
-    lake_chance = float(hyd.get("lake_chance", 0.0))
-    lsz = hyd.get("lake_size", [2, 6])
-    lmin, lmax = (int(lsz[0]), int(lsz[1])) if isinstance(lsz, list) and len(lsz) == 2 else (2, 6)
-
-    rivers_chosen = rng.randi("hyd.river_count", rmin, rmax) if rmax >= rmin else 0
-    lakes_chosen = 1 if (lake_chance > 0 and rng.randf("hyd.lake_roll") < lake_chance) else 0
-
-    # interior bbox to pick preview coords from
-    ix0 = _clamp(ocean_ring + coast_w, 0, w - 1)
-    iy0 = _clamp(ocean_ring + coast_w, 0, h - 1)
-    ix1 = _clamp(w - 1 - (ocean_ring + coast_w), 0, w - 1)
-    iy1 = _clamp(h - 1 - (ocean_ring + coast_w), 0, h - 1)
-
-    river_sources = [
-        RiverSource(
-            x=rng.randi(f"hyd.rsrc.x.{i}", ix0, ix1),
-            y=rng.randi(f"hyd.rsrc.y.{i}", iy0, iy1),
-            key=f"river.source.{i}",
-        )
-        for i in range(rivers_chosen)
-    ]
-    lake_seeds = [
-        LakeSeed(
-            x=rng.randi(f"hyd.lake.x.{i}", ix0, ix1),
-            y=rng.randi(f"hyd.lake.y.{i}", iy0, iy1),
-            size=rng.randi(f"hyd.lake.size.{i}", lmin, lmax),
-            key=f"lake.seed.{i}",
-        )
-        for i in range(lakes_chosen)
-    ]
-
-    settlements_cfg = merged_tier.get("settlements", {})
-    budget = settlements_cfg.get("budget", {})
-    city_n = int(budget.get("city", 0))
-    town_n = int(budget.get("town", 0))
-    village_n = int(budget.get("village", 0))
-    port_n = int(budget.get("port", 0))
-
-    settlements_selected = {"city": [], "towns": [], "villages": [], "ports": []}
-    for i in range(city_n):
-        settlements_selected["city"].append(
-            SettlementPick(
-                x=rng.randi(f"sett.city.x.{i}", ix0, ix1),
-                y=rng.randi(f"sett.city.y.{i}", iy0, iy1),
-                score=round(0.75 + 0.2 * rng.randf(f"sett.city.sc.{i}"), 2),
-                near=["river"],
-            )
-        )
-    for i in range(town_n):
-        settlements_selected["towns"].append(
-            SettlementPick(
-                x=rng.randi(f"sett.town.x.{i}", ix0, ix1),
-                y=rng.randi(f"sett.town.y.{i}", iy0, iy1),
-                score=round(0.6 + 0.2 * rng.randf(f"sett.town.sc.{i}"), 2),
-            )
-        )
-    for i in range(village_n):
-        settlements_selected["villages"].append(
-            SettlementPick(
-                x=rng.randi(f"sett.vil.x.{i}", ix0, ix1),
-                y=rng.randi(f"sett.vil.y.{i}", iy0, iy1),
-                score=round(0.5 + 0.2 * rng.randf(f"sett.vil.sc.{i}"), 2),
-            )
-        )
-    # ports along the outer rim (ocean coast)
-    for i in range(port_n):
-        side = rng.choice(f"sett.port.side.{i}", ["N", "S", "E", "W"])
-        if side in ("N", "S"):
-            y = 0 if side == "N" else h - 1
-            x = rng.randi(f"sett.port.x.{i}", 1, w - 2)
-        else:
-            x = 0 if side == "W" else w - 1
-            y = rng.randi(f"sett.port.y.{i}", 1, h - 2)
-        settlements_selected["ports"].append(
-            SettlementPick(
-                x=x,
-                y=y,
-                score=round(0.7 + 0.2 * rng.randf(f"sett.port.sc.{i}"), 2),
-                type="ocean_coast",
-                at_river_mouth=rng.coinflip(f"sett.port.mouth.{i}", 0.5),
-            )
-        )
-
-    nodes = city_n + town_n + village_n + port_n
-    edges = max(0, nodes - 1)
-    bridges = {
-        "candidates": max(0, rivers_chosen),
-        "will_place": min(rivers_chosen, max(0, nodes // 3)),
-        "max_span_rule": int(merged_tier.get("roads", {}).get("bridge", {}).get("max_span", 2)),
+    metrics = {
+        "tileCounts_hint": {"ocean_border_est": width * 4 + height * 4},
+        "connectivity": {"coastRing": True},
     }
 
-    poi_cfg = merged_tier.get("poi", {})
-    poi_budget = int(poi_cfg.get("budget", 0))
-    poi_tables = poi_cfg.get("tables", [])
-
-    selected_preview: List[POIPick] = []
-    for i in range(poi_budget):
-        selected_preview.append(
-            POIPick(
-                tag=("ruin_tower" if i % 2 == 0 else "fishing_hut"),
-                x=rng.randi(f"poi.x.{i}", ix0, ix1),
-                y=rng.randi(f"poi.y.{i}", iy0, iy1),
-                why=["spacing_ok"],
-            )
-        )
-
-    resources_cfg = merged_tier.get("resources", {})
-    thresholds = resources_cfg.get("thresholds", {"ore": 0.8, "timber": 0.7, "herbs": 0.6, "fish": 0.7})
-    potentials = resources_cfg.get("potentials", list(thresholds.keys()))
-    coverage = {
-        k: {"p10": 0.1, "p50": 0.5, "p90": 0.85, "high_tiles_est": max(0, int(interior * 0.12))}
-        for k in potentials
-    }
-
-    layers = LayersBlock(
-        water=WaterLayerPlan(
-            ocean_ring=ocean_ring,
-            coast_width=(cmin, cmax),
-            coastline_ok=True,
-            estimated_counts={
-                "ocean_tiles": ocean_tiles,
-                "coast_tiles": coast_tiles,
-                "interior_land_tiles": interior,
-                "interior_water_reserve": max(0, int(0.05 * interior)),
-            },
-        ),
-        hydrology=HydrologyLayerPlan(
-            requested=HydrologyRequested(
-                rivers_min=rmin, rivers_max=rmax, lake_chance=lake_chance, lake_size=(lmin, lmax)
-            ),
-            chosen={"rivers": rivers_chosen, "lakes": lakes_chosen},
-            river_sources=river_sources,
-            lake_seeds=lake_seeds,
-            notes=["rivers will greedily route to ocean using distance-to-ocean gradient"],
-        ),
-        biomes=BiomesLayerPlan(
-            pack=biome_doc.id_at_version,
-            assignment=BiomeAssignment(
-                coast_biomes=[b["id"] if isinstance(b, dict) else b for b in merged_tier.get("biomes", {}).get("coast_biomes", [])],
-                interior_weights=merged_tier.get("biomes", {}).get("interior_weights", {}),
-            ),
-            smoothing={"enabled": True, "min_patch_size": 3},
-        ),
-        settlements=SettlementsLayerPlan(
-            candidates_scanned=max(10, interior // 4),
-            selected=settlements_selected,
-            constraints={"ports_ocean_only": True, "min_spacing_ok": True},
-        ),
-        roads=RoadsLayerPlan(strategy="mst", nodes=nodes, edges=edges, bridges=bridges),
-        poi=POILayerPlan(
-            budget=poi_budget,
-            tables=poi_tables,
-            min_spacing=int(poi_cfg.get("min_spacing", 3)),
-            selected_preview=selected_preview,
-            rejected_preview=[],
-        ),
-        resources=ResourcesLayerPlan(
-            potentials=potentials,
-            thresholds=thresholds,
-            coverage_estimate=coverage,
-            materialization_policy={
-                "max_nodes_per_room": int(resources_cfg.get("max_nodes_per_room", 2)),
-                "ambient_roll": bool(resources_cfg.get("ambient_roll", True)),
-            },
-        ),
-    )
-
-    budgets = BudgetsBlock(
-        settlements={"city": city_n, "town": town_n, "village": village_n, "port": port_n},
-        poi={"budget": poi_budget, "tables": poi_tables},
-    )
-
-    metrics = MetricsBlock(
-        tile_counts_estimate=TileCountsEstimate(
-            land=interior + coast_tiles,
-            ocean=ocean_tiles,
-            coast=coast_tiles,
-            river_tiles=max(0, rivers_chosen * (h // 2)),
-            lake_tiles=max(0, lakes_chosen * ((lmin + lmax) // 2)),
-        ),
-        connectivity=ConnectivityMetrics(road_components=1 if nodes > 0 else 0, river_outlets=max(1, rivers_chosen)),
-    )
-
-    filename = f"{seed:08d}_{req.name}.json"
-    would_write = WouldWriteBlock(
-        filename=filename,
-        path=f"/static/public/shards/{filename}",
-        compat=CompatBlock(
-            includes_legacy_tiles=True,
-            includes_grid_and_sites=True,
-            extra_layers=["water", "hydrology", "roads", "poi", "resources"],
-        ),
-    )
-
-    prov = Provenance(
-        generator="v2",
-        schema_version="2.0.0",
-        template=tier_prov,
-        biome_pack=biome_doc.id_at_version,
-        seed=seed,
-        # hash only the applied overrides for stable provenance
-        overrides_hash=overrides_hash_sha1(diff.template_overrides_applied),
-        request_echo={
-            "templateId": req.templateId,
-            "name": req.name,
-            "autoSeed": req.autoSeed,
+    return {
+        "ok": True,
+        "planId": f"plan-{seed}-{req.templateId}",
+        "seed": seed,
+        "grid": {"width": width, "height": height},
+        "provenance": {
+            "generator": "v2",
+            "schema_version": "2.0.0",
+            "template": tier_prov,
+            "biome_pack": getattr(biome_doc, "id_at_version", str(biome_doc)),
             "seed": seed,
         },
-    )
+        "layers": {
+            "water": {"coast_width": merged_tier.get("water", {}).get("coast_width", [1, 2])},
+            "hydrology": {"requested": True},
+            "settlements": {"requested": True},
+            "roads": {"requested": True},
+            "elevation": {"provided": True},
+        },
+        "wouldWrite": {"name": would_name, "path": would_path},
+        "compat": {"v1_like_sites": True},
+        "metrics": metrics,
+    }
 
-    return PlanResponse(
-        ok=True,
-        plan_id=f"plan-{seed:08d}-{req.templateId}",
-        timestamp=_iso_now(),
-        provenance=prov,
-        grid=GridSpec(cols=w, rows=h, tile_size=tile_size),
-        diff=DiffBlock(
-            template_overrides_applied=diff.template_overrides_applied,
-            ignored_overrides=diff.ignored_overrides,
-        ),
-        budgets=budgets,
-        layers=layers,
-        metrics=metrics,
-        warnings=[],
-        would_write=would_write,
-    )
+# ---------- GENERATE ----------
 
-
-# ======================================================================
-# /generate — minimal shard write (ocean + coast + interior fill)
-# ======================================================================
 def generate(
     *,
-    req: PlanRequest,
+    req,
     merged_tier: Dict[str, Any],
     tier_prov: str,
-    biome_doc: LoadedDoc,
+    biome_doc: Any,
     seed: int,
+    diff: Optional[Dict[str, Any]] = None,
+    **_ignored,
 ) -> Dict[str, Any]:
+    rng = KeyedRNG(seed)
 
-    grid_cfg = merged_tier.get("grid", {})
-    w, h = int(grid_cfg.get("cols", 16)), int(grid_cfg.get("rows", 16))
+    # --- grid size
+    w = int(merged_tier.get("grid", {}).get("width", 16))
+    h = int(merged_tier.get("grid", {}).get("height", w))
 
-    water = merged_tier.get("water", {})
-    ocean_ring = int(water.get("ocean_ring", 1))
-    cw = water.get("coast_width", [1, 2])
-    cmin, cmax = (int(cw[0]), int(cw[1])) if isinstance(cw, list) and len(cw) == 2 else (1, 2)
+    # --- world / noise settings
+    world_cfg = (merged_tier.get("world") or {})
+    world_type = str(world_cfg.get("type", "mixed")).lower()  # 'continent' | 'archipelago' | 'mixed'
+    land_target = float(world_cfg.get("landmass_ratio", merged_tier.get("landmass_ratio", 0.44)))
+    land_target = max(0.05, min(0.9, land_target))
 
-    rng = KeyedRNG(seed, namespace=f"v2.{req.templateId}")
-    coast_w = rng.randi("water.coast_width", cmin, cmax)
+    noise_cfg = (merged_tier.get("noise") or {})
+    octaves    = int(noise_cfg.get("octaves", 4))
+    base_freq  = float(noise_cfg.get("frequency", 1.3))   # “how many main blobs across map”
+    lacunarity = float(noise_cfg.get("lacunarity", 2.0))
+    gain       = float(noise_cfg.get("gain", 0.5))
+    smooth_it  = int(noise_cfg.get("smooth_iters", 1))
 
-    # biome selection sources
-    biome_cfg = biome_doc.data
-    coast_entries = (merged_tier.get("biomes", {}) or {}).get("coast_biomes") \
-                    or biome_cfg.get("coast_biomes", [])
-    interior_weights = (merged_tier.get("biomes", {}) or {}).get("interior_weights") \
-                    or biome_cfg.get("interior_weights", {"plains": 1.0})
+    # --- coast width
+    water_cfg = merged_tier.get("water", {}) or {}
+    cw_raw = water_cfg.get("coast_width", [1, 2])
+    if isinstance(cw_raw, list) and len(cw_raw) >= 2:
+        coast_w = rng.randi("water.coastw", int(cw_raw[0]), int(cw_raw[1]))
+    else:
+        coast_w = int(cw_raw if isinstance(cw_raw, int) else 1)
+    coast_w = max(1, min(3, coast_w))
 
-    # build grid[y][x]
-    grid: List[List[str]] = []
+    # --- heightmap (fBm + world mask)
+    # coordinate space: make noise frequency independent of absolute pixels
+    # so base_freq ≈ number of “main features” across the map.
+    def sample_height(xx: int, yy: int) -> float:
+        # normalize to 0..1
+        nx, ny = xx / max(1.0, w), yy / max(1.0, h)
+
+        # world shape mask
+        cx, cy = nx - 0.5, ny - 0.5
+        r = math.sqrt(cx*cx + cy*cy) * 1.4142  # 0..~1 to corners
+        if world_type == "continent":
+            mask = 1.0 - (r ** 1.5)  # landier center, oceanic edges
+        elif world_type == "archipelago":
+            mask = 0.85  # mostly neutral; islands come from higher-frequency noise
+        else:  # mixed
+            mask = 0.9 - (r ** 1.2) * 0.4
+
+        # base fBm
+        v_lo = _fbm(rng, "hm.lo", nx * base_freq,  ny * base_freq,  octaves, lacunarity, gain)
+        # a little extra detail
+        v_hi = _fbm(rng, "hm.hi", nx * base_freq*2.2, ny * base_freq*2.2,  octaves-1, lacunarity, gain)
+
+        h_raw = 0.65 * v_lo + 0.35 * v_hi  # -1..1
+        h_masked = h_raw * mask
+        return h_masked  # still roughly -1..1
+
+    elev = [[0.0 for _ in range(w)] for _ in range(h)]
+    lo, hi = +1e9, -1e9
     for y in range(h):
-        row: List[str] = []
         for x in range(w):
-            d = min(x, y, w - 1 - x, h - 1 - y)
-            if d < ocean_ring:
-                cell = "ocean"
-            elif d < ocean_ring + coast_w:
-                cell = _pick_coast_biome(rng, f"coast.{x}.{y}", coast_entries)
-            else:
-                cell = _weighted_pick(rng, f"interior.{x}.{y}", interior_weights, fallback="plains")
-            row.append(cell)
-        grid.append(row)
+            v = sample_height(x, y)
+            elev[y][x] = v
+            lo = min(lo, v); hi = max(hi, v)
 
-    # minimal sites for first cut
+    # normalize to 0..1 for thresholding
+    span = max(1e-6, hi - lo)
+    for y in range(h):
+        for x in range(w):
+            elev[y][x] = (elev[y][x] - lo) / span  # 0..1
+
+    # optional smoothing to remove single-tile noise
+    for _ in range(max(0, smooth_it)):
+        new = [[elev[y][x] for x in range(w)] for y in range(h)]
+        for y in range(h):
+            for x in range(w):
+                s = elev[y][x]
+                cnt = 1
+                for nx, ny in _n8(x, y):
+                    if _inb(nx, ny, w, h):
+                        s += elev[ny][nx]
+                        cnt += 1
+                new[y][x] = s / cnt
+        elev = new
+
+    # choose sea level by binary search to hit target land ratio
+    def land_ratio_at(thr: float) -> float:
+        land = 0
+        for y in range(h):
+            for x in range(w):
+                if elev[y][x] >= thr:
+                    land += 1
+        return land / (w * h)
+
+    lo_thr, hi_thr = 0.20, 0.80
+    for _ in range(18):
+        mid = (lo_thr + hi_thr) * 0.5
+        r = land_ratio_at(mid)
+        if r > land_target:
+            lo_thr = mid
+        else:
+            hi_thr = mid
+    sea_level = (lo_thr + hi_thr) * 0.5
+
+    # paint biomes: start ocean/land, then coasts
+    grid: List[List[str]] = [["ocean" for _ in range(w)] for _ in range(h)]
+    for y in range(h):
+        for x in range(w):
+            if elev[y][x] >= sea_level:
+                grid[y][x] = "plains"
+
+    # coast ring wherever land touches ocean
+    coast_entries = (getattr(biome_doc, "data", {}) or {}).get("coast", [])
+    for y in range(h):
+        for x in range(w):
+            if grid[y][x] != "ocean":
+                # within coast_w of ocean?
+                make_coast = False
+                for ring in range(1, coast_w + 1):
+                    x0, x1 = x - ring, x + ring
+                    y0, y1 = y - ring, y + ring
+                    for nx in range(x0, x1 + 1):
+                        if _inb(nx, y0, w, h) and grid[y0][nx] == "ocean":
+                            make_coast = True; break
+                        if _inb(nx, y1, w, h) and grid[y1][nx] == "ocean":
+                            make_coast = True; break
+                    if make_coast:
+                        break
+                    for ny in range(y0, y1 + 1):
+                        if _inb(x0, ny, w, h) and grid[ny][x0] == "ocean":
+                            make_coast = True; break
+                        if _inb(x1, ny, w, h) and grid[ny][x1] == "ocean":
+                            make_coast = True; break
+                    if make_coast:
+                        break
+                if make_coast:
+                    grid[y][x] = _choose_coast_biome(rng, f"coast.{x}.{y}", coast_entries)
+
+    # interior variety by elevation + jitter
+    # thresholds relative to land heights within [sea_level..1]
+    def land_norm(v: float) -> float:
+        return 0.0 if v < sea_level else (v - sea_level) / max(1e-6, 1.0 - sea_level)
+
+    for y in range(h):
+        for x in range(w):
+            b = grid[y][x]
+            if b == "plains":
+                z = land_norm(elev[y][x])  # 0 lowland .. 1 high
+                j = (rng.randf(f"bio.jit.{x}.{y}") - 0.5) * 0.10
+                z2 = max(0.0, min(1.0, z + j))
+                if z2 > 0.80:
+                    grid[y][x] = "mountains"
+                elif z2 > 0.55:
+                    grid[y][x] = "hills"
+                else:
+                    # sprinkle forests & marsh-lite in lowlands
+                    if rng.randf(f"forest.jit.{x}.{y}") < 0.28:
+                        grid[y][x] = "forest"
+                    elif rng.randf(f"marsh.jit.{x}.{y}") < 0.05:
+                        grid[y][x] = "marsh-lite"
+
+    # ---------- hydrology ----------
+    land_tiles = sum(1 for y in range(h) for x in range(w) if grid[y][x] != "ocean" and "coast" not in grid[y][x])
+    area_scale = math.sqrt(max(1, land_tiles))
+    hydro_cfg = (merged_tier.get("hydrology") or {})
+    desired_rivers = int(hydro_cfg.get("desired_rivers", 0)) or max(1, int(area_scale / 6))
+    desired_lakes  = int(hydro_cfg.get("desired_lakes", 0))  or max(0, int(area_scale / 10))
+
+    hydro = generate_hydrology(
+        grid=grid,
+        rng=rng.with_namespace("hydrology"),
+        desired_rivers=desired_rivers,
+        desired_lakes=desired_lakes,
+    )
+    rivers = [[[x, y] for (x, y) in path] for path in hydro.get("rivers", [])]
+    lakes  = [{"tiles": [[x, y] for (x, y) in blob]} for blob in hydro.get("lakes", [])]
+    river_tiles = {(x, y) for path in rivers for (x, y) in path}
+
+    # ---------- ports (coast land, favor coves & river mouths) ----------
+    def is_ocean(x: int, y: int) -> bool:
+        return _inb(x, y, w, h) and grid[y][x] == "ocean"
+
+    def is_coast_land(x: int, y: int) -> bool:
+        if not _inb(x, y, w, h):
+            return False
+        if grid[y][x] == "ocean":
+            return False
+        return any(is_ocean(nx, ny) for nx, ny in _n4(x, y))
+
+    mouth_adjacency = set()
+    for path in rivers:
+        if not path:
+            continue
+        mx, my = path[-1]
+        mouth_adjacency.add((mx, my))
+        for nx, ny in _n4(mx, my):
+            if _inb(nx, ny, w, h):
+                mouth_adjacency.add((nx, ny))
+
+    port_budget = int(((merged_tier.get("settlements", {}) or {}).get("budget", {}) or {}).get("port", 0))
+    port_candidates: List[Tuple[float, int, int, bool]] = []
+    for y in range(h):
+        for x in range(w):
+            if not is_coast_land(x, y):
+                continue
+            o4 = sum(1 for nx, ny in _n4(x, y) if is_ocean(nx, ny))
+            if o4 == 0:
+                continue
+            o8 = sum(1 for nx, ny in _n8(x, y) if is_ocean(nx, ny))
+            cove_bonus = 0.75 if o4 == 1 else (0.25 if o4 == 2 else -0.4)
+            at_mouth = (x, y) in mouth_adjacency
+            river_bonus = 0.6 if at_mouth else 0.0
+            score = (o8 * 0.2) + cove_bonus + river_bonus
+            score += (rng.randf(f"ports.jit.{x}.{y}") - 0.5) * 0.05
+            port_candidates.append((score, x, y, at_mouth))
+
+    port_candidates.sort(key=lambda t: t[0], reverse=True)
+    ports: List[Tuple[int, int, bool]] = []
+    for score, x, y, at_mouth in port_candidates:
+        if len(ports) >= port_budget:
+            break
+        if any(_manhattan((x, y), (px, py)) < 4 for (px, py, _) in ports):
+            continue
+        ports.append((x, y, at_mouth))
+
+    # ---------- settlements ----------
+    settle_cfg = (merged_tier.get("settlements", {}) or {})
+    budget = (settle_cfg.get("budget", {}) or {})
+    n_city    = int(budget.get("city", 0))
+    n_town    = int(budget.get("town", 0))
+    n_village = int(budget.get("village", 0))
+
+    suit = {"plains": 1.0, "forest": 0.75, "hills": 0.65, "marsh-lite": 0.35, "desert": 0.2, "tundra": 0.2}
+
+    def near_river_bonus(x: int, y: int) -> float:
+        for nx, ny in _n4(x, y):
+            if (nx, ny) in river_tiles:
+                return 0.5
+        return 0.0
+
+    def near_coast_bonus(x: int, y: int) -> float:
+        for nx, ny in _n4(x, y):
+            if is_ocean(nx, ny):
+                return 0.4
+        return 0.0
+
+    cand: List[Tuple[float, int, int, str]] = []
+    for y in range(h):
+        for x in range(w):
+            b = grid[y][x]
+            if b == "ocean" or "coast" in b:
+                continue
+            s = suit.get(b, 0.6) + near_river_bonus(x, y) + near_coast_bonus(x, y)
+            s += (rng.randf(f"settle.jit.{x}.{y}") - 0.5) * 0.05
+            cand.append((s, x, y, b))
+    cand.sort(key=lambda t: t[0], reverse=True)
+
+    def pick_n(n: int, min_dist: int) -> List[Tuple[int, int]]:
+        picks: List[Tuple[int, int]] = []
+        for score, x, y, _ in cand:
+            if len(picks) >= n:
+                break
+            if any(_manhattan((x, y), p) < min_dist for p in picks):
+                continue
+            if is_coast_land(x, y):  # keep core settlements off exact shoreline
+                continue
+            picks.append((x, y))
+        return picks
+
+    cities    = pick_n(n_city,    min_dist=6)
+    towns     = pick_n(n_town,    min_dist=5)
+    villages  = pick_n(n_village, min_dist=4)
+
+    # ---------- roads & bridges (A* + MST backbone) ----------
+    from heapq import heappush, heappop
+
+    def walkable(x: int, y: int) -> bool:
+        return _inb(x, y, w, h) and grid[y][x] != "ocean"
+
+    def astar(start: Coord, goal: Coord) -> List[Coord]:
+        if start == goal:
+            return [start]
+        openh: List[Tuple[int, int, Coord]] = []
+        heappush(openh, (0, 0, start))
+        came: Dict[Coord, Optional[Coord]] = {start: None}
+        gscore: Dict[Coord, int] = {start: 0}
+        it = 0
+        while openh and it < w * h * 10:
+            it += 1
+            _, _, cur = heappop(openh)
+            if cur == goal:
+                break
+            cx, cy = cur
+            for nx, ny in _n4(cx, cy):
+                if not walkable(nx, ny):
+                    continue
+                step = 1
+                if (nx, ny) in river_tiles:
+                    step += 2  # prefer bridges only when useful
+                newg = gscore[cur] + step
+                if newg < gscore.get((nx, ny), 1_000_000_000):
+                    gscore[(nx, ny)] = newg
+                    came[(nx, ny)] = cur
+                    f = newg + abs(nx - goal[0]) + abs(ny - goal[1])
+                    heappush(openh, (f, it, (nx, ny)))
+        if goal not in came:
+            return []
+        path: List[Coord] = []
+        cur: Optional[Coord] = goal
+        while cur is not None:
+            path.append(cur)
+            cur = came[cur]
+        path.reverse()
+        return path
+
+    all_nodes: List[Coord] = []
+    all_nodes.extend(cities); all_nodes.extend(towns); all_nodes.extend(villages)
+    all_nodes.extend([(x, y) for x, y, _ in ports])
+
+    edges: List[Tuple[Coord, Coord]] = []
+    if len(all_nodes) >= 2:
+        used = {all_nodes[0]}
+        left = set(all_nodes[1:])
+        while left:
+            best = None; bestd = 10**9
+            for a in list(used):
+                for b in list(left):
+                    d = _manhattan(a, b)
+                    if d < bestd:
+                        bestd = d; best = (a, b)
+            edges.append(best)           # type: ignore
+            used.add(best[1])            # type: ignore
+            left.remove(best[1])         # type: ignore
+
+    if ports:
+        land_nodes = cities + towns + villages
+        for px, py, _ in ports:
+            if not land_nodes:
+                break
+            nearest = min(land_nodes, key=lambda q: _manhattan((px, py), q))
+            if ((px, py), nearest) not in edges and (nearest, (px, py)) not in edges:
+                edges.append(((px, py), nearest))
+
+    roads: List[List[List[int]]] = []
+    bridges: List[Dict[str, Any]] = []
+    for a, b in edges:
+        path = astar(a, b)
+        if len(path) >= 2:
+            for i in range(1, len(path) - 1):
+                x, y = path[i]
+                if (x, y) in river_tiles:
+                    bridges.append({"x": x, "y": y})
+            roads.append([[x, y] for (x, y) in path])
+
+    # ---------- sites & layers ----------
     sites: List[Dict[str, Any]] = []
+    for x, y in cities:    sites.append({"type": "city",    "x": x, "y": y})
+    for x, y in towns:     sites.append({"type": "town",    "x": x, "y": y})
+    for x, y in villages:  sites.append({"type": "village", "x": x, "y": y})
+    for x, y, at_mouth in ports:
+        tags = ["ocean_coast"]
+        if bool(at_mouth):
+            tags.append("river_mouth")
+        sites.append({"type": "port", "x": x, "y": y, "tags": tags})
 
+    # pack elevation as a small integer grid for tooltips
+    # scale to 0..100 (sea_level noted)
+    elev_scaled = [[int(round(v * 100.0)) for v in row] for row in elev]
     layers: Dict[str, Any] = {
-        "water": {
-            "ocean_ring": ocean_ring,
-            "coast_width": coast_w,
-        }
+        "water": {"coast_width": coast_w},
+        "hydrology": {"rivers": rivers, "lakes": lakes},
+        "settlements": {
+            "cities":   [{"x": x, "y": y} for x, y in cities],
+            "towns":    [{"x": x, "y": y} for x, y in towns],
+            "villages": [{"x": x, "y": y} for x, y in villages],
+            "ports":    [{"x": x, "y": y, "at_river_mouth": bool(at)} for x, y, at in ports],
+        },
+        "roads": {"paths": roads, "bridges": bridges},
+        "elevation": elev_scaled,
+        "world": {
+            "type": world_type,
+            "landmass_ratio": land_target,
+            "sea_level": round(sea_level, 3),
+            "noise": {"octaves": octaves, "frequency": base_freq, "lacunarity": lacunarity, "gain": gain, "smooth_iters": smooth_it},
+        },
     }
 
     provenance = {
         "generator": "v2",
         "schema_version": "2.0.0",
         "template": tier_prov,
-        "biome_pack": biome_doc.id_at_version,
+        "biome_pack": getattr(biome_doc, "id_at_version", str(biome_doc)),
         "seed": seed,
     }
 
-        # --- Hydrology v1: rivers + lakes (no elevation) ---
-    dist = _compute_dist_to_ocean(grid)
-
-    hyd_cfg = merged_tier.get("hydrology", {})
-    r_cfg = hyd_cfg.get("rivers", {})
-    rivers_min = int(r_cfg.get("min", 0))
-    rivers_max = int(r_cfg.get("max", 0))
-    rivers_n = rng.randi("hyd.count", rivers_min, rivers_max) if rivers_max >= rivers_min else 0
-
-    lake_chance = float(hyd_cfg.get("lake_chance", 0.0))
-    lsz = hyd_cfg.get("lake_size", [2, 6])
-    lmin, lmax = (int(lsz[0]), int(lsz[1])) if isinstance(lsz, list) and len(lsz) == 2 else (2, 6)
-    lakes_n = 1 if (lake_chance > 0.0 and rng.randf("hyd.lake.roll") < lake_chance) else 0
-
-    # pick river sources from far interior
-    sources = _pick_river_sources(rng.with_namespace("hyd"), dist, rivers_n, min_dist=3)
-
-    # route rivers
-    rivers: List[List[List[int]]] = []
-    for i, (sx, sy) in enumerate(sources):
-        path = _route_river(rng.with_namespace(f"river.{i}"), dist, (sx, sy))
-        if len(path) >= 2:
-            rivers.append([[x, y] for (x, y) in path])
-
-    # build lakes
-    lakes: List[Dict[str, Any]] = []
-    for i in range(lakes_n):
-        # choose a seed in interior with decent distance
-        candidates = [(x, y) for y in range(h) for x in range(w) if dist[y][x] >= 3 and grid[y][x] != "ocean" and min(x,y,w-1-x,h-1-y)>0]
-        if not candidates:
-            break
-        idx = rng.randi(f"lake.seed.pick.{i}", 0, len(candidates)-1)
-        cx, cy = candidates[idx]
-        size = rng.randi(f"lake.size.{i}", lmin, lmax)
-        tiles = _grow_lake(rng.with_namespace(f"lake.{i}"), grid, dist, cx, cy, size)
-        if tiles:
-            lakes.append({"tiles": [[x, y] for (x, y) in tiles]})
-
-    # Attach hydrology layer
-    layers["hydrology"] = {
-        "rivers": rivers,
-        "lakes": lakes,
-        "notes": ["distance-to-ocean routing; lakes are interior & non-ocean"],
-    }
-
-
-    # save
     res = save_shard_v2(
         base_name=req.name,
         seed=seed,

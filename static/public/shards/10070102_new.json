@@ -1,0 +1,1656 @@
+{
+  "meta": {
+    "name": "10070102_new",
+    "displayName": "New",
+    "seed": 10070102,
+    "width": 16,
+    "height": 16,
+    "createdAt": "2025-08-22T16:06:39Z",
+    "version": "2.0.0",
+    "template": "hard-32",
+    "generator": "v2"
+  },
+  "tiles": [
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "hills"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "plains"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "hills"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "plains"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "hills"
+      },
+      {
+        "biome": "hills"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "forest"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "forest"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "hills"
+      },
+      {
+        "biome": "hills"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "hills"
+      },
+      {
+        "biome": "hills"
+      },
+      {
+        "biome": "hills"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "plains"
+      }
+    ],
+    [
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "hills"
+      },
+      {
+        "biome": "hills"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "marsh-lite"
+      }
+    ],
+    [
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "coast"
+      }
+    ],
+    [
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "ocean"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "forest"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "plains"
+      },
+      {
+        "biome": "coast"
+      },
+      {
+        "biome": "ocean"
+      }
+    ]
+  ],
+  "pois": [
+    {
+      "type": "city",
+      "name": "POI",
+      "x": 15,
+      "y": 1,
+      "meta": {}
+    },
+    {
+      "type": "town",
+      "name": "POI",
+      "x": 15,
+      "y": 1,
+      "meta": {}
+    },
+    {
+      "type": "town",
+      "name": "POI",
+      "x": 15,
+      "y": 12,
+      "meta": {}
+    },
+    {
+      "type": "village",
+      "name": "POI",
+      "x": 15,
+      "y": 1,
+      "meta": {}
+    },
+    {
+      "type": "village",
+      "name": "POI",
+      "x": 15,
+      "y": 12,
+      "meta": {}
+    },
+    {
+      "type": "village",
+      "name": "POI",
+      "x": 10,
+      "y": 2,
+      "meta": {}
+    },
+    {
+      "type": "village",
+      "name": "POI",
+      "x": 12,
+      "y": 15,
+      "meta": {}
+    },
+    {
+      "type": "port",
+      "name": "POI",
+      "x": 14,
+      "y": 4,
+      "meta": {}
+    }
+  ],
+  "grid": [
+    [
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "coast",
+      "plains",
+      "plains",
+      "forest",
+      "plains",
+      "hills",
+      "forest",
+      "forest",
+      "forest",
+      "plains"
+    ],
+    [
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "coast",
+      "plains",
+      "forest",
+      "plains",
+      "plains",
+      "forest",
+      "hills",
+      "plains",
+      "plains",
+      "plains"
+    ],
+    [
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "coast",
+      "coast",
+      "forest",
+      "plains",
+      "plains",
+      "hills",
+      "hills",
+      "forest",
+      "plains",
+      "forest"
+    ],
+    [
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "coast",
+      "coast",
+      "plains",
+      "plains",
+      "forest",
+      "forest",
+      "forest",
+      "plains",
+      "forest"
+    ],
+    [
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "coast",
+      "coast",
+      "forest",
+      "forest",
+      "coast",
+      "coast",
+      "coast",
+      "coast"
+    ],
+    [
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "coast",
+      "coast",
+      "coast",
+      "coast",
+      "ocean",
+      "ocean",
+      "ocean"
+    ],
+    [
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "coast",
+      "coast",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean"
+    ],
+    [
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean"
+    ],
+    [
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean"
+    ],
+    [
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "coast",
+      "coast",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean"
+    ],
+    [
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "coast",
+      "coast",
+      "coast",
+      "coast",
+      "coast",
+      "coast",
+      "coast",
+      "coast",
+      "coast",
+      "coast",
+      "ocean",
+      "ocean"
+    ],
+    [
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "coast",
+      "coast",
+      "forest",
+      "plains",
+      "plains",
+      "forest",
+      "hills",
+      "hills",
+      "coast",
+      "coast",
+      "coast"
+    ],
+    [
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "coast",
+      "coast",
+      "coast",
+      "plains",
+      "hills",
+      "hills",
+      "hills",
+      "plains",
+      "plains",
+      "plains"
+    ],
+    [
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "coast",
+      "coast",
+      "forest",
+      "hills",
+      "hills",
+      "plains",
+      "plains",
+      "marsh-lite"
+    ],
+    [
+      "coast",
+      "coast",
+      "coast",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "coast",
+      "plains",
+      "plains",
+      "plains",
+      "plains",
+      "coast",
+      "coast"
+    ],
+    [
+      "plains",
+      "forest",
+      "coast",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "ocean",
+      "coast",
+      "forest",
+      "plains",
+      "plains",
+      "plains",
+      "coast",
+      "ocean"
+    ]
+  ],
+  "sites": [
+    {
+      "type": "city",
+      "x": 15,
+      "y": 1
+    },
+    {
+      "type": "town",
+      "x": 15,
+      "y": 1
+    },
+    {
+      "type": "town",
+      "x": 15,
+      "y": 12
+    },
+    {
+      "type": "village",
+      "x": 15,
+      "y": 1
+    },
+    {
+      "type": "village",
+      "x": 15,
+      "y": 12
+    },
+    {
+      "type": "village",
+      "x": 10,
+      "y": 2
+    },
+    {
+      "type": "village",
+      "x": 12,
+      "y": 15
+    },
+    {
+      "type": "port",
+      "x": 14,
+      "y": 4,
+      "tags": [
+        "ocean_coast"
+      ]
+    }
+  ],
+  "layers": {
+    "water": {
+      "coast_width": 1
+    },
+    "hydrology": {
+      "rivers": [],
+      "lakes": []
+    },
+    "settlements": {
+      "cities": [
+        {
+          "x": 15,
+          "y": 1
+        }
+      ],
+      "towns": [
+        {
+          "x": 15,
+          "y": 1
+        },
+        {
+          "x": 15,
+          "y": 12
+        }
+      ],
+      "villages": [
+        {
+          "x": 15,
+          "y": 1
+        },
+        {
+          "x": 15,
+          "y": 12
+        },
+        {
+          "x": 10,
+          "y": 2
+        },
+        {
+          "x": 12,
+          "y": 15
+        }
+      ],
+      "ports": [
+        {
+          "x": 14,
+          "y": 4,
+          "at_river_mouth": false
+        }
+      ]
+    },
+    "roads": {
+      "paths": [
+        [
+          [
+            15,
+            1
+          ],
+          [
+            14,
+            1
+          ],
+          [
+            14,
+            2
+          ],
+          [
+            14,
+            3
+          ],
+          [
+            14,
+            4
+          ]
+        ],
+        [
+          [
+            15,
+            1
+          ],
+          [
+            14,
+            1
+          ],
+          [
+            13,
+            1
+          ],
+          [
+            12,
+            1
+          ],
+          [
+            11,
+            1
+          ],
+          [
+            10,
+            1
+          ],
+          [
+            10,
+            2
+          ]
+        ],
+        [
+          [
+            15,
+            12
+          ],
+          [
+            14,
+            12
+          ],
+          [
+            13,
+            12
+          ],
+          [
+            12,
+            12
+          ],
+          [
+            12,
+            13
+          ],
+          [
+            12,
+            14
+          ],
+          [
+            12,
+            15
+          ]
+        ]
+      ],
+      "bridges": []
+    },
+    "elevation": [
+      [
+        24,
+        25,
+        25,
+        27,
+        32,
+        40,
+        49,
+        55,
+        59,
+        65,
+        72,
+        77,
+        78,
+        75,
+        72,
+        71
+      ],
+      [
+        21,
+        22,
+        23,
+        26,
+        32,
+        40,
+        49,
+        56,
+        60,
+        66,
+        71,
+        77,
+        78,
+        75,
+        73,
+        71
+      ],
+      [
+        14,
+        15,
+        18,
+        22,
+        30,
+        39,
+        48,
+        56,
+        60,
+        64,
+        69,
+        73,
+        75,
+        72,
+        71,
+        69
+      ],
+      [
+        7,
+        9,
+        12,
+        19,
+        28,
+        37,
+        44,
+        51,
+        57,
+        61,
+        64,
+        66,
+        67,
+        65,
+        64,
+        64
+      ],
+      [
+        8,
+        8,
+        8,
+        14,
+        22,
+        30,
+        36,
+        43,
+        51,
+        56,
+        59,
+        58,
+        57,
+        55,
+        52,
+        51
+      ],
+      [
+        15,
+        12,
+        9,
+        10,
+        16,
+        23,
+        29,
+        36,
+        45,
+        51,
+        53,
+        51,
+        48,
+        45,
+        40,
+        37
+      ],
+      [
+        21,
+        18,
+        12,
+        10,
+        14,
+        20,
+        25,
+        32,
+        41,
+        47,
+        46,
+        43,
+        40,
+        35,
+        30,
+        27
+      ],
+      [
+        25,
+        23,
+        20,
+        20,
+        21,
+        27,
+        29,
+        35,
+        39,
+        42,
+        39,
+        35,
+        31,
+        28,
+        23,
+        21
+      ],
+      [
+        26,
+        28,
+        30,
+        34,
+        36,
+        39,
+        37,
+        37,
+        38,
+        39,
+        36,
+        33,
+        30,
+        27,
+        23,
+        21
+      ],
+      [
+        30,
+        33,
+        36,
+        42,
+        46,
+        47,
+        44,
+        41,
+        40,
+        41,
+        43,
+        43,
+        40,
+        36,
+        29,
+        27
+      ],
+      [
+        36,
+        36,
+        37,
+        42,
+        48,
+        51,
+        50,
+        47,
+        46,
+        51,
+        58,
+        63,
+        60,
+        51,
+        41,
+        38
+      ],
+      [
+        40,
+        38,
+        36,
+        38,
+        43,
+        49,
+        52,
+        52,
+        52,
+        59,
+        71,
+        80,
+        77,
+        65,
+        53,
+        48
+      ],
+      [
+        43,
+        41,
+        38,
+        37,
+        40,
+        45,
+        49,
+        52,
+        54,
+        60,
+        73,
+        83,
+        84,
+        72,
+        60,
+        54
+      ],
+      [
+        45,
+        44,
+        42,
+        40,
+        39,
+        39,
+        41,
+        45,
+        49,
+        57,
+        69,
+        77,
+        79,
+        71,
+        60,
+        54
+      ],
+      [
+        47,
+        46,
+        46,
+        43,
+        39,
+        33,
+        31,
+        35,
+        44,
+        54,
+        63,
+        67,
+        68,
+        63,
+        54,
+        47
+      ],
+      [
+        48,
+        47,
+        48,
+        45,
+        39,
+        31,
+        27,
+        31,
+        42,
+        55,
+        62,
+        63,
+        62,
+        58,
+        49,
+        42
+      ]
+    ],
+    "world": {
+      "type": "mixed",
+      "landmass_ratio": 0.44,
+      "sea_level": 0.455,
+      "noise": {
+        "octaves": 4,
+        "frequency": 1.3,
+        "lacunarity": 2.0,
+        "gain": 0.5,
+        "smooth_iters": 1
+      }
+    }
+  },
+  "provenance": {
+    "generator": "v2",
+    "schema_version": "2.0.0",
+    "template": "hard-32@1.0.0",
+    "biome_pack": "temperate-base@1.0.0",
+    "seed": 10070102
+  }
+}

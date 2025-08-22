@@ -2,191 +2,396 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>API Playground • Shardbound</title>
+  <title>API Playground • v1 + v2</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root {
-      --bg: #0f1115; --panel: #161a22; --muted: #98a2b3; --text: #e6e8ea; --accent: #62d4ff;
-      --ok: #7dd27d; --bad: #e57373; --warn: #f8c147;
-    }
-    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif; }
-    .wrap { max-width: 1100px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
-    .top { display: flex; gap: 12px; align-items: center; }
-    h1 { font-size: 18px; margin: 0; }
-    .card { background: var(--panel); border: 1px solid #202634; border-radius: 10px; padding: 14px; }
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    label { font-size: 12px; color: var(--muted); display:block; margin-bottom:6px; }
-    input, select, textarea, button {
-      background: #0f141d; color: var(--text); border: 1px solid #2a3140; border-radius: 8px; padding: 8px 10px; width: 100%;
-    }
-    textarea { min-height: 160px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
-    button { width: auto; cursor: pointer; }
-    .muted { color: var(--muted); }
-    .flex { display:flex; gap:8px; align-items:center; flex-wrap: wrap;}
-    pre { background: #0c0f15; border: 1px solid #1d2331; color: #cfe3ff; padding: 10px; border-radius: 8px; overflow: auto; font-size: 12px; }
-    .chips { display:flex; flex-wrap: wrap; gap:6px; }
-    .chip { font-size:12px; padding:4px 8px; border-radius:999px; border:1px solid #2a3140; background:#121720;}
-    .ok { color: var(--ok); } .bad { color: var(--bad); } .warn { color: var(--warn); }
+    :root { --bg:#0f1115; --panel:#161a22; --muted:#98a2b3; --text:#e6e8ea; --accent:#62d4ff; --ok:#7dd27d; --bad:#e57373; --warn:#f8c147; --grid:#1d2331; }
+    html,body{height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
+    .wrap{max-width:1200px;margin:0 auto;padding:16px;display:grid;gap:16px}
+    details{background:var(--panel);border:1px solid #202634;border-radius:10px;overflow:hidden}
+    summary{cursor:pointer;list-style:none;padding:14px 16px;font-weight:600;display:flex;gap:10px;align-items:center}
+    summary::marker{display:none}
+    details[open] summary{border-bottom:1px solid #202634}
+    .card{padding:14px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}
+    label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
+    input,select,textarea,button{background:#0f141d;color:var(--text);border:1px solid #2a3140;border-radius:8px;padding:8px 10px;width:100%}
+    textarea{min-height:140px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    button{width:auto;cursor:pointer}
+    pre{background:#0c0f15;border:1px solid var(--grid);color:#cfe3ff;padding:10px;border-radius:8px;overflow:auto;font-size:12px;min-height:120px}
+    .btnbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .tiny{font-size:11px}.muted{color:var(--muted)}.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}
+    @media (max-width:1050px){ .row,.grid{grid-template-columns:1fr} }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="top">
-      <h1>API Playground</h1>
-      <span class="muted">Quickly call your endpoints with canonical biomes & settlement types</span>
-    </div>
 
-    <section class="card row">
-      <div>
-        <h3 class="muted" style="margin-top:0;">List Shards</h3>
-        <div class="flex">
-          <button id="btnList">GET /api/shards</button>
-          <button id="btnOpen">Open in Shard Viewer</button>
+    <details open>
+      <summary>🔧 Global tools</summary>
+      <div class="card">
+        <div class="btnbar">
+          <label class="muted tiny">Base URL</label>
+          <input id="baseUrl" style="max-width:360px" />
+          <button id="btnCatalog">GET /api/catalog</button>
+          <button id="btnCatalogRefresh">POST /api/catalog/refresh</button>
+          <button id="btnRoutes">GET /api/debug/routes</button>
+          <button id="btnOpenV2">Open Viewer v2</button>
+          <span id="globalStatus" class="muted tiny"></span>
         </div>
-        <pre id="listOut">// results here</pre>
+        <pre id="globalOut">// catalog / routes output</pre>
       </div>
+    </details>
 
-      <div>
-        <h3 class="muted" style="margin-top:0;">Get One</h3>
-        <div class="flex">
-          <input id="getName" placeholder="nameNoExt (e.g. 12345678_shard_fire_island)" />
-          <button id="btnGet">GET /api/shards/&lt;nameNoExt&gt;</button>
-        </div>
-        <pre id="getOut">// shard JSON here</pre>
-      </div>
-    </section>
-
-    <section class="card">
-      <h3 class="muted" style="margin-top:0;">Generate Shard (POST /api/generate_shard)</h3>
-      <div class="row">
-        <div>
-          <label>Seed (8 digits)</label>
-          <input id="seed" placeholder="e.g. 24681357" />
-          <label>Width × Height</label>
-          <div class="flex">
-            <input id="width" placeholder="64" style="max-width:110px" />
-            <input id="height" placeholder="64" style="max-width:110px" />
+    <details open>
+      <summary>🧪 v2 — Plan & Generate</summary>
+      <div class="card">
+        <div class="grid" style="margin-bottom:10px">
+          <div>
+            <label>Template</label>
+            <select id="v2Template"></select>
+            <div class="tiny muted" id="v2GridNote"></div>
           </div>
-          <label>Landmass Ratio</label>
-          <input id="land" placeholder="0.50" />
-          <div style="height:8px"></div>
-          <label class="muted">Volcano</label>
-          <div class="flex">
-            <select id="volEnabled" style="max-width:130px">
-              <option value="false">Disabled</option>
-              <option value="true">Enabled</option>
+          <div><label>Name</label><input id="v2Name" placeholder="blue_coast"/></div>
+          <div>
+            <label>Seed</label>
+            <div class="btnbar">
+              <input id="v2Seed" placeholder="########" style="flex:1"/>
+              <label class="tiny"><input type="checkbox" id="v2AutoSeed" checked/> Auto-seed</label>
+            </div>
+          </div>
+          <div><label>Biome pack (optional)</label><input id="v2BiomePack" placeholder=""/></div>
+
+          <div><label>Coast width (N or N–M)</label><input id="v2Coast" placeholder="1-2" value="1-2"/></div>
+          <div>
+            <label>World type</label>
+            <select id="v2World">
+              <option value="mixed">mixed</option>
+              <option value="continent">continent</option>
+              <option value="archipelago">archipelago</option>
             </select>
-            <input id="volMin" placeholder="min radius (2)" style="max-width:150px" />
-            <input id="volMax" placeholder="max radius (4)" style="max-width:150px" />
           </div>
-          <label class="muted">Ports / Settlements</label>
-          <div class="flex">
-            <input id="ports" placeholder="ports count (0)" style="max-width:160px" />
-            <input id="towns" placeholder="settlements count (0)" style="max-width:200px" />
+          <div><label>Landmass %</label><input id="v2Land" type="number" min="5" max="90" value="44"/></div>
+          <div><label>Noise octaves</label><input id="v2Oct" type="number" min="1" max="8" value="4"/></div>
+          <div><label>Noise freq</label><input id="v2Freq" type="number" step="0.1" min="0.2" max="8" value="1.3"/></div>
+          <div><label>Lacunarity</label><input id="v2Lac" type="number" step="0.1" min="1.2" max="4" value="2"/></div>
+          <div><label>Gain</label><input id="v2Gain" type="number" step="0.05" min="0.1" max="0.9" value="0.5"/></div>
+          <div><label>Smoothing iters</label><input id="v2Smooth" type="number" min="0" max="4" value="1"/></div>
+
+          <div><label>Desired rivers (0=auto)</label><input id="v2Rivers" type="number" min="0" max="256" value="0"/></div>
+          <div><label>Desired lakes (0=auto)</label><input id="v2Lakes" type="number" min="0" max="256" value="0"/></div>
+
+          <div><label>City budget</label><input id="v2Bcity" type="number" min="0" max="32" value="1"/></div>
+          <div><label>Town budget</label><input id="v2Btown" type="number" min="0" max="64" value="2"/></div>
+          <div><label>Village budget</label><input id="v2Bvil" type="number" min="0" max="128" value="4"/></div>
+          <div><label>Port budget</label><input id="v2Bport" type="number" min="0" max="32" value="1"/></div>
+
+          <div><label>POI budget</label><input id="v2POI" type="number" min="0" max="128" value="3"/></div>
+
+          <div class="btnbar" style="grid-column:1/-1">
+            <button id="btnBuildV2">Build Body</button>
+            <button id="btnPlanV2">POST /api/shard-gen-v2/plan</button>
+            <button id="btnGenV2">POST /api/shard-gen-v2/generate</button>
+            <span id="v2Status" class="muted tiny"></span>
           </div>
         </div>
-        <div>
-          <label>Allowed Biomes (canonical)</label>
-          <div id="biomeChips" class="chips"></div>
-          <label style="margin-top:8px;">Payload</label>
-          <textarea id="payload"></textarea>
-          <div class="flex">
-            <button id="btnGen">POST /api/generate_shard</button>
-            <span id="genStatus" class="muted"></span>
+
+        <div class="row">
+          <div>
+            <label>Plan — Request</label>
+            <textarea id="planReq"></textarea>
+            <div class="btnbar">
+              <button id="btnPlanSend">Send Plan</button>
+              <button id="btnPlanUseSeed">Use response seed ➜ body</button>
+              <button id="btnCopyPlanReq">Copy</button>
+            </div>
+          </div>
+          <div>
+            <label>Plan — Response</label>
+            <pre id="planResp">// plan response</pre>
+            <div class="btnbar">
+              <button id="btnCopyPlanResp">Copy</button>
+              <span id="planMeta" class="muted tiny"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:12px">
+          <div>
+            <label>Generate — Request</label>
+            <textarea id="genReq"></textarea>
+            <div class="btnbar">
+              <button id="btnGenSend">Send Generate</button>
+              <button id="btnUsePlanBody">Use Plan body</button>
+              <button id="btnCopyGenReq">Copy</button>
+            </div>
+          </div>
+          <div>
+            <label>Generate — Response</label>
+            <pre id="genResp">// generate response</pre>
+            <div class="btnbar">
+              <button id="btnCopyGenResp">Copy</button>
+              <button id="btnOpenShard">Open shard JSON</button>
+            </div>
           </div>
         </div>
       </div>
-      <pre id="genOut">// server response here</pre>
-    </section>
+    </details>
+
+    <details>
+      <summary>📚 v1 — List & Get</summary>
+      <div class="card row">
+        <div>
+          <div class="btnbar">
+            <button id="btnList">GET /api/shards</button>
+            <button id="btnOpen">Open in Shard Viewer</button>
+          </div>
+          <pre id="listOut">// results here</pre>
+        </div>
+        <div>
+          <div class="btnbar">
+            <input id="getName" placeholder="nameNoExt (e.g. 12345678_blue_coast)" />
+            <button id="btnGet">GET /api/shards/&lt;nameNoExt&gt;</button>
+          </div>
+          <pre id="getOut">// shard JSON here</pre>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary>🧩 v1 — Generate Shard</summary>
+      <div class="card">
+        <div class="row">
+          <div>
+            <label>Payload</label>
+            <textarea id="payload"></textarea>
+            <div class="btnbar">
+              <button id="btnGen">POST /api/generate_shard</button>
+              <span id="genStatus" class="muted tiny"></span>
+            </div>
+          </div>
+          <div>
+            <label class="muted tiny">Quick helpers</label>
+            <div class="grid">
+              <div><label>Seed</label><input id="seed" placeholder="e.g. 24681357" /></div>
+              <div><label>Width</label><input id="width" placeholder="64" /></div>
+              <div><label>Height</label><input id="height" placeholder="64" /></div>
+              <div><label>Landmass Ratio</label><input id="land" placeholder="0.50" /></div>
+              <div><label>Volcano enabled</label>
+                <select id="volEnabled"><option value="false">false</option><option value="true">true</option></select>
+              </div>
+              <div><label>Volcano min</label><input id="volMin" placeholder="2" /></div>
+              <div><label>Volcano max</label><input id="volMax" placeholder="4" /></div>
+              <div><label>Ports count</label><input id="ports" placeholder="0" /></div>
+              <div><label>Settlements count</label><input id="towns" placeholder="0" /></div>
+            </div>
+          </div>
+        </div>
+        <pre id="genOut">// server response here</pre>
+      </div>
+    </details>
+
   </div>
 
   <script type="module">
-    import { ALL_BIOME_KEYS } from "/static/js/biomeRegistry.js";
-    import { ALL_SETTLEMENT_KEYS } from "/static/js/settlementRegistry.js";
+    // ---------- tiny helpers ----------
+    const $ = (id)=>document.getElementById(id);
+    const qs = (sel,root=document)=>root.querySelector(sel);
+    const setOut = (el, obj)=> el.textContent = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2);
+    const copy = (text)=>navigator.clipboard?.writeText(text).catch(()=>{});
+    const clamp = (n,min,max)=>Math.max(min,Math.min(max,n|0));
+    const BASE = ()=> ($('baseUrl').value || location.origin).replace(/\/$/,'');
+    const status = (el,msg,cls='muted')=>{ el.textContent=msg; el.className=cls+' tiny'; };
 
-    // ===== Helpers
-    const $ = (id) => document.getElementById(id);
-    const listOut = $('listOut'), getOut = $('getOut'), genOut = $('genOut'), genStatus = $('genStatus');
-
-    function setOut(el, obj){ el.textContent = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2); }
-
-    async function doList(){
-      const r = await fetch('/api/shards'); setOut(listOut, await r.json());
-      window.__lastList = await (await fetch('/api/shards')).json();
+    function parseCoastWidth(t){
+      const s = String(t??'').trim();
+      if(!s) return [1,2];
+      const m = s.match(/^(\d+)\s*[-–—]\s*(\d+)$/);
+      if(m){ const a=+m[1], b=+m[2]; return [Math.min(a,b), Math.max(a,b)]; }
+      const n = parseInt(s,10);
+      return Number.isFinite(n) ? [n,n] : [1,2];
     }
-    async function doGet(){
-      const name = $('getName').value.trim();
-      const r = await fetch(`/api/shards/${encodeURIComponent(name)}`); setOut(getOut, await r.json());
+
+    // ---------- global ----------
+    $('baseUrl').value = location.origin;
+    async function GET(path){
+      const r = await fetch(`${BASE()}${path}`);
+      let data; try{ data = await r.json(); }catch{ data = { _raw: await r.text() }; }
+      return { ok: r.ok, data, status: r.status };
+    }
+    async function POST(path, body){
+      const r = await fetch(`${BASE()}${path}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      let data; try{ data = await r.json(); }catch{ data = { _raw: await r.text() }; }
+      return { ok: r.ok, data, status: r.status };
     }
 
-    // ===== Biome chips for generator payload
-    const chosen = new Set(ALL_BIOME_KEYS); // default: allow all
-    function drawBiomeChips(){
-      const host = $('biomeChips'); host.innerHTML = '';
-      ALL_BIOME_KEYS.forEach(k => {
-        const btn = document.createElement('button');
-        btn.className = 'chip';
-        btn.textContent = chosen.has(k) ? `✓ ${k}` : k;
-        btn.style.opacity = chosen.has(k) ? '1' : '.55';
-        btn.addEventListener('click', () => { if (chosen.has(k)) chosen.delete(k); else chosen.add(k); drawBiomeChips(); buildPayload(); });
-        host.appendChild(btn);
+    $('btnCatalog').addEventListener('click', async ()=>{
+      status($('globalStatus'),'Fetching catalog…');
+      const {ok,data,status:sc} = await GET('/api/catalog');
+      status($('globalStatus'), ok?'OK':'Error '+sc, ok?'ok':'bad');
+      setOut($('globalOut'), data);
+    });
+    $('btnCatalogRefresh').addEventListener('click', async ()=>{
+      status($('globalStatus'),'Refreshing catalog…');
+      const {ok,data,status:sc} = await POST('/api/catalog/refresh', {});
+      status($('globalStatus'), ok?'OK':'Error '+sc, ok?'ok':'bad');
+      setOut($('globalOut'), data);
+    });
+    $('btnRoutes').addEventListener('click', async ()=>{
+      const {ok,data} = await GET('/api/debug/routes');
+      status($('globalStatus'), ok?'OK':'Error', ok?'ok':'bad');
+      setOut($('globalOut'), data);
+    });
+    $('btnOpenV2').addEventListener('click', ()=> window.open('/shard-viewer-v2?debug=1','_blank'));
+
+    // ---------- v2 ----------
+    async function fetchTiers(){
+      const r = await fetch('/api/shard-gen-v2/tiers');
+      return r.ok ? r.json() : [];
+    }
+    function buildV2Body(){
+      const templateId = $('v2Template').value.trim(); // required; grid locked to tier
+      const name = $('v2Name').value.trim() || 'blue_coast';
+      const autoSeed = $('v2AutoSeed').checked;
+      const seedStr = $('v2Seed').value.trim();
+      const seed = autoSeed ? undefined : (seedStr ? Number(seedStr) : undefined);
+
+      const body = {
+        templateId, name, autoSeed: !!autoSeed,
+        overrides: {
+          water: { coast_width: parseCoastWidth($('v2Coast').value) },
+          world: { type: $('v2World').value, landmass_ratio: Math.max(5,Math.min(90,+($('v2Land').value||'44')))/100 },
+          noise: { octaves:+$('v2Oct').value, frequency:+$('v2Freq').value, lacunarity:+$('v2Lac').value, gain:+$('v2Gain').value, smooth_iters:+$('v2Smooth').value },
+          hydrology: { desired_rivers:+$('v2Rivers').value, desired_lakes:+$('v2Lakes').value },
+          settlements: { budget: { city:+$('v2Bcity').value, town:+$('v2Btown').value, village:+$('v2Bvil').value, port:+$('v2Bport').value } },
+          poi: { budget:+$('v2POI').value },
+        }
+      };
+      const pack = $('v2BiomePack').value.trim();
+      if (pack) body.biomePack = pack;
+      if (seed !== undefined) body.seed = seed;
+      return body;
+    }
+    function putPlanBody(b){ $('planReq').value = JSON.stringify(b, null, 2); if(!$('genReq').value.trim()) $('genReq').value = JSON.stringify(b, null, 2); }
+
+    let lastPlanResp = null, cachedTiers = [];
+    async function initTiers(){
+      cachedTiers = await fetchTiers();
+      const sel = $('v2Template'); sel.innerHTML = '';
+      for (const t of cachedTiers){
+        const opt = document.createElement('option'); opt.value = t.id; opt.textContent = t.label || t.id; sel.appendChild(opt);
+      }
+      function fill(t){
+        $('v2GridNote').textContent = `Grid locked: ${t.grid.width}×${t.grid.height}`;
+        // defaults
+        const d = t.defaults || {};
+        $('v2Coast').value = Array.isArray(d.water?.coast_width) ? `${d.water.coast_width[0]}-${d.water.coast_width[1]}` : ($('v2Coast').value || '1-2');
+        if (d.world?.type) $('v2World').value = d.world.type;
+        if (typeof d.world?.landmass_ratio === 'number') $('v2Land').value = Math.round(d.world.landmass_ratio*100);
+        if (d.noise?.octaves) $('v2Oct').value = d.noise.octaves;
+        if (d.noise?.frequency) $('v2Freq').value = d.noise.frequency;
+        if (d.noise?.lacunarity) $('v2Lac').value = d.noise.lacunarity;
+        if (d.noise?.gain) $('v2Gain').value = d.noise.gain;
+        if (d.noise?.smooth_iters!==undefined) $('v2Smooth').value = d.noise.smooth_iters;
+        if (d.hydrology?.desired_rivers!==undefined) $('v2Rivers').value = d.hydrology.desired_rivers;
+        if (d.hydrology?.desired_lakes!==undefined)  $('v2Lakes').value  = d.hydrology.desired_lakes;
+        const B = d.settlements?.budget || {};
+        if (B.city!==undefined) $('v2Bcity').value = B.city;
+        if (B.town!==undefined) $('v2Btown').value = B.town;
+        if (B.village!==undefined) $('v2Bvil').value = B.village;
+        if (B.port!==undefined) $('v2Bport').value = B.port;
+        if (d.poi?.budget!==undefined) $('v2POI').value = d.poi.budget;
+        if (d.biomes?.pack) $('v2BiomePack').value = d.biomes.pack;
+      }
+      if (cachedTiers.length) fill(cachedTiers[0]);
+      sel.addEventListener('change', ()=> {
+        const t = cachedTiers.find(x=>x.id===sel.value); if (t) fill(t);
       });
     }
+    initTiers();
 
+    $('btnBuildV2').addEventListener('click', ()=> putPlanBody(buildV2Body()));
+    $('btnPlanV2').addEventListener('click', ()=> { putPlanBody(buildV2Body()); $('btnPlanSend').click(); });
+    $('btnGenV2').addEventListener('click',  ()=> { $('genReq').value = JSON.stringify(buildV2Body(), null, 2); $('btnGenSend').click(); });
+
+    $('btnPlanSend').addEventListener('click', async ()=>{
+      let body; try{ body = JSON.parse($('planReq').value || '{}'); }catch(e){ status($('v2Status'),'Invalid plan JSON','bad'); return; }
+      status($('v2Status'),'Planning…');
+      const {ok,data,status:sc} = await POST('/api/shard-gen-v2/plan', body);
+      setOut($('planResp'), data); lastPlanResp = data || null;
+      if(ok){
+        status($('v2Status'),'Plan OK','ok');
+        const eff = data?.debug?.effective?.grid || data?.grid;
+        $('planMeta').textContent = eff ? `effective grid: ${eff.width}×${eff.height}` : '';
+        if(typeof data?.seed === 'number'){
+          const g = JSON.parse($('genReq').value || JSON.stringify(body));
+          g.seed = data.seed; g.autoSeed = false;
+          $('genReq').value = JSON.stringify(g, null, 2);
+        }
+      } else status($('v2Status'),`Plan error (${sc})`,'bad');
+    });
+    $('btnPlanUseSeed').addEventListener('click', ()=>{
+      if(!lastPlanResp?.seed) return;
+      try{ const b = JSON.parse($('planReq').value || '{}'); b.seed = lastPlanResp.seed; b.autoSeed = false; $('planReq').value = JSON.stringify(b, null, 2);}catch{}
+    });
+
+    $('btnGenSend').addEventListener('click', async ()=>{
+      let body; try{ body = JSON.parse($('genReq').value || '{}'); }catch(e){ status($('v2Status'),'Invalid generate JSON','bad'); return; }
+      status($('v2Status'),'Generating…');
+      const {ok,data,status:sc} = await POST('/api/shard-gen-v2/generate', body);
+      setOut($('genResp'), data);
+      if(ok){ status($('v2Status'),'Generate OK','ok'); window.__lastGen = data; }
+      else status($('v2Status'),`Generate error (${sc})`,'bad');
+    });
+    $('btnUsePlanBody').addEventListener('click', ()=> { $('genReq').value = $('planReq').value; });
+
+    $('btnCopyPlanReq').addEventListener('click', ()=> copy($('planReq').value));
+    $('btnCopyPlanResp').addEventListener('click', ()=> copy($('planResp').textContent));
+    $('btnCopyGenReq').addEventListener('click', ()=> copy($('genReq').value));
+    $('btnCopyGenResp').addEventListener('click', ()=> copy($('genResp').textContent));
+    $('btnOpenShard').addEventListener('click', ()=> { const p = window.__lastGen?.path; if(p) window.open(`${BASE()}${p}`,'_blank'); });
+
+    // ---------- v1 ----------
     function buildPayload(){
-      const seed = $('seed').value.trim();
-      const width = parseInt($('width').value || '64', 10);
-      const height = parseInt($('height').value || '64', 10);
-      const land = parseFloat($('land').value || '0.5');
-      const volEnabled = $('volEnabled').value === 'true';
-      const volMin = parseInt($('volMin').value || '2', 10);
-      const volMax = parseInt($('volMax').value || '4', 10);
-      const ports = parseInt($('ports').value || '0', 10);
-      const towns = parseInt($('towns').value || '0', 10);
-
-      const payload = {
-        seed,
-        width, height,
-        landmass_ratio: isFinite(land) ? land : 0.5,
-        biomes: Array.from(chosen), // canonical keys only
-        volcano: { enabled: volEnabled, min_radius: volMin, max_radius: volMax },
-        ports: { count: ports },
-        settlements: { count: towns }
-      };
-      $('payload').value = JSON.stringify(payload, null, 2);
+      const seed=$('seed').value.trim();
+      const width=parseInt($('width').value||'64',10);
+      const height=parseInt($('height').value||'64',10);
+      const land=parseFloat($('land').value||'0.5');
+      const volEnabled=$('volEnabled').value==='true';
+      const volMin=parseInt($('volMin').value||'2',10);
+      const volMax=parseInt($('volMax').value||'4',10);
+      const ports=parseInt($('ports').value||'0',10);
+      const towns=parseInt($('towns').value||'0',10);
+      const payload={ seed,width,height,landmass_ratio:isFinite(land)?land:0.5,
+        volcano:{enabled:volEnabled,min_radius:volMin,max_radius:volMax}, ports:{count:ports}, settlements:{count:towns}};
+      $('payload').value = JSON.stringify(payload,null,2);
     }
-
+    async function doList(){ const r=await GET('/api/shards'); setOut($('listOut'),r.data); }
+    async function doGet(){ const n=$('getName').value.trim(); const r=await GET(`/api/shards/${encodeURIComponent(n)}`); setOut($('getOut'),r.data); }
     async function doGen(){
-      const body = $('payload').value.trim();
-      let parsed;
-      try { parsed = JSON.parse(body || '{}'); }
-      catch(e) { genStatus.textContent = 'Invalid JSON'; genStatus.className='bad'; return; }
-
-      genStatus.textContent = 'Sending…'; genStatus.className='muted';
-      const r = await fetch('/api/generate_shard', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(parsed) });
-      const out = await r.json(); setOut(genOut, out);
-      if (r.ok) { genStatus.textContent = 'OK'; genStatus.className='ok'; await doList(); }
-      else { genStatus.textContent = 'Error'; genStatus.className='bad'; }
+      let parsed; try{ parsed=JSON.parse($('payload').value||'{}'); }catch(e){ $('genStatus').textContent='Invalid JSON'; $('genStatus').className='bad tiny'; return; }
+      $('genStatus').textContent='Sending…'; $('genStatus').className='muted tiny';
+      const r = await POST('/api/generate_shard', parsed);
+      setOut($('genOut'), r.data);
+      $('genStatus').textContent = r.ok ? 'OK' : 'Error'; $('genStatus').className = (r.ok?'ok':'bad')+' tiny';
     }
 
-    $('btnList').addEventListener('click', doList);
-    $('btnGet').addEventListener('click', doGet);
-    $('btnOpen').addEventListener('click', () => { window.location.href = '/shard-viewer'; });
+    $('btnList').addEventListener('click',doList);
+    $('btnGet').addEventListener('click',doGet);
+    $('btnOpen').addEventListener('click',()=>window.location.href='/shard-viewer-v2?debug=1');
 
-    $('seed').addEventListener('input', buildPayload);
-    $('width').addEventListener('input', buildPayload);
-    $('height').addEventListener('input', buildPayload);
-    $('land').addEventListener('input', buildPayload);
-    $('volEnabled').addEventListener('change', buildPayload);
-    $('volMin').addEventListener('input', buildPayload);
-    $('volMax').addEventListener('input', buildPayload);
-    $('ports').addEventListener('input', buildPayload);
-    $('towns').addEventListener('input', buildPayload);
-    $('btnGen').addEventListener('click', doGen);
+    $('seed').addEventListener('input',buildPayload);
+    $('width').addEventListener('input',buildPayload);
+    $('height').addEventListener('input',buildPayload);
+    $('land').addEventListener('input',buildPayload);
+    $('volEnabled').addEventListener('change',buildPayload);
+    $('volMin').addEventListener('input',buildPayload);
+    $('volMax').addEventListener('input',buildPayload);
+    $('ports').addEventListener('input',buildPayload);
+    $('towns').addEventListener('input',buildPayload);
 
-    // init
-    drawBiomeChips(); buildPayload();
-    doList();
+    buildPayload();
   </script>
 </body>
 </html>
