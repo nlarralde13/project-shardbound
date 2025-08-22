@@ -4,49 +4,42 @@
   <meta charset="utf-8" />
   <title>API Playground • v1 + v2</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Shared retro theme -->
+  <link rel="stylesheet" href="/static/css/retro-ui.css" />
   <style>
-    :root { --bg:#0f1115; --panel:#161a22; --muted:#98a2b3; --text:#e6e8ea; --accent:#62d4ff; --ok:#7dd27d; --bad:#e57373; --warn:#f8c147; --grid:#1d2331; }
-    html,body{height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
-    .wrap{max-width:1200px;margin:0 auto;padding:16px;display:grid;gap:16px}
-    details{background:var(--panel);border:1px solid #202634;border-radius:10px;overflow:hidden}
-    summary{cursor:pointer;list-style:none;padding:14px 16px;font-weight:600;display:flex;gap:10px;align-items:center}
-    summary::marker{display:none}
-    details[open] summary{border-bottom:1px solid #202634}
-    .card{padding:14px}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}
-    label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
-    input,select,textarea,button{background:#0f141d;color:var(--text);border:1px solid #2a3140;border-radius:8px;padding:8px 10px;width:100%}
-    textarea{min-height:140px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-    button{width:auto;cursor:pointer}
-    pre{background:#0c0f15;border:1px solid var(--grid);color:#cfe3ff;padding:10px;border-radius:8px;overflow:auto;font-size:12px;min-height:120px}
-    .btnbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    .tiny{font-size:11px}.muted{color:var(--muted)}.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}
-    @media (max-width:1050px){ .row,.grid{grid-template-columns:1fr} }
+    /* Minimal page-local tweaks (kept small) */
+    details{ overflow:hidden }
+    summary{ cursor:pointer; list-style:none; padding:14px 16px; font-weight:800; display:flex; gap:10px; align-items:center }
+    summary::marker{ display:none }
+    .grid{ display:grid; grid-template-columns: repeat(12,1fr); gap:10px }
+    @media (max-width:1050px){ .grid{ grid-template-columns:1fr } }
+    .muted{ color:var(--ink-2) }
+    .tiny{ font-size:11px }
+    .ok{ color:#7dd27d } .bad{ color:#e57373 } .warn{ color:#f8c147 }
   </style>
 </head>
 <body>
   <div class="wrap">
 
-    <details open>
-      <summary>🔧 Global tools</summary>
-      <div class="card">
+    <details open class="card">
+      <summary class="pix">🔧 Global tools</summary>
+      <div class="card" style="padding:14px">
         <div class="btnbar">
           <label class="muted tiny">Base URL</label>
           <input id="baseUrl" style="max-width:360px" />
-          <button id="btnCatalog">GET /api/catalog</button>
-          <button id="btnCatalogRefresh">POST /api/catalog/refresh</button>
-          <button id="btnRoutes">GET /api/debug/routes</button>
-          <button id="btnOpenV2">Open Viewer v2</button>
+          <button id="btnCatalog" class="secondary">GET /api/catalog</button>
+          <button id="btnCatalogRefresh" class="secondary">POST /api/catalog/refresh</button>
+          <button id="btnRoutes" class="secondary">GET /api/debug/routes</button>
+          <button id="btnOpenV2" class="primary">Open Viewer v2</button>
           <span id="globalStatus" class="muted tiny"></span>
         </div>
         <pre id="globalOut">// catalog / routes output</pre>
       </div>
     </details>
 
-    <details open>
-      <summary>🧪 v2 — Plan & Generate</summary>
-      <div class="card">
+    <details open class="card">
+      <summary class="pix">🧪 v2 — Plan & Generate</summary>
+      <div class="card" style="padding:14px">
         <div class="grid" style="margin-bottom:10px">
           <div>
             <label>Template</label>
@@ -90,9 +83,9 @@
           <div><label>POI budget</label><input id="v2POI" type="number" min="0" max="128" value="3"/></div>
 
           <div class="btnbar" style="grid-column:1/-1">
-            <button id="btnBuildV2">Build Body</button>
-            <button id="btnPlanV2">POST /api/shard-gen-v2/plan</button>
-            <button id="btnGenV2">POST /api/shard-gen-v2/generate</button>
+            <button id="btnBuildV2" class="secondary">Build Body</button>
+            <button id="btnPlanV2" class="secondary">POST /api/shard-gen-v2/plan</button>
+            <button id="btnGenV2" class="primary">POST /api/shard-gen-v2/generate</button>
             <span id="v2Status" class="muted tiny"></span>
           </div>
         </div>
@@ -102,16 +95,16 @@
             <label>Plan — Request</label>
             <textarea id="planReq"></textarea>
             <div class="btnbar">
-              <button id="btnPlanSend">Send Plan</button>
-              <button id="btnPlanUseSeed">Use response seed ➜ body</button>
-              <button id="btnCopyPlanReq">Copy</button>
+              <button id="btnPlanSend" class="secondary">Send Plan</button>
+              <button id="btnPlanUseSeed" class="secondary">Use response seed ➜ body</button>
+              <button id="btnCopyPlanReq" class="secondary">Copy</button>
             </div>
           </div>
           <div>
             <label>Plan — Response</label>
             <pre id="planResp">// plan response</pre>
             <div class="btnbar">
-              <button id="btnCopyPlanResp">Copy</button>
+              <button id="btnCopyPlanResp" class="secondary">Copy</button>
               <span id="planMeta" class="muted tiny"></span>
             </div>
           </div>
@@ -122,52 +115,52 @@
             <label>Generate — Request</label>
             <textarea id="genReq"></textarea>
             <div class="btnbar">
-              <button id="btnGenSend">Send Generate</button>
-              <button id="btnUsePlanBody">Use Plan body</button>
-              <button id="btnCopyGenReq">Copy</button>
+              <button id="btnGenSend" class="secondary">Send Generate</button>
+              <button id="btnUsePlanBody" class="secondary">Use Plan body</button>
+              <button id="btnCopyGenReq" class="secondary">Copy</button>
             </div>
           </div>
           <div>
             <label>Generate — Response</label>
             <pre id="genResp">// generate response</pre>
             <div class="btnbar">
-              <button id="btnCopyGenResp">Copy</button>
-              <button id="btnOpenShard">Open shard JSON</button>
+              <button id="btnCopyGenResp" class="secondary">Copy</button>
+              <button id="btnOpenShard" class="primary">Open shard JSON</button>
             </div>
           </div>
         </div>
       </div>
     </details>
 
-    <details>
-      <summary>📚 v1 — List & Get</summary>
-      <div class="card row">
+    <details class="card">
+      <summary class="pix">📚 v1 — List & Get</summary>
+      <div class="card row" style="padding:14px">
         <div>
           <div class="btnbar">
-            <button id="btnList">GET /api/shards</button>
-            <button id="btnOpen">Open in Shard Viewer</button>
+            <button id="btnList" class="secondary">GET /api/shards</button>
+            <button id="btnOpen" class="primary">Open in Shard Viewer</button>
           </div>
           <pre id="listOut">// results here</pre>
         </div>
         <div>
           <div class="btnbar">
             <input id="getName" placeholder="nameNoExt (e.g. 12345678_blue_coast)" />
-            <button id="btnGet">GET /api/shards/&lt;nameNoExt&gt;</button>
+            <button id="btnGet" class="secondary">GET /api/shards/&lt;nameNoExt&gt;</button>
           </div>
           <pre id="getOut">// shard JSON here</pre>
         </div>
       </div>
     </details>
 
-    <details>
-      <summary>🧩 v1 — Generate Shard</summary>
-      <div class="card">
+    <details class="card">
+      <summary class="pix">🧩 v1 — Generate Shard</summary>
+      <div class="card" style="padding:14px">
         <div class="row">
           <div>
             <label>Payload</label>
             <textarea id="payload"></textarea>
             <div class="btnbar">
-              <button id="btnGen">POST /api/generate_shard</button>
+              <button id="btnGen" class="primary">POST /api/generate_shard</button>
               <span id="genStatus" class="muted tiny"></span>
             </div>
           </div>
@@ -195,7 +188,7 @@
   </div>
 
   <script type="module">
-    // ---------- tiny helpers ----------
+    /* --- original JS unchanged below, just copied --- */
     const $ = (id)=>document.getElementById(id);
     const qs = (sel,root=document)=>root.querySelector(sel);
     const setOut = (el, obj)=> el.textContent = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2);
@@ -213,7 +206,6 @@
       return Number.isFinite(n) ? [n,n] : [1,2];
     }
 
-    // ---------- global ----------
     $('baseUrl').value = location.origin;
     async function GET(path){
       const r = await fetch(`${BASE()}${path}`);
@@ -245,18 +237,13 @@
     });
     $('btnOpenV2').addEventListener('click', ()=> window.open('/shard-viewer-v2?debug=1','_blank'));
 
-    // ---------- v2 ----------
-    async function fetchTiers(){
-      const r = await fetch('/api/shard-gen-v2/tiers');
-      return r.ok ? r.json() : [];
-    }
+    async function fetchTiers(){ const r = await fetch('/api/shard-gen-v2/tiers'); return r.ok ? r.json() : []; }
     function buildV2Body(){
-      const templateId = $('v2Template').value.trim(); // required; grid locked to tier
+      const templateId = $('v2Template').value.trim();
       const name = $('v2Name').value.trim() || 'blue_coast';
       const autoSeed = $('v2AutoSeed').checked;
       const seedStr = $('v2Seed').value.trim();
       const seed = autoSeed ? undefined : (seedStr ? Number(seedStr) : undefined);
-
       const body = {
         templateId, name, autoSeed: !!autoSeed,
         overrides: {
@@ -279,12 +266,9 @@
     async function initTiers(){
       cachedTiers = await fetchTiers();
       const sel = $('v2Template'); sel.innerHTML = '';
-      for (const t of cachedTiers){
-        const opt = document.createElement('option'); opt.value = t.id; opt.textContent = t.label || t.id; sel.appendChild(opt);
-      }
+      for (const t of cachedTiers){ const opt = document.createElement('option'); opt.value = t.id; opt.textContent = t.label || t.id; sel.appendChild(opt); }
       function fill(t){
         $('v2GridNote').textContent = `Grid locked: ${t.grid.width}×${t.grid.height}`;
-        // defaults
         const d = t.defaults || {};
         $('v2Coast').value = Array.isArray(d.water?.coast_width) ? `${d.water.coast_width[0]}-${d.water.coast_width[1]}` : ($('v2Coast').value || '1-2');
         if (d.world?.type) $('v2World').value = d.world.type;
@@ -305,9 +289,7 @@
         if (d.biomes?.pack) $('v2BiomePack').value = d.biomes.pack;
       }
       if (cachedTiers.length) fill(cachedTiers[0]);
-      sel.addEventListener('change', ()=> {
-        const t = cachedTiers.find(x=>x.id===sel.value); if (t) fill(t);
-      });
+      sel.addEventListener('change', ()=> { const t = cachedTiers.find(x=>x.id===sel.value); if (t) fill(t); });
     }
     initTiers();
 
@@ -352,7 +334,6 @@
     $('btnCopyGenResp').addEventListener('click', ()=> copy($('genResp').textContent));
     $('btnOpenShard').addEventListener('click', ()=> { const p = window.__lastGen?.path; if(p) window.open(`${BASE()}${p}`,'_blank'); });
 
-    // ---------- v1 ----------
     function buildPayload(){
       const seed=$('seed').value.trim();
       const width=parseInt($('width').value||'64',10);

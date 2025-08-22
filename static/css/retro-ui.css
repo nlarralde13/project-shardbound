@@ -1,0 +1,106 @@
+
+/* ==========================================================
+   Retro UI (SNES‑inspired) — shared theme
+   Safe to include after existing CSS to override styles.
+   ========================================================== */
+:root{
+  --bg: #120b22;            /* deep indigo */
+  --bg-2:#0b0716;           /* darker panel */
+  --ink:#e9e7ef;
+  --ink-2:#bfb7d9;
+  --accent:#70d6ff;         /* cyan */
+  --accent-2:#ff7edb;       /* magenta */
+  --accent-3:#ffe066;       /* gold */
+  --edge-light:#c9c3de;     /* bevel light */
+  --edge-dark:#3a2d62;      /* bevel dark */
+  --grid:#20163d;
+}
+
+/* Global base */
+html,body{height:100%; background:var(--bg); color:var(--ink);
+  font-family: Inter, Roboto, "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+}
+
+/* Optional pixel header font when available */
+@supports (font-variation-settings: normal) {
+  .pix { font-family: "Press Start 2P", ui-monospace, Menlo, Consolas, monospace; letter-spacing: .5px; }
+}
+
+/* Card/window with SNES-ish hard edges and bevel */
+.card, details, .snes-card {
+  background: linear-gradient(#110a20, #0d0818);
+  border: 2px solid var(--edge-dark);
+  box-shadow: 0 0 0 2px var(--edge-light) inset, 0 2px 0 0 rgba(0,0,0,.35);
+  border-radius: 2px; /* crisp corners */
+}
+
+/* Summary header tweaks inside <details> */
+summary { background: #1a1330; }
+details[open] summary{ border-bottom: 2px solid var(--edge-dark); }
+
+/* Grid rows & alignment */
+.row{ display:grid; grid-template-columns: 180px 1fr; gap:12px; align-items:center; }
+.row.inline-3{ grid-template-columns: repeat(3, 1fr); }
+.row.inline-3 > div{ display:flex; align-items:center; gap:8px; }
+.row label{ color:var(--ink-2); font-size:12px; }
+
+/* Inputs */
+input,select,textarea,button{
+  background: #0f0a1c; color: var(--ink);
+  border:2px solid var(--edge-dark); border-radius:2px; padding:8px 10px;
+}
+input:focus,select:focus,textarea:focus{ outline:none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(112,214,255,.2); }
+
+/* Buttons */
+button{ cursor:pointer; font-weight:700; }
+button.primary{ background: var(--accent); color:#0e0e1a; border-color:#0a4d5f; }
+button.secondary{ background:#231a44; color:var(--ink); border-color:#3a2d62; }
+button:hover{ filter:brightness(1.08); }
+
+/* Pre / code outputs */
+pre{ background:#0b0716; color:#d7d2ff; border:2px solid var(--edge-dark);
+     box-shadow: 0 0 0 2px var(--grid) inset; border-radius:2px; }
+
+/* Toolbars */
+.btnbar{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+
+/* Wrap containers */
+.wrap{ max-width:1200px; margin:0 auto; padding:16px; display:grid; gap:16px; }
+
+/* Gutter between panes */
+.gutter{ width:6px; background: linear-gradient(180deg,#3a2d62,#231a44); cursor:col-resize; }
+
+/* Zoom control pad (bottom-right) */
+.canvas-wrap{ position:relative; background:#000; box-shadow: 0 0 0 2px var(--edge-dark), inset 0 0 0 2px #000; }
+.zoomOverlay{ position:absolute; right:12px; bottom:12px; display:flex; flex-direction:column; gap:6px; z-index:4; }
+.zbtn{ width:36px; height:36px; display:grid; place-items:center; font-weight:900;
+       background:#231a44; color:#fff; border:2px solid var(--edge-light); border-radius:2px; }
+.zbtn:hover{ background:#2d2360; }
+
+/* Tooltip: keep inside frame */
+.tooltip{ position:absolute; z-index:5; pointer-events:none; padding:6px 8px; font-size:12px;
+  background:#1a1330; color:var(--ink); border:2px solid var(--edge-light);
+  box-shadow: 0 0 0 2px var(--edge-dark) inset; border-radius:2px; max-width: min(360px, calc(100% - 24px));
+}
+
+/* Legend chips */
+.legend .chip{ display:inline-flex; align-items:center; gap:.35rem; padding:.2rem .5rem; border-radius:2px; background:#231a44; color:var(--ink-2); border:1px solid var(--edge-dark); }
+.legend .swatch{ width:10px; height:10px; border-radius:2px; background:#999; display:inline-block; box-shadow: 0 0 0 1px #000 inset; }
+
+/* CRT mode (toggle .crt on .canvas-wrap) */
+.canvas-wrap.crt{
+  position:relative; filter: contrast(1.08) saturate(1.12);
+}
+.canvas-wrap.crt::after{
+  content:""; position:absolute; inset:0; pointer-events:none; z-index:3;
+  background:
+    /* subtle vignette */ radial-gradient(ellipse at center, rgba(0,0,0,0) 60%, rgba(0,0,0,.25) 100%),
+    /* scanlines */ repeating-linear-gradient( to bottom, rgba(255,255,255,.06) 0 1px, rgba(0,0,0,.08) 1px 2px );
+  mix-blend-mode: multiply;
+}
+
+/* Mobile */
+@media (max-width: 1050px){
+  .row{ grid-template-columns: 1fr; }
+  .wrap{ grid-template-columns: 1fr; }
+}
