@@ -71,6 +71,16 @@ nav.actions{display:flex;gap:8px}
 .console-actions .hint{color:var(--muted);font-size:12px}
 .console-actions .btns{display:flex;gap:8px;flex-wrap:wrap}
 
+/* Map overlay: allow large canvas in devMode but keep some breathing room */
+#overlayMap .panel { max-width: min(94vw, 1500px); }
+#overlayMap .map-frame { padding: 12px; }
+#overlayMap .map-box { position: relative; margin: 0 auto; }
+/* Canvas overlay for rivers/FX sits on top of the grid */
+#overlayMap .map-box > canvas#mapFX {
+  position: absolute; inset: 0; pointer-events: none; image-rendering: pixelated;
+}
+
+
 /* Overlays (Map, Character, Inventory) */
 .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(5,8,12,.55);backdrop-filter:blur(2px);z-index:1000}
 .overlay.hidden{display:none}
@@ -105,7 +115,7 @@ nav.actions{display:flex;gap:8px}
 .map-hint{margin-top:8px;color:var(--muted);font-size:12px}
 
 /* Mini 16×16 grid INSIDE the map overlay */
-.overlay .mini-grid{position:static;margin:8px auto 0;width:360px;height:360px;display:grid;grid-template-columns:repeat(16,1fr);grid-template-rows:repeat(16,1fr);background:rgba(10,14,20,.55);border:1px solid var(--border);border-radius:8px;overflow:hidden;backdrop-filter:blur(3px);box-shadow:0 4px 16px rgba(0,0,0,.35)}
+.overlay .mini-grid{position:static;margin:8px auto 0;width:640px;height:640px;display:grid;grid-template-columns:repeat(16,1fr);grid-template-rows:repeat(16,1fr);background:rgba(10,14,20,.55);border:1px solid var(--border);border-radius:8px;overflow:hidden;backdrop-filter:blur(3px);box-shadow:0 4px 16px rgba(0,0,0,.35)}
 .mini-grid .cell{border-right:1px solid rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.04);background:rgba(255,255,255,.02)}
 .mini-grid .cell.here{background:rgba(255,217,94,.9);box-shadow:inset 0 0 0 2px rgba(0,0,0,.4)}
 .mini-grid .Forest{background-color:rgba(34,100,70,.22)} .mini-grid .Plains{background-color:rgba(70,120,40,.22)} .mini-grid .Coast{background-color:rgba(40,110,155,.22)} .mini-grid .Desert{background-color:rgba(180,140,60,.22)} .mini-grid .Volcano{background-color:rgba(130,50,40,.22)} .mini-grid .Tundra{background-color:rgba(90,120,160,.22)}

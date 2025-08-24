@@ -1,0 +1,86 @@
+/* ========================================================================
+   Map Overlay (standalone)
+   This version uses a STATIC map-holder that controls final size.
+   TUNE THESE and the map will fit exactly to your desired rectangle.
+   ======================================================================== */
+
+:root{
+  /* Panel width (outer dialog) */
+  --map-panel-w: 43vw;      /* or a px value, e.g. 1260px */
+
+  /* Map holder (the red rectangle) — THIS drives the map size */
+  --map-holder-w: 36vw;     /* e.g. 1200px */
+  --map-holder-h: 48vh;     /* e.g. 560px  */
+
+  /* If you want exact pixel tiles instead of stretch, set this (e.g. 16px).
+     Leave empty to stretch cells proportionally to fill the holder. */
+  --tile-size: 16px ; /* 16px; */
+}
+
+/* Panel & header */
+#overlayMap .panel{
+  width: var(--map-panel-w);
+  max-width: 96vw;
+}
+#overlayMap .map-frame{ padding: 12px; }
+
+/* NEW: The fixed-size holder that defines the map rectangle */
+#overlayMap .map-holder{
+  width:  var(--map-holder-w);
+  height: var(--map-holder-h);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Map box stretches to fill the holder exactly */
+#overlayMap .map-box{
+  position: relative;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  background: rgba(10,14,20,.55);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 10px;
+  overflow: hidden;
+  backdrop-filter: blur(3px);
+  box-shadow: 0 4px 16px rgba(0,0,0,.35);
+}
+
+/* Grid occupies the box; JS sets repeat() counts */
+#overlayMap .mini-grid{
+  position: absolute; inset: 0;
+  display: grid;
+}
+
+/* Cells + token */
+#overlayMap .mini-grid .cell{
+  border-right: 1px solid rgba(255,255,255,.04);
+  border-bottom: 1px solid rgba(255,255,255,.04);
+}
+#overlayMap .mini-grid .here{
+  background: rgba(255,217,94,.88) !important;
+  box-shadow: inset 0 0 0 2px rgba(0,0,0,.45);
+}
+
+/* Hydrology canvas and POIs layers */
+#overlayMap canvas#mapFX{
+  position: absolute; inset: 0;
+  z-index: 2; pointer-events: none; image-rendering: pixelated;
+}
+#overlayMap #mapPOI{
+  position: absolute; inset: 0;
+  z-index: 3; pointer-events: none;
+}
+
+/* Legend + toggles */
+#overlayMap .map-legend{ display:flex; gap:14px; align-items:center; color:#9aa6bf; font-size:12px; margin-bottom:8px; }
+#overlayMap .dot{ width:10px; height:10px; display:inline-block; border-radius:50%; box-shadow:0 0 0 1px rgba(255,255,255,.2) inset; background:#86b6ff; }
+#overlayMap .dot.port{ background:#7fe7b0; } 
+#overlayMap .dot.gate{ background:#ffd16b; }
+#overlayMap #mapToggles{ display:flex; gap:16px; align-items:center; margin:8px 0 14px; }
+#overlayMap #mapToggles.hidden{ display:none; }
+#overlayMap #mapToggles label{ display:inline-flex; align-items:center; gap:6px; font-size:12px; opacity:.9; }
+
+#overlayMap .map-hint{ margin-top:8px; color:#9aa6bf; font-size:12px; }

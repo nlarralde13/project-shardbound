@@ -558,6 +558,14 @@ def generate(
         },
     }
 
+    # NEW: movement layer derived from grid (standardize on grid as canonical biomes)
+    # All ocean cells are blocked for land movement and require a boat for traversal.
+    ocean_cells = [[x, y] for y in range(h) for x in range(w) if grid[y][x] == "ocean"]
+    layers["movement"] = {
+        "blocked_for": { "land": ocean_cells },
+        "requires":    { "boat": ocean_cells }
+    }
+
     provenance = {
         "generator": "v2",
         "schema_version": "2.0.0",

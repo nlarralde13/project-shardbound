@@ -246,14 +246,44 @@ class ResourcesLayerPlan(BaseModel):
     coverage_estimate: Dict[str, ResourceCoverageStats]
     materialization_policy: Dict[str, Any] = Field(default_factory=dict)
 
-class LayersBlock(BaseModel):
-    water: WaterLayerPlan
-    hydrology: HydrologyLayerPlan
-    biomes: BiomesLayerPlan
-    settlements: SettlementsLayerPlan
-    roads: RoadsLayerPlan
-    poi: POILayerPlan
-    resources: ResourcesLayerPlan
+
+# ---- collision / tile flags --------------------------------------------------
+
+class TileFlags(BaseModel):
+    """Per-tile movement modifiers and hazards.
+    Defaults are permissive (walkable land). Generator can sparsely annotate tiles.
+    """
+    walkable: bool = Field(True, description="If false, player movement is blocked")
+    swim: bool = Field(False, description="If true, tile requires swim/boat to enter")
+    slow: Optional[float] = Field(
+        None, ge=0.0, le=1.0, description="Movement multiplier (0.5 = half speed)"
+    )
+    hazard: Optional[str] = Field(
+        None, description="Optional hazard tag (e.g., 'lava', 'spikes')"
+    )
+
+class CollisionLayerPlan(BaseModel):
+    """Sparse mapping of coordinates to TileFlags.
+
+    Keep this sparse to avoid large payloads: only non-default tiles should appear here.
+    """
+    # Represent coordinates as "x,y" keys to stay JSON-friendly
+    flags: Dict[str, TileFlags] = Field(
+        default_factory=dict,
+        description="Mapping of 'x,y' -> TileFlags for non-default tiles",
+    )
+    notes: List[str] = Field(default_factory=list)
+
+class TileSchema(BaseModel):
+    """Optional richer per-tile representation for clients that want biome+flags.
+
+    Not required for current generator, but useful for serializing a grid-of-objects.
+    """
+    biome: str
+    flags: Optional[TileFlags] = None
+    site: Optional[str] = None
+
+    collision: Optional[CollisionLayerPlan] = None
 
 # ---- metrics, warnings, would_write -----------------------------------------
 
@@ -337,6 +367,9 @@ __all__ = [
     "ResourcesOverrides",
     "GridSpec",
     "Provenance",
+    "TileFlags",
+    "CollisionLayerPlan",
+    "TileSchema",
     "LayersBlock",
     "WarningItem",
 ]

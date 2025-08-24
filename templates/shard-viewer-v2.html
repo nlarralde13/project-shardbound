@@ -9,6 +9,11 @@
   <link rel="stylesheet" href="/static/css/shard-viewer.css" />
   <link rel="stylesheet" href="/static/css/shard-viewer-v2.css" />
 
+  <!-- Prefer grid as the canonical biome source; renderer may fallback to tiles -->
+  <script>
+    window.SHARDBIOME_SOURCE = 'grid';
+  </script>
+
   <!-- Small add-on styles for v2 controls (non-invasive) -->
   <style>
     .group h3 { display:flex; align-items:center; gap:.5rem; }
@@ -143,12 +148,12 @@
 
     async function callPlan() {
       const body = {
-        templateId: v2Template.value || 'normal-16',
-        name: (v2Name.value || 'blue_coast'),
-        autoSeed: v2AutoSeed.checked,
-        seed: v2AutoSeed.checked ? undefined : Number(v2Seed.value || 0),
-        overrides: { poi: { budget: Number(v2POIBudget.value || 0) } },
-        biomePack: v2BiomePack.value || undefined
+        templateId: v2Template?.value || 'normal-16',
+        name: (v2Name?.value || 'blue_coast'),
+        autoSeed: v2AutoSeed?.checked,
+        seed: v2AutoSeed?.checked ? undefined : Number(v2Seed?.value || 0),
+        overrides: { poi: { budget: Number(v2POIBudget?.value || 0) } },
+        biomePack: v2BiomePack?.value || undefined
       };
       try {
         const res = await fetch('/api/shard-gen-v2/plan', {

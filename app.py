@@ -14,7 +14,7 @@ app.register_blueprint(api_bp,         url_prefix="/api")
 # ----- UI routes (HTML only) -----
 @app.route("/")
 def index():
-    return render_template("mvp2.html")
+    return render_template("mvp3.html")
 
 @app.route("/api-playground")
 def api_playground():
@@ -27,6 +27,8 @@ def shard_viewer():
 @app.route("/shard-viewer-v2")
 def shard_viewer_v2():
     return render_template("shard-viewer-v2.html")
+
+
 
 # Static passthrough (unchanged)
 @app.route("/static/<path:filename>")

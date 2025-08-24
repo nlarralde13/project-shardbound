@@ -1,0 +1,241 @@
+/* =======================================================================
+   Shardbound — MVP3 (SNES vibe, unified stylesheet)
+   Combines: mvp2.css + mapOverlay.css + retro-ui.css
+   Edit the variables below to adjust global look & overlay sizing.
+   ======================================================================= */
+
+/* == THEME & SIZES ===================================================== */
+:root{
+  /* ---- SNES-inspired palette ---- */
+  --bg:#120b22;           /* background */
+  --bg-2:#0b0716;         /* panel background */
+  --panel:#111925;
+  --panel-2:#0b121a;
+  --ink:#e9e7ef;          /* primary text */
+  --ink-2:#bfb7d9;        /* muted text */
+  --accent:#70d6ff;       /* cyan */
+  --accent-2:#ff7edb;     /* magenta */
+  --accent-3:#ffe066;     /* gold */
+  --edge-light:#c9c3de;   /* bevel light */
+  --edge-dark:#3a2d62;    /* bevel dark */
+  --grid:#20163d;
+
+  /* ---- Shadows, borders ---- */
+  --border:rgba(255,255,255,.08);
+  --shadow:0 10px 30px rgba(0,0,0,.45);
+
+  /* ---- HUD colors ---- */
+  --hp:#e15a5a; --mp:#79a5ff; --sta:#63c27b;
+
+  /* ---- App layout ---- */
+  --topbar-h:56px;
+  --v-gap:22px;
+  --card-w:1020px;
+  --card-ratio:0.55;      /* art height = card-w * ratio */
+  --card-pad:14px;
+  --radius-xl:18px; --radius:12px; --radius-sm:8px;
+
+  /* ---- Console height ---- */
+  --console-h:220px;
+
+  /* ---- Overlay Map sizing ----
+     Window (outer panel content box) = 720×720
+     Internal canvas area (map box)   = 640×640
+  */
+  --overlay-window: 720px;
+  --overlay-canvas: 640px;
+
+  /* ---- Tile math (16×16 grid) ---- */
+  --overlay-tiles: 16;
+  --tile-size: calc(var(--overlay-canvas) / var(--overlay-tiles)); /* 40px */
+}
+
+/* == GLOBAL BASE ======================================================= */
+*{ box-sizing: border-box; }
+html,body{ height:100%; }
+body.app{
+  margin:0; color:var(--ink);
+  background: radial-gradient(1200px 600px at 50% -20%, #15202c 0%, var(--bg) 45%, #081018 100%);
+  font:14px/1.5 "Inter",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  letter-spacing:.2px;
+}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:8px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* == SNES CARDS / WINDOWS ============================================= */
+.snes-card, .card, details, .panel{
+  background: linear-gradient(#110a20, #0d0818);
+  border: 2px solid var(--edge-dark);
+  box-shadow: 0 0 0 2px var(--edge-light) inset, 0 2px 0 rgba(0,0,0,.35);
+  border-radius: 2px; /* crisp edges */
+  color: var(--ink);
+}
+summary { background:#1a1330; }
+details[open] summary{ border-bottom: 2px solid var(--edge-dark); }
+
+/* == TOP BAR & HUD ===================================================== */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 20px}
+.topbar .title{font-weight:700;font-size:18px;color:#e8f0ff;text-shadow:0 1px 0 rgba(0,0,0,.35)}
+.hud{display:flex;gap:12px;align-items:center}
+.bar{position:relative;height:14px;min-width:120px;padding-left:34px;background:#0b1320;border:1px solid var(--border);border-radius:999px;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.bar span{position:absolute;left:6px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--ink-2)}
+.bar i{position:absolute;left:32px;top:1px;bottom:1px;right:1px;border-radius:999px;background:linear-gradient(90deg,rgba(255,255,255,.15),rgba(255,255,255,.02));box-shadow:inset 0 0 12px rgba(0,0,0,.55)}
+.bar.hp i{background:var(--hp)} .bar.mp i{background:var(--mp)} .bar.sta i{background:var(--sta)}
+nav.actions{display:flex;gap:8px}
+.btn{appearance:none;border:none;cursor:pointer;color:#cfe0ff;background:#1b2636;border:1px solid rgba(255,255,255,.12);padding:8px 12px;border-radius:999px;transition:background .15s,transform .02s;box-shadow:0 1px 0 rgba(255,255,255,.04),0 6px 16px rgba(0,0,0,.25);user-select:none}
+.btn:hover{background:#223146} .btn:active{transform:translateY(1px)} .btn.small{padding:6px 10px;font-size:12px}
+
+/* == MAIN LAYOUT ======================================================= */
+.main{max-width:1400px;margin:0 auto;padding:14px 18px 60px;min-height:calc(100vh - var(--topbar-h));display:flex;flex-direction:column;align-items:center}
+.room{width:100%;display:flex;flex-direction:column;align-items:center}
+.room-header{display:flex;align-items:center;justify-content:center;gap:10px;margin:6px 2px 12px;text-align:center}
+.room-header h1{font-size:22px;margin:0}
+.tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:3px 9px;border-radius:999px;color:#cfe0ff;background:#0b121a;border:1px solid var(--border)}
+.tag::before{content:"";width:8px;height:8px;border-radius:50%;display:inline-block;background:#4ea3ff}
+
+/* == ROOM CARD & ART =================================================== */
+.room-card{width:var(--card-w);margin:0 auto;padding:var(--card-pad);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow)}
+.room-stage{position:relative}
+.room-art{
+  width:100%;
+  height:calc(var(--card-w) * var(--card-ratio));
+  border-radius:calc(var(--radius-xl) - 6px);
+  background:#09111a center/contain no-repeat;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);
+}
+
+/* == CONSOLE =========================================================== */
+.console-wrap{width:var(--card-w);margin:12px auto 0;height:var(--console-h);display:grid;grid-template-rows:minmax(0,1fr) auto auto;gap:8px}
+.console{background:rgba(14,21,30,.78);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;overflow:auto;box-shadow:var(--shadow);min-height:120px}
+.console .line{padding:2px 0} .console .dim{color:var(--ink-2)}
+.console-input{display:flex;gap:8px;align-items:center}
+.console-input input{flex:1;min-height:36px;background:#0d1622;color:var(--ink);border:1px solid var(--border);border-radius:8px;padding:8px 10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.console-input input::placeholder{color:#7f8aa0}
+.console-actions{display:grid;grid-template-columns:1fr;gap:10px;padding-bottom:2px}
+.console-actions .group{display:grid;grid-template-columns:90px 1fr;align-items:center;gap:8px}
+.console-actions .hint{color:var(--ink-2);font-size:12px}
+.console-actions .btns{display:flex;gap:8px;flex-wrap:wrap}
+
+/* == OVERLAYS (Map / Char / Inv shell) ================================ */
+.overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(5,8,12,.55);backdrop-filter:blur(2px);z-index:1000}
+.overlay.hidden{display:none}
+.panel{width:min(900px,92vw)}
+.panel-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--panel-2);border-bottom:1px solid var(--border);font-weight:600}
+
+/* == OVERLAY MAP — OUTER LAYOUT ======================================= */
+/* Window area is 720×720 (breathing room around the 640×640 map) */
+#overlayMap .map-frame{
+  width: var(--overlay-window);
+  height: var(--overlay-window);
+  margin: 0 auto;
+  padding: 20px;
+  display: grid;
+  grid-template-rows: auto 1fr auto; /* legend | map | hint */
+  gap: 10px;
+}
+
+/* Centered holder for the 640×640 map box */
+#overlayMap .map-holder{
+  width: var(--overlay-canvas);
+  height: var(--overlay-canvas);
+  margin: 0 auto;
+  display:flex; align-items:center; justify-content:center;
+}
+
+/* The map box is the actual canvas area */
+#overlayMap .map-box{
+  position: relative;
+  width: 640px;
+  height: 640px;
+  image-rendering: pixelated;
+  background: rgba(10,14,20,.55);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 10px;
+  overflow: auto;
+  box-shadow: 0 4px 16px rgba(0,0,0,.35);
+}
+
+/* == MINI GRID (16×16) ================================================= */
+#overlayMap .mini-grid{
+  position: absolute; inset: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--overlay-tiles), 1fr);
+  grid-template-rows:    repeat(var(--overlay-tiles), 1fr);
+}
+#overlayMap .mini-grid .cell{
+  border-right: 1px solid rgba(255,255,255,.04);
+  border-bottom: 1px solid rgba(255,255,255,.04);
+  background: rgba(255,255,255,.02);
+}
+#overlayMap .mini-grid .here{
+  background: rgba(255,217,94,.9);
+  box-shadow: inset 0 0 0 2px rgba(0,0,0,.4);
+}
+
+/* == HYDROLOGY CANVAS & POI LAYER ===================================== */
+/* Your requested stylesheet rule (no inline styles): */
+#overlayMap canvas#mapFX{
+  position: absolute; inset: 0;
+  z-index: 2; pointer-events: none; image-rendering: pixelated;
+}
+#mapPOI{
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+/* Moving token inside POI layer (if used) */
+#mapYou{
+  position: absolute;
+  z-index: 4;
+  width: 14px; height: 14px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 9px; font-weight: 700; color: #0b0f16;
+  background: linear-gradient(#ffd87a,#ffbd52);
+  box-shadow: 0 0 0 1px rgba(0,0,0,.45), 0 0 8px rgba(0,0,0,.25);
+}
+
+/* == MAP LEGEND & TOGGLES ============================================= */
+#overlayMap .map-legend{ display:flex; gap:14px; align-items:center; color:var(--ink-2); font-size:12px; }
+#overlayMap .dot{ width:10px; height:10px; border-radius:50%; display:inline-block; box-shadow:0 0 0 1px rgba(255,255,255,.2) inset; background:#86b6ff; }
+#overlayMap .dot.port{ background:#7fe7b0; } 
+#overlayMap .dot.gate{ background:#ffd16b; }
+#overlayMap #mapToggles{ display:flex; gap:16px; align-items:center; }
+#overlayMap #mapToggles.hidden{ display:none; }
+#overlayMap #mapToggles label{ display:inline-flex; align-items:center; gap:6px; font-size:12px; opacity:.9; }
+#overlayMap .map-hint{ color:var(--ink-2); font-size:12px; }
+
+/* == CHARACTER & INVENTORY PANELS ===================================== */
+.char-grid{padding:12px 14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.char-col h3{margin:0 0 8px;font-size:14px;color:#eaf0ff}
+.slots,.stats{list-style:none;margin:0;padding:0}
+.slots li{display:flex;justify-content:space-between;padding:6px 8px;background:#0c1520;border:1px solid var(--border);border-radius:8px;margin-bottom:6px}
+.stats li{display:inline-block;margin:0 8px 8px 0;padding:6px 10px;background:#0c1520;border:1px solid var(--border);border-radius:999px}
+
+.inv-body{padding:12px 14px 16px}
+.inv-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.inv-list li{display:flex;justify-content:space-between;align-items:center;background:#0c1520;border:1px solid var(--border);border-radius:8px;padding:8px 10px}
+.inv-list .name{color:#eaf0ff}
+.inv-list .qty{color:#a8b2c5}
+
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:2px 8px;border:1px solid var(--border);border-radius:999px;background:#0b121a;color:#cfe0ff}
+.badge .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+
+/* == LOG COLORS & UTILS =============================================== */
+.log-ok{color:#b7f7c3}.log-warn{color:#ffd27a}.log-bad{color:#ff9b9b}.log-note{color:var(--ink-2)}
+.hidden{display:none !important}
+
+/* == RESPONSIVE ======================================================== */
+@media (max-width: 900px){
+  :root{ --card-w: 92vw; --overlay-window: 92vw; --overlay-canvas: 92vw; }
+  .room-header h1{font-size:20px}
+}
+@media (max-width: 760px){
+  :root{ --console-h: 200px; }
+  .topbar{flex-wrap:wrap;gap:10px}
+  .hud{order:3;width:100%;justify-content:flex-start;flex-wrap:wrap;gap:8px}
+  nav.actions{order:2}
+  /* keep square map but scale down */
+  #overlayMap .map-frame{ width: 92vw; height: auto; }
+  #overlayMap .map-holder{ width: 92vw; height: 92vw; }
+}
