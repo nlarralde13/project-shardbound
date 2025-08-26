@@ -14,6 +14,7 @@ class World:
     pois: List[Dict]
     roads: List[List[Coord]]
     road_tiles: Set[Coord]
+    bridge_tiles: Set[Coord]
     blocked_land: Set[Coord]
     requires_boat: Set[Coord]
 
@@ -42,7 +43,7 @@ def _to_set(coords) -> Set[Coord]:
             out.add((int(x), int(y)))
     return out
 
-def _roads_to_set(paths: List[List]) -> Set[Coord]:
+def _paths_to_set(paths: List[List]) -> Set[Coord]:
     tiles = set()
     for seg in paths or []:
         for p in seg:
@@ -55,12 +56,11 @@ def _roads_to_set(paths: List[List]) -> Set[Coord]:
 def load_world(path: str | Path) -> World:
     data = json.loads(Path(path).read_text())
 
-    # Basic size
     grid = data["grid"]
     H = len(grid)
     W = len(grid[0]) if H else 0
 
-    # POIs: prefer layers.settlements + sites/pois fallback
+    # POIs from settlements + sites + pois
     poi_list = []
     layers = data.get("layers", {})
     settlements = (layers.get("settlements") or {})
@@ -69,7 +69,6 @@ def load_world(path: str | Path) -> World:
             x = p["x"] if "x" in p else p[0]
             y = p["y"] if "y" in p else p[1]
             poi_list.append({"x": int(x), "y": int(y), "type": tkey[:-1] if tkey.endswith("s") else tkey})
-
     poi_list += [
         {"x": s.get("x", (s.get("pos") or [None, None])[0]),
          "y": s.get("y", (s.get("pos") or [None, None])[1]),
@@ -82,13 +81,16 @@ def load_world(path: str | Path) -> World:
         for p in (data.get("pois") or [])
     ]
 
-    # Roads
-    road_paths = (layers.get("roads") or {}).get("paths") or []
-    road_tiles = _roads_to_set(road_paths)
+    # Roads + bridges
+    road_layer = (layers.get("roads") or {})
+    road_paths = road_layer.get("paths") or []
+    bridges    = road_layer.get("bridges") or []
 
-    # Movement restrictions (fallbacks are empty if not present)
-    blocked = _to_set(((layers.get("movement") or {}).get("blocked_for") or {}).get("land"))
-    needs_boat = _to_set(((layers.get("movement") or {}).get("requires") or {}).get("boat"))
+    road_tiles   = _paths_to_set(road_paths)
+    bridge_tiles = _to_set(bridges)
+
+    blocked     = _to_set(((layers.get("movement") or {}).get("blocked_for") or {}).get("land"))
+    needs_boat  = _to_set(((layers.get("movement") or {}).get("requires")   or {}).get("boat"))
 
     return World(
         id=(data.get("meta") or {}).get("name", "shard"),
@@ -97,6 +99,7 @@ def load_world(path: str | Path) -> World:
         pois=poi_list,
         roads=[[ (int(p[0]), int(p[1])) if isinstance(p,(list,tuple)) else (int(p["x"]),int(p["y"])) for p in seg ] for seg in road_paths],
         road_tiles=road_tiles,
+        bridge_tiles=bridge_tiles,
         blocked_land=blocked,
         requires_boat=needs_boat,
     )

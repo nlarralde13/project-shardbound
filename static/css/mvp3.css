@@ -1,6 +1,6 @@
 /* =======================================================================
-   Shardbound — MVP3 (SNES vibe, unified stylesheet)
-   Master CSS consolidating prior files + new overlay banner/legend
+   Shardbound — MVP3 (SNES x high-fantasy MUD vibe)
+   Master CSS consolidating app + overlay + new console frame & action overlay
    ======================================================================= */
 
 /* == THEME & SIZES ===================================================== */
@@ -23,11 +23,14 @@
   --card-pad:14px;
   --radius-xl:18px; --radius:12px; --radius-sm:8px;
 
-  /* Overlay sizing (requested) */
-  --overlay-window: 720px;        /* overall dialog content size */
-  --overlay-canvas: 640px;        /* internal map box */
+  /* Overlay sizing */
+  --overlay-window: 720px;        /* dialog content size */
+  --overlay-canvas: 640px;        /* internal map canvas */
   --overlay-tiles: 16;            /* 16×16 grid */
   --tile-size: calc(var(--overlay-canvas) / var(--overlay-tiles)); /* 40px */
+
+  /* Console lines shown (JS reads this var) */
+  --console-lines: 8;
 }
 
 /* == GLOBAL BASE ======================================================= */
@@ -39,6 +42,8 @@ body.app{
   font:14px/1.5 "Inter",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
   letter-spacing:.2px;
 }
+a{ color:#a9c9ff; text-decoration:none }
+a:hover{ text-decoration:underline }
 ::-webkit-scrollbar{width:10px;height:10px}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:8px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -55,7 +60,7 @@ body.app{
 .bar.hp i{background:var(--hp)} .bar.mp i{background:var(--mp)} .bar.sta i{background:var(--sta)}
 nav.actions{display:flex;gap:8px;flex-wrap:wrap}
 .btn{appearance:none;border:none;cursor:pointer;color:#cfe0ff;background:#1b2636;border:1px solid rgba(255,255,255,.12);padding:8px 12px;border-radius:999px;transition:background .15s,transform .02s;box-shadow:0 1px 0 rgba(255,255,255,.04),0 6px 16px rgba(0,0,0,.25);user-select:none}
-.btn:hover{background:#223146} .btn:active{transform:translateY(1px)} .btn.small{padding:6px 10px;font-size:12px}
+.btn:hover{background:#223146} .btn:active{transform:translateY(1px)} .btn.small{padding:5px 9px;font-size:12px}
 
 /* ======================================================================
    MAIN LAYOUT + ROOM CARD
@@ -78,36 +83,101 @@ nav.actions{display:flex;gap:8px;flex-wrap:wrap}
 }
 
 /* ======================================================================
-   CONSOLE
+   CONSOLE — Arcane frame + Input
    ====================================================================== */
-.console-wrap{width:var(--card-w);margin:12px auto 0;display:grid;grid-template-rows:minmax(0,1fr) auto auto;gap:8px}
-.console{background:rgba(14,21,30,.78);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;overflow:auto;box-shadow:var(--shadow);min-height:120px}
-.console .line{padding:2px 0} .console .dim{color:var(--ink-2)}
-.console-input{display:flex;gap:8px;align-items:center}
-.console-input input{flex:1;min-height:36px;background:#0d1622;color:var(--ink);border:1px solid var(--border);border-radius:8px;padding:8px 10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
-.console-input input::placeholder{color:#7f8aa0}
-.console-actions{display:grid;grid-template-columns:1fr;gap:10px;padding-bottom:2px}
-.console-actions .group{display:grid;grid-template-columns:90px 1fr;align-items:center;gap:8px}
-.console-actions .hint{color:var(--ink-2);font-size:12px}
-.console-actions .btns{display:flex;gap:8px;flex-wrap:wrap}
-
-/* ======================================================================
-   PANELS / OVERLAYS (generic container)
-   ====================================================================== */
-.snes-card, .card, details, .panel{
-  background: linear-gradient(#110a20, #0d0818);
+.console,
+.console-input {
+  position: relative;
+  background: linear-gradient(180deg, #0d111b, #0a0f16);
   border: 2px solid var(--edge-dark);
-  box-shadow: 0 0 0 2px var(--edge-light) inset, 0 2px 0 rgba(0,0,0,.35);
-  border-radius: 2px;
-  color: var(--ink);
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,.06) inset,
+    0 10px 28px rgba(0,0,0,.35);
 }
-.overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(5,8,12,.55);backdrop-filter:blur(2px);z-index:1000}
-.overlay.hidden{display:none}
-.panel{width:min(900px,92vw)}
-.panel-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--panel-2);border-bottom:1px solid var(--border);font-weight:600}
+.console{
+  font-size:13px;
+  line-height:1.25;
+  height:calc(var(--console-lines) * 1.25em + 16px);
+  overflow:hidden;
+  padding:10px 12px;
+  border-radius:14px 14px 0 0;
+}
+.console-input{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:8px;
+  padding:10px 12px;
+  border-top:none;
+  border-radius:0 0 14px 14px;
+  background:linear-gradient(180deg, #0a0f16, #080c12);
+}
+.console-input input{min-height:34px}
+.console .line{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Corner runes */
+.console::before,.console-input::after{
+  content:"";position:absolute;inset:-6px;border-radius:18px;pointer-events:none;
+  box-shadow:0 0 20px rgba(124,155,255,.18),0 0 2px rgba(124,155,255,.26) inset;
+}
+.console::after,.console-input::before{
+  content:"";position:absolute;width:14px;height:14px;border-radius:50%;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(164,212,255,.9), rgba(164,212,255,0) 60%),
+    radial-gradient(circle at 50% 50%, rgba(180,140,255,.8), rgba(180,140,255,0) 60%);
+  filter:blur(.2px);opacity:.55;
+}
+.console::after{left:-7px;top:-7px}
+.console-input::before{right:-7px;bottom:-7px}
 
 /* ======================================================================
-   OVERLAY MAP — WINDOW + MAP AREA (requested sizes)
+   ACTION BAR — Transparent overlay on viewport
+   ====================================================================== */
+.action-overlay{
+  position:absolute;left:50%;transform:translateX(-50%);bottom:10px;width:calc(100% - 32px);
+  display:flex;justify-content:center;pointer-events:none;z-index:50;
+}
+.action-overlay .console-actions{
+  pointer-events:auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;
+  border-radius:999px;background:rgba(12,16,24,.38);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(6px);
+  box-shadow:0 8px 24px rgba(0,0,0,.35);
+}
+.console-actions .group{display:flex;align-items:center;gap:8px}
+.console-actions .group .label{font-size:12px;color:var(--ink-2);opacity:.9}
+.console-actions .group .btns{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ======================================================================
+   MODAL OVERLAYS — Map / Character / Inventory
+   ====================================================================== */
+/* Fullscreen dimmed layer, centered content */
+#overlayMap, #overlayChar, #overlayInv{
+  position: fixed;
+  inset: 0;
+  display: none;                 /* shown when .hidden is removed */
+  place-items: center;           /* center the inner content */
+  padding: 28px;
+  z-index: 100;                  /* above the action overlay (z=50) */
+  background:
+    radial-gradient(800px 400px at 50% 0, rgba(22, 26, 40, .72), rgba(10, 14, 20, .88)),
+    rgba(6, 10, 16, .65);
+  backdrop-filter: blur(4px);
+}
+/* unhide when toggled by JS */
+#overlayMap:not(.hidden),
+#overlayChar:not(.hidden),
+#overlayInv:not(.hidden){
+  display: grid;
+}
+/* generic panel shells for char/inventory (map has its own frame) */
+#overlayChar .panel,
+#overlayInv  .panel{
+  box-shadow: 0 16px 48px rgba(0,0,0,.6);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 16px;
+  background: linear-gradient(#0e1320,#0a0f18);
+}
+
+/* ======================================================================
+   OVERLAY MAP — WINDOW + MAP AREA
    ====================================================================== */
 #overlayMap .map-frame{
   width: var(--overlay-window);
@@ -135,13 +205,11 @@ nav.actions{display:flex;gap:8px;flex-wrap:wrap}
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(0,0,0,.35);
 }
-
-/* --- Grid (16×16) ---------------------------------------------------- */
 #overlayMap .mini-grid{
   position: absolute; inset: 0;
   display: grid;
   grid-template-columns: repeat(var(--overlay-tiles), 1fr);
-  grid-template-rows:    repeat(var(--overlay-tiles), 1fr);
+  grid-template-rows:    repeat(var(--overlay-tiles),  1fr);
 }
 #overlayMap .mini-grid .cell{
   border-right: 1px solid rgba(255,255,255,.04);
@@ -152,66 +220,35 @@ nav.actions{display:flex;gap:8px;flex-wrap:wrap}
   background: rgba(255,217,94,.9);
   box-shadow: inset 0 0 0 2px rgba(0,0,0,.4);
 }
-
-/* --- FX canvas & POI layer (no inline styles) ------------------------ */
-#overlayMap canvas#mapFX{
-  position: absolute; inset: 0;
-  z-index: 2; pointer-events: none; image-rendering: pixelated;
-}
-#mapPOI{
-  position: absolute; inset: 0;
-  pointer-events: none;
-  z-index: 3;
-}
-#mapPOI .poi{ box-shadow: 0 0 0 1px rgba(0,0,0,.45), 0 0 6px rgba(0,0,0,.25); width:14px; height:14px; border-radius:50% }
-#mapPOI .poi.city    { background:#8ec5ff }
-#mapPOI .poi.town    { background:#86b6ff }
-#mapPOI .poi.village { background:#b7e07a }
-#mapPOI .poi.port    { background:#7fe7b0; border:1px solid rgba(0,0,0,.45) }
-#mapYou{
-  position:absolute; z-index:4; width:14px; height:14px; border-radius:50%;
-  display:grid; place-items:center; font-size:9px; font-weight:700; color:#0b0f16;
-  background:linear-gradient(#ffd87a,#ffbd52);
-  box-shadow:0 0 0 1px rgba(0,0,0,.45), 0 0 8px rgba(0,0,0,.25);
-}
-
-/* --- Bottom banner: Legend + Toggles + Hint -------------------------- */
+/* FX canvas & POI layer */
+#overlayMap canvas#mapFX{position:absolute;inset:0;z-index:2;pointer-events:none;image-rendering:pixelated}
+#mapPOI{position:absolute;inset:0;pointer-events:none;z-index:3}
+#mapPOI .poi{box-shadow:0 0 0 1px rgba(0,0,0,.45),0 0 6px rgba(0,0,0,.25);width:14px;height:14px;border-radius:50%}
+#mapPOI .poi.city{background:#8ec5ff}
+#mapPOI .poi.town{background:#86b6ff}
+#mapPOI .poi.village{background:#b7e07a}
+#mapPOI .poi.port{background:#7fe7b0;border:1px solid rgba(0,0,0,.45)}
+#mapYou{position:absolute;z-index:4;width:14px;height:14px;border-radius:50%;display:grid;place-items:center;font-size:9px;font-weight:700;color:#0b0f16;background:linear-gradient(#ffd87a,#ffbd52);box-shadow:0 0 0 1px rgba(0,0,0,.45),0 0 8px rgba(0,0,0,.25)}
+/* Bottom banner: Legend + Toggles + Hint */
 #overlayMap .map-footer{
-  display: grid;
-  grid-template-columns: 1fr auto auto; /* legend | toggles | hint */
-  align-items: center;
-  gap: 16px;
-  padding: 10px 14px;
-  background: var(--panel-2);
-  border-top: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+  display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:16px;
+  padding:10px 14px;background:var(--panel-2);border-top:1px solid var(--border);border-radius:10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)
 }
-#overlayMap .legend{ display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
-#overlayMap .legend-item{ display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--ink-2); }
-#overlayMap .dot{
-  width:10px; height:10px; border-radius:50%;
-  display:inline-block;
-  box-shadow:0 0 0 1px rgba(0,0,0,.35), 0 0 6px rgba(0,0,0,.18);
-  background:#86b6ff;
-}
-#overlayMap .dot.port    { background:#7fe7b0 }
-#overlayMap .dot.village { background:#b7e07a }
-
-/* Line swatches to match canvas stroke colors */
-#overlayMap .swatch{ position:relative; display:inline-block; width:22px; height:12px; }
-#overlayMap .swatch::before{
-  content:""; position:absolute; left:0; right:0; top:50%; transform:translateY(-50%);
-  border-top:3px solid; border-radius:2px;
-}
-#overlayMap .swatch.road::before  { border-color: rgba(245,215,122,0.95) } /* roads */
-#overlayMap .swatch.river::before { border-color: rgba(30,120,210,0.90) }   /* rivers */
-
-#overlayMap #mapToggles{ display:flex; gap:14px; align-items:center; }
-#overlayMap #mapToggles.hidden{ display:none }
-#overlayMap #mapToggles label{ display:inline-flex; gap:6px; font-size:12px; color:var(--ink-2) }
-
-#overlayMap .map-hint{ text-align:right; font-size:12px; color:var(--ink-2); opacity:.9 }
+#overlayMap .legend{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+#overlayMap .legend-item{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-2)}
+#overlayMap .dot{width:10px;height:10px;border-radius:50%;display:inline-block;box-shadow:0 0 0 1px rgba(0,0,0,.35),0 0 6px rgba(0,0,0,.18);background:#86b6ff}
+#overlayMap .dot.port{background:#7fe7b0}
+#overlayMap .dot.village{background:#b7e07a}
+#overlayMap .swatch{position:relative;display:inline-block;width:22px;height:12px}
+#overlayMap .swatch::before{content:"";position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);border-top:3px solid;border-radius:2px}
+#overlayMap .swatch.road::before{border-color: rgba(245,215,122,0.95)}
+#overlayMap .swatch.river::before{border-color: rgba(30,120,210,0.90)}
+#overlayMap #mapToggles{display:flex;gap:14px;align-items:center}
+#overlayMap #mapToggles.hidden{display:none}
+#overlayMap #mapToggles label{display:inline-flex;gap:6px;font-size:12px;color:var(--ink-2)}
+#overlayMap .map-hint{text-align:right;font-size:12px;color:var(--ink-2);opacity:.9}
+/* Hide any legacy top legend row */
+#overlayMap .map-legend{display:none !important}
 
 /* ======================================================================
    CHARACTER + INVENTORY PANELS
@@ -249,3 +286,7 @@ nav.actions{display:flex;gap:8px;flex-wrap:wrap}
   #overlayMap .map-frame{ width:92vw; height:auto }
   #overlayMap .map-holder{ width:92vw; height:92vw }
 }
+/* Short screens: reduce art + lines so page never scrolls */
+@media (max-height: 840px){ :root{ --card-ratio: 0.44; --console-lines: 7; } }
+@media (max-height: 760px){ :root{ --card-ratio: 0.40; --console-lines: 6; } }
+@media (max-height: 700px){ :root{ --card-ratio: 0.36; --console-lines: 5; } }

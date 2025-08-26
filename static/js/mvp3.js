@@ -1,6 +1,7 @@
 // MVP3 Orchestrator — gameplay shell + shard loader + overlay wiring
-// Keeps keyboard handling in movementController; rules in movementRules.
-// Overlay map shows full board, token, roads/POIs; devmode supports ?noclip.
+// Hotkeys: B/C/I open overlays; movement keys only in devmode&noclip.
+// Buttons use delegated clicks so they still work after DOM moves.
+
 import { poiClassFor, canonicalSettlement } from '/static/js/settlementRegistry.js';
 import { rollRoomEvent } from '/static/js/eventTables.js';
 import { initOverlayMap } from '/static/js/overlayMap.js';
@@ -10,6 +11,11 @@ import { createMovementController } from '/static/js/movement/movementController
 import { createMovementRules } from '/static/js/movement/movementRules.js';
 
 (async function () {
+  // Wait for DOM so all buttons/fields exist before wiring events
+  if (document.readyState === 'loading') {
+    await new Promise(r => document.addEventListener('DOMContentLoaded', r, { once: true }));
+  }
+
   // --- flags & token ---------------------------------------------------------
   const QS = new URLSearchParams(location.search);
   const DEV_MODE = QS.has('devmode');
@@ -41,6 +47,45 @@ import { createMovementRules } from '/static/js/movement/movementRules.js';
   const roomTitle    = document.getElementById('roomTitle');
   const roomBiome    = document.getElementById('roomBiome');
   const roomArt      = document.getElementById('roomArt');
+  const actionBar    = document.querySelector('.console-actions');
+  const roomStage    = document.querySelector('.room-stage');
+
+  // --- console tail buffer (syncs with CSS --console-lines) ------------------
+  const cssVar = getComputedStyle(document.documentElement).getPropertyValue('--console-lines');
+  let MAX_LOG_LINES = parseInt(cssVar, 10) || 8;
+  const qsLines = parseInt(QS.get('lines'), 10);
+  if (!Number.isNaN(qsLines) && qsLines > 0) {
+    MAX_LOG_LINES = qsLines;
+    document.documentElement.style.setProperty('--console-lines', String(qsLines));
+  }
+
+  const _logBuffer = [];
+  function renderConsole() {
+    if (!consoleEl) return;
+    const tail = _logBuffer.slice(-MAX_LOG_LINES);
+    consoleEl.replaceChildren(...tail.map(({text, cls}) => {
+      const div = document.createElement('div');
+      div.className = 'line' + (cls ? (' ' + cls) : '');
+      div.textContent = text;
+      return div;
+    }));
+  }
+  function log(text, cls=''){
+    _logBuffer.push({ text:String(text), cls });
+    if (_logBuffer.length > 400) _logBuffer.splice(0, _logBuffer.length - 400);
+    renderConsole();
+  }
+  function logLines(arr){
+    (arr || []).forEach(s => log(s, s?.toLowerCase?.().includes('warn') ? 'log-warn' : 'log-note'));
+  }
+
+  // --- move existing action bar into an overlay above the viewport ----------
+  if (roomStage && actionBar) {
+    const overlay = document.createElement('div');
+    overlay.className = 'action-overlay';
+    overlay.appendChild(actionBar);
+    roomStage.appendChild(overlay);
+  }
 
   // --- state -----------------------------------------------------------------
   let shard = null;
@@ -59,17 +104,7 @@ import { createMovementRules } from '/static/js/movement/movementRules.js';
     getPoiClass:    (t) => poiClassFor?.(t) || 'poi',
   });
 
-  // --- console helpers -------------------------------------------------------
-  function log(text, cls = '') {
-    if (!consoleEl) return;
-    const line = document.createElement('div');
-    line.className = 'line ' + (cls || '');
-    line.textContent = text;
-    consoleEl.appendChild(line);
-    consoleEl.scrollTop = consoleEl.scrollHeight;
-    if (consoleEl.children.length > 220) consoleEl.removeChild(consoleEl.firstChild);
-  }
-  function logLines(arr) { (arr || []).forEach(s => log(s, s?.toLowerCase().includes('warn') ? 'log-warn' : 'log-note')); }
+  // --- helpers ---------------------------------------------------------------
   function setShardStatus(msg, kind = 'info') {
     if (!shardStatus) return;
     const color = kind === 'error' ? '#e57373' : kind === 'warn' ? '#ffb74d' : '#9e9e9e';
@@ -90,7 +125,6 @@ import { createMovementRules } from '/static/js/movement/movementRules.js';
     if (x < 0 || y < 0 || x >= W || y >= H) return 'Coast';
     return shard.grid?.[y]?.[x] ?? 'Coast';
   }
-
   function applyArt(biomeKey) {
     const b = BIOMES[biomeKey] || BIOMES.Forest;
     roomArt.style.backgroundImage = b.tint;
@@ -161,28 +195,12 @@ import { createMovementRules } from '/static/js/movement/movementRules.js';
     return true;
   }
 
-  // Optional: server-side move (kept here but unused in the local rules path)
-  async function move(dx, dy) {
-    const res = await fetch('/api/move', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dx, dy })
-    }).then(r => r.json());
-    if (res.ok) {
-      const { x, y } = res.pos;
-      overlay.setPos(x, y); overlay.render();
-      logLines(res.log);
-    } else {
-      logLines([`Can't move: ${res.reason}`]);
-    }
-  }
-
   function tryInteract() {
     const here = siteAt(pos.x, pos.y);
     if (!here) { log('Nothing obvious to enter here.', 'log-note'); return; }
     const label = canonicalSettlement(here.type);
     log(`You enter ${label}.`, 'log-ok');
   }
-
   function tryRest() {
     const heal = 2;
     actor.hp = Math.min(20, actor.hp + heal);
@@ -191,18 +209,20 @@ import { createMovementRules } from '/static/js/movement/movementRules.js';
     log(`You rest. (+${heal} HP, +2 STA)`, 'log-ok');
   }
 
-  // click UI still supported
-  document.querySelectorAll('[data-qa]').forEach(b => {
-    b.addEventListener('click', () => {
-      const qa = b.dataset.qa;
-      if (qa.startsWith('move')) tryMove(qa.slice(-1).toUpperCase());
-      else if (qa === 'search')  log('You search carefully…', 'log-note');
-      else if (qa === 'harvest') log('There is nothing obvious to harvest here.', 'log-note');
-      else if (qa === 'rest')    tryRest();
-      else if (qa === 'enter')   tryInteract();
-      else if (qa === 'help')    log('Try: Move N/E/S/W, Search, Harvest, Rest (R), Enter, Map (M).', 'log-note');
-    });
-  });
+  // Delegated clicks so moving DOM around (action overlay) never breaks handlers
+  document.addEventListener('click', (ev) => {
+    const el = ev.target.closest('[data-qa]');
+    if (!el) return;
+    const qa = el.dataset.qa;
+    if (qa?.startsWith('move'))       { tryMove(qa.slice(-1).toUpperCase()); }
+    else if (qa === 'search')         { log('You search carefully…', 'log-note'); }
+    else if (qa === 'harvest')        { log('There is nothing obvious to harvest here.', 'log-note'); }
+    else if (qa === 'rest')           { tryRest(); }
+    else if (qa === 'enter')          { tryInteract(); }
+    else if (qa === 'open-map')       { toggle(overlayMapEl); }
+    else if (qa === 'open-char')      { toggle(overlayChar); }
+    else if (qa === 'open-inventory') { toggle(overlayInv); }
+  }, { capture: true });
 
   // Overlay toggling
   function toggle(el, show) {
@@ -219,7 +239,7 @@ import { createMovementRules } from '/static/js/movement/movementRules.js';
     }
   }
 
-  // Keyboard controller (arrow/WASD + hotkeys)
+  // Keyboard controller (arrows/WASD only when devmode&noclip; B/C/I hotkeys always)
   const controller = createMovementController({
     devMode: DEV_MODE,
     noclip: NOCLIP,
@@ -307,7 +327,7 @@ import { createMovementRules } from '/static/js/movement/movementRules.js';
   });
   shardSelect?.addEventListener('change', () => btnLoadShard?.click());
 
-  // overlay buttons
+  // overlay buttons (top bar)
   btnWorldMap?.addEventListener('click', () => toggle(overlayMapEl));
   btnCharacter?.addEventListener('click', () => toggle(overlayChar));
   btnInventory?.addEventListener('click', () => toggle(overlayInv));

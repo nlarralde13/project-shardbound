@@ -19,7 +19,7 @@ class Player:
     level: int = 1
     xp: int = 0
     gold: int = 0
-    flags: Dict[str, bool] = field(default_factory=lambda: {"noclip": False, "has_boat": False})
+    flags: Dict[str, bool] = field(default_factory=lambda: {"noclip": False, "has_boat": False, "can_climb": False})
     inventory: Dict[str, int] = field(default_factory=dict)
     equipment: Dict[str, Optional[str]] = field(default_factory=dict)
     quests_active: Dict[str, QuestState] = field(default_factory=dict)
@@ -27,7 +27,6 @@ class Player:
 
     def as_public(self) -> dict:
         d = self.__dict__.copy()
-        # dataclasses inside need expansion
         d["quests_active"] = {k: v.__dict__ for k, v in self.quests_active.items()}
         d["quests_done"] = list(self.quests_done)
         return d
@@ -37,17 +36,34 @@ class Player:
 
 # ---- movement & rules --------------------------------------------------
 
+IMPASSABLE_BIOMES = {"Mountains", "Volcano"}
+
 def can_enter(world, x: int, y: int, player: Player) -> tuple[bool, str]:
     # dev noclip bypass
-    if player.flags.get("noclip"): 
+    if player.flags.get("noclip"):
         return True, "noclip"
+
     W, H = world.size
     if not (0 <= x < W and 0 <= y < H):
         return False, "bounds"
-    if (x, y) in world.blocked_land:
+
+    # Road / bridge overrides come FIRST
+    on_road   = (x, y) in world.road_tiles
+    on_bridge = (x, y) in world.bridge_tiles
+
+    # Movement layer restrictions — allow road/bridge to override
+    if (x, y) in world.blocked_land and not (on_road or on_bridge):
         return False, "blocked"
-    if (x, y) in world.requires_boat and not player.flags.get("has_boat"):
+
+    # Boat requirement — bridge overrides
+    if (x, y) in world.requires_boat and not (on_bridge or player.flags.get("has_boot")):
         return False, "need_boat"
+
+    # Terrain-based restrictions — road/bridge can carve a pass
+    biome = world.biome_at(x, y)
+    if biome in IMPASSABLE_BIOMES and not (on_road or on_bridge or player.flags.get("can_climb")):
+        return False, "too_steep"
+
     return True, "ok"
 
 def move(world, player: Player, dx: int, dy: int) -> dict:
@@ -60,14 +76,11 @@ def move(world, player: Player, dx: int, dy: int) -> dict:
     log = [f"You move to ({nx},{ny}) — {world.biome_at(nx,ny)}."]
     return {"ok": True, "reason": "ok", "pos": player.pos, "log": log}
 
-# ---- Quest Q001: travel to the city at (15,10) ------------------------
+# ---- Quest Q001 --------------------------------------------------------
 
 def ensure_first_quest(player: Player):
     if "Q001" not in player.quests_active and "Q001" not in player.quests_done:
-        player.quests_active["Q001"] = QuestState(
-            id="Q001",
-            data={"target": (15, 10)},
-        )
+        player.quests_active["Q001"] = QuestState(id="Q001", data={"target": (15, 10)})
 
 def check_quests(world, player: Player, log: List[str]):
     q = player.quests_active.get("Q001")

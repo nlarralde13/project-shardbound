@@ -1,31 +1,31 @@
 // movementController.js
 // Centralizes keyboard handling and delegates movement + actions via callbacks.
+// Movement via keys is allowed ONLY when devMode && noclip are both true.
 
 export function createMovementController(opts) {
   const {
     devMode = false,
     noclip = false,
-    tryMove,          // function(dir): boolean | Promise<boolean>
-    tryInteract,      // function(): void (e.g., ENTER on POI/city)
-    tryRest,          // function(): void
+    tryMove,          // async (dir) -> boolean
+    tryInteract,      // () -> void
+    tryRest,          // () -> void
     onHotkey = {},    // { map, char, inv, escape }
     allowDiagonals = false,
   } = opts || {};
 
   const state = { devMode, noclip, attached: false };
 
+  const canKeyMove = () => !!(state.devMode && state.noclip);
+
   function keyToDir(key) {
+    if (!canKeyMove()) return null;          // block movement keys in user mode
+
     const k = key.toLowerCase();
     // Cardinal
     if (k === 'arrowup' || k === 'w' || k === 'k') return 'N';
     if (k === 'arrowright' || k === 'd' || k === 'l') return 'E';
     if (k === 'arrowdown' || k === 's' || k === 'j') return 'S';
     if (k === 'arrowleft' || k === 'a' || k === 'h') return 'W';
-    // Numpad (2/4/6/8)
-    if (key === '2') return 'S';
-    if (key === '4') return 'W';
-    if (key === '6') return 'E';
-    if (key === '8') return 'N';
 
     if (!allowDiagonals) return null;
 
@@ -38,12 +38,15 @@ export function createMovementController(opts) {
   }
 
   async function handleKeydown(e) {
-    const tag = document.activeElement?.tagName;
-    if (tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
+    const active = document.activeElement;
+    const tag = active?.tagName;
+    // Let the user type freely in inputs/textareas
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || active?.isContentEditable) return;
 
     const k = e.key;
+    const low = k.toLowerCase();
 
-    // Movement
+    // Movement (dev+noclip only)
     const dir = keyToDir(k);
     if (dir) {
       e.preventDefault(); e.stopPropagation();
@@ -59,16 +62,16 @@ export function createMovementController(opts) {
     }
 
     // Rest
-    if (k.toLowerCase() === 'r') {
+    if (low === 'r') {
       e.preventDefault(); e.stopPropagation();
       tryRest?.();
       return;
     }
 
-    // UI toggles
-    if (k.toLowerCase() === 'm') { onHotkey?.map?.(); return; }
-    if (k.toLowerCase() === 'c') { onHotkey?.char?.(); return; }
-    if (k.toLowerCase() === 'i') { onHotkey?.inv?.(); return; }
+    // UI toggles — support B (bag) + C (character) + I (inventory) + M (map)
+    if (low === 'b' || low === 'i') { onHotkey?.inv?.(); return; }
+    if (low === 'c') { onHotkey?.char?.(); return; }
+    if (low === 'm') { onHotkey?.map?.(); return; }
     if (k === 'Escape') { onHotkey?.escape?.(); return; }
   }
 

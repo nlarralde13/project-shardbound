@@ -65,40 +65,39 @@ def api_world():
         "roads": getattr(WORLD, "roads", []),
     })
 
-# ---- Spawn -------------------------------------------------------------------
+# --- Spawn -------------------------------------------------------------------
 @app.post("/api/spawn")
 def api_spawn():
     data = request.get_json(force=True) or {}
-    x, y = int(data.get("x", 12)), int(data.get("y", 15))  # default spawn requested
+    x, y = int(data.get("x", 12)), int(data.get("y", 15))
     PLAYER.spawn(x, y)
-
-    # devmode noclip via query string ?noclip=1
     if request.args.get("noclip") == "1":
         PLAYER.flags["noclip"] = True
-
     ensure_first_quest(PLAYER)
-    return jsonify({"ok": True, "player": PLAYER.__dict__})
+    return jsonify({"ok": True, "player": PLAYER.as_public()})  # <-- was __dict__
 
-# ---- Movement + encounters ---------------------------------------------------
+
+# --- Movement + encounters ---------------------------------------------------
 @app.post("/api/move")
 def api_move():
     data = request.get_json(force=True) or {}
     dx, dy = int(data.get("dx", 0)), int(data.get("dy", 0))
 
-    res = move(WORLD, PLAYER, dx, dy)  # applies rules (respecting protected layers, etc.)
+    res = move(WORLD, PLAYER, dx, dy)
     log = res.get("log", [])
-
-    # simple encounter roll — roads are safer (handled inside maybe_spawn or your logic)
     biome = WORLD.biome_at(*PLAYER.pos)
-    enemy = maybe_spawn(biome)
+    try:
+        enemy = maybe_spawn(biome)  # ok if your version only takes (biome)
+    except TypeError:
+        enemy = None
     if enemy:
         log += resolve_combat(PLAYER, enemy)
-
     check_quests(WORLD, PLAYER, log)
 
-    res["player"] = PLAYER.__dict__
+    res["player"] = PLAYER.as_public()      # <-- was __dict__
     res["log"] = log
     return jsonify(res)
+
 
 # ---- Interaction at POIs -----------------------------------------------------
 @app.post("/api/interact")
@@ -108,10 +107,11 @@ def api_interact():
         return jsonify({"ok": False, "log": ["Nothing to interact with here."]})
     return jsonify({"ok": True, "poi": p, "log": [f"You arrive at a {p['type']}"]})
 
-# ---- Player state ------------------------------------------------------------
+# --- Player state ------------------------------------------------------------
 @app.get("/api/state")
 def api_state():
-    return jsonify({"player": PLAYER.__dict__})
+    return jsonify({"player": PLAYER.as_public()})  # <-- was __dict__
+
 
 # ---- Static passthrough ------------------------------------------------------
 @app.route("/static/<path:filename>")
