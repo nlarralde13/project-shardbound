@@ -65,7 +65,8 @@ export function initOverlayMap({ devMode = false } = {}) {
     const c = document.createElement('canvas'); c.id = 'mapPOI'; c.width = 640; c.height = 640; return c;
   });
 
-  // bottom banner (legend + toggles)
+  // bottom banner (legend only)
+  const POI_BASE = '/static/assets/2d/minimap/';
   const bottom = ensure(panel, '.map-bottom', () => {
     const b = document.createElement('footer');
     b.className = 'map-bottom';
@@ -76,17 +77,12 @@ export function initOverlayMap({ devMode = false } = {}) {
           <span class="legend-item"><span class="swatch coast"></span>Coast</span>
           <span class="legend-item"><span class="swatch plains"></span>Plains</span>
           <span class="legend-item"><span class="swatch forest"></span>Forest</span>
-          <span class="legend-item"><span class="dot city"></span>City</span>
-          <span class="legend-item"><span class="dot town"></span>Town</span>
-          <span class="legend-item"><span class="dot village"></span>Village</span>
-          <span class="legend-item"><span class="dot port"></span>Port</span>
-        </div>
-        <div class="legend-toggles" id="mapToggles">
-          <label><input id="tGrid"  type="checkbox" checked> Grid</label>
-          <label><input id="tRiv"   type="checkbox" checked> Rivers</label>
-          <label><input id="tLakes" type="checkbox" checked> Lakes</label>
-          <label><input id="tRoads" type="checkbox" checked> Roads</label>
-          <label><input id="tSet"   type="checkbox" checked> Settlements</label>
+          <span class="legend-item"><img class="legend-icon" src="${POI_BASE}city_1.png" alt="City">City</span>
+          <span class="legend-item"><img class="legend-icon" src="${POI_BASE}town_1.png" alt="Town">Town</span>
+          <span class="legend-item"><img class="legend-icon" src="${POI_BASE}village_1.png" alt="Village">Village</span>
+          <span class="legend-item"><img class="legend-icon" src="${POI_BASE}port_1.png" alt="Port">Port</span>
+          <span class="legend-item"><img class="legend-icon" src="${POI_BASE}dungeon_1.png" alt="Dungeon">Dungeon</span>
+          <span class="legend-item"><img class="legend-icon" src="${POI_BASE}volcano_1.png" alt="Volcano">Volcano</span>
         </div>
       </div>`;
     return b;
@@ -104,7 +100,8 @@ export function initOverlayMap({ devMode = false } = {}) {
     gridW: 0, gridH: 0,
     pos: { x: 0, y: 0 },
     tile: { w: 8, h: 8 },
-    title: 'World Map',
+    title: '',
+    pois: [],
   };
 
   // -------- utils --------
@@ -134,15 +131,17 @@ export function initOverlayMap({ devMode = false } = {}) {
 
   // -------- public API --------
   function setTitle(text) {
-    state.title = String(text || 'World Map');
+    state.title = String(text || '');
     const el = top.querySelector('.map-title');
-    if (el) el.textContent = state.title;
+    if (el) el.textContent = state.title ? `World Map — ${state.title}` : 'World Map';
   }
   function setShard(shard) {
     state.shard = shard || null;
     const g = shard?.grid || [];
     state.gridH = g.length;
     state.gridW = g[0]?.length || 0;
+    state.pois = Array.isArray(shard?.pois) ? shard.pois : (Array.isArray(shard?.sites) ? shard.sites : []);
+    if (shard?.name) setTitle(shard.name);
     fitCanvases();
     render();
   }
@@ -191,88 +190,79 @@ export function initOverlayMap({ devMode = false } = {}) {
         gctx.fillRect(px(x), py(y), state.tile.w, state.tile.h);
       }
     }
-    // grid (toggle)
-    const gridOn = bottom.querySelector('#tGrid')?.checked;
-    if (gridOn) {
-      gctx.save();
-      gctx.globalAlpha = 0.25;
-      gctx.strokeStyle = colors.grid;
-      gctx.lineWidth = 1;
-      gctx.beginPath();
-      for (let x=0;x<=state.gridW;x++) { const X=px(x); gctx.moveTo(X,0); gctx.lineTo(X,py(state.gridH)); }
-      for (let y=0;y<=state.gridH;y++) { const Y=py(y); gctx.moveTo(0,Y); gctx.lineTo(px(state.gridW),Y); }
-      gctx.stroke();
-      gctx.restore();
-    }
+    // grid
+    gctx.save();
+    gctx.globalAlpha = 0.25;
+    gctx.strokeStyle = colors.grid;
+    gctx.lineWidth = 1;
+    gctx.beginPath();
+    for (let x=0;x<=state.gridW;x++) { const X=px(x); gctx.moveTo(X,0); gctx.lineTo(X,py(state.gridH)); }
+    for (let y=0;y<=state.gridH;y++) { const Y=py(y); gctx.moveTo(0,Y); gctx.lineTo(px(state.gridW),Y); }
+    gctx.stroke();
+    gctx.restore();
   }
 
   function drawWaterRoads() {
     fctx.clearRect(0,0,fxCanvas.width, fxCanvas.height);
 
     // Lakes
-    if (bottom.querySelector('#tLakes')?.checked) {
-      const lakes = state.shard?.layers?.lakes;
-      if (lakes) {
-        fctx.save();
-        fctx.fillStyle = colors.lake;
-        fctx.strokeStyle = colors.lakeEdge;
-        fctx.lineWidth = 1;
-        if (Array.isArray(lakes.cells)) {
-          for (const c of lakes.cells) {
-            const x=(c.x??c[0])|0, y=(c.y??c[1])|0;
-            fctx.fillRect(px(x),py(y),state.tile.w,state.tile.h);
-            fctx.strokeRect(px(x)+.5,py(y)+.5,state.tile.w-1,state.tile.h-1);
-          }
+    const lakes = state.shard?.layers?.lakes;
+    if (lakes) {
+      fctx.save();
+      fctx.fillStyle = colors.lake;
+      fctx.strokeStyle = colors.lakeEdge;
+      fctx.lineWidth = 1;
+      if (Array.isArray(lakes.cells)) {
+        for (const c of lakes.cells) {
+          const x=(c.x??c[0])|0, y=(c.y??c[1])|0;
+          fctx.fillRect(px(x),py(y),state.tile.w,state.tile.h);
+          fctx.strokeRect(px(x)+.5,py(y)+.5,state.tile.w-1,state.tile.h-1);
         }
-        if (Array.isArray(lakes.polygons)) {
-          for (const poly of lakes.polygons) {
-            const pts=(poly||[]).map(p=>[(p.x??p[0])|0,(p.y??p[1])|0]); if (pts.length<3) continue;
-            fctx.beginPath(); fctx.moveTo(px(pts[0][0]),py(pts[0][1]));
-            for (let i=1;i<pts.length;i++) fctx.lineTo(px(pts[i][0]),py(pts[i][1]));
-            fctx.closePath(); fctx.fill(); fctx.stroke();
-          }
-        }
-        fctx.restore();
       }
+      if (Array.isArray(lakes.polygons)) {
+        for (const poly of lakes.polygons) {
+          const pts=(poly||[]).map(p=>[(p.x??p[0])|0,(p.y??p[1])|0]); if (pts.length<3) continue;
+          fctx.beginPath(); fctx.moveTo(px(pts[0][0]),py(pts[0][1]));
+          for (let i=1;i<pts.length;i++) fctx.lineTo(px(pts[i][0]),py(pts[i][1]));
+          fctx.closePath(); fctx.fill(); fctx.stroke();
+        }
+      }
+      fctx.restore();
     }
 
     // Rivers
-    if (bottom.querySelector('#tRiv')?.checked) {
-      const rivers = state.shard?.layers?.rivers?.paths;
-      if (Array.isArray(rivers) && rivers.length) {
-        const s=Math.max(1.2,state.tile.w*.14);
-        fctx.save();
-        fctx.lineJoin='round'; fctx.lineCap='round';
-        fctx.strokeStyle = colors.riverGlow; fctx.lineWidth = s*3; for (const p of rivers) path(p);
-        fctx.strokeStyle = colors.river;     fctx.lineWidth = s*1.6; for (const p of rivers) path(p);
-        fctx.restore();
-      }
+    const rivers = state.shard?.layers?.rivers?.paths;
+    if (Array.isArray(rivers) && rivers.length) {
+      const s=Math.max(1.2,state.tile.w*.14);
+      fctx.save();
+      fctx.lineJoin='round'; fctx.lineCap='round';
+      fctx.strokeStyle = colors.riverGlow; fctx.lineWidth = s*3; for (const p of rivers) path(p);
+      fctx.strokeStyle = colors.river;     fctx.lineWidth = s*1.6; for (const p of rivers) path(p);
+      fctx.restore();
     }
 
     // Roads + Bridges
-    if (bottom.querySelector('#tRoads')?.checked) {
-      const roads = state.shard?.layers?.roads?.paths;
-      if (Array.isArray(roads) && roads.length) {
-        const w=Math.max(1.5,state.tile.w*.18);
-        fctx.save();
-        fctx.lineJoin='round'; fctx.lineCap='round';
-        fctx.strokeStyle=colors.roadEdge; fctx.globalAlpha=.35; fctx.lineWidth=w*2.2; for(const p of roads) path(p);
-        fctx.strokeStyle=colors.road;     fctx.globalAlpha=.95; fctx.lineWidth=w;     for(const p of roads) path(p);
-        fctx.restore();
+    const roads = state.shard?.layers?.roads?.paths;
+    if (Array.isArray(roads) && roads.length) {
+      const w=Math.max(1.5,state.tile.w*.18);
+      fctx.save();
+      fctx.lineJoin='round'; fctx.lineCap='round';
+      fctx.strokeStyle=colors.roadEdge; fctx.globalAlpha=.35; fctx.lineWidth=w*2.2; for(const p of roads) path(p);
+      fctx.strokeStyle=colors.road;     fctx.globalAlpha=.95; fctx.lineWidth=w;     for(const p of roads) path(p);
+      fctx.restore();
+    }
+    const bridges = state.shard?.layers?.bridges;
+    if (Array.isArray(bridges) && bridges.length) {
+      fctx.save();
+      for (const b of bridges) {
+        const x=(b.x??b[0])|0, y=(b.y??b[1])|0;
+        const pad=Math.max(1,Math.floor(state.tile.w*.18));
+        fctx.fillStyle = '#e6d4a8';
+        fctx.strokeStyle = '#3b3422';
+        const bx=px(x)+pad, by=py(y)+pad, bw=state.tile.w-2*pad, bh=state.tile.h-2*pad;
+        fctx.fillRect(bx,by,bw,bh); fctx.strokeRect(bx+.5,by+.5,bw-1,bh-1);
       }
-      const bridges = state.shard?.layers?.bridges;
-      if (Array.isArray(bridges) && bridges.length) {
-        fctx.save();
-        for (const b of bridges) {
-          const x=(b.x??b[0])|0, y=(b.y??b[1])|0;
-          const pad=Math.max(1,Math.floor(state.tile.w*.18));
-          fctx.fillStyle = '#e6d4a8';
-          fctx.strokeStyle = '#3b3422';
-          const bx=px(x)+pad, by=py(y)+pad, bw=state.tile.w-2*pad, bh=state.tile.h-2*pad;
-          fctx.fillRect(bx,by,bw,bh); fctx.strokeRect(bx+.5,by+.5,bw-1,bh-1);
-        }
-        fctx.restore();
-      }
+      fctx.restore();
     }
 
     function path(p){ if(!Array.isArray(p)||p.length<2) return;
@@ -282,74 +272,57 @@ export function initOverlayMap({ devMode = false } = {}) {
     }
   }
 
-  function drawSettlements() {
-    pctx.clearRect(0,0,poiCanvas.width, poiCanvas.height);
-    if (!bottom.querySelector('#tSet')?.checked) return;
+  const TOKEN_BASE = '/static/assets/2d/tokens/';
+  const tokenImgs = { character: new Image(), boat: new Image() };
+  tokenImgs.character.onload = () => render();
+  tokenImgs.boat.onload = () => render();
+  tokenImgs.character.src = `${TOKEN_BASE}character.png`;
+  tokenImgs.boat.src = `${TOKEN_BASE}boat.png`;
 
-    // collect groups
-    const lay = state.shard?.layers?.settlements || {};
-    const groups = {
-      cities:   arr(lay.cities),
-      towns:    arr(lay.towns),
-      villages: arr(lay.villages),
-      ports:    arr(lay.ports),
-    };
-    if (!groups.cities.length && !groups.towns.length && !groups.villages.length && !groups.ports.length) {
-      const sites = Array.isArray(state.shard?.sites) ? state.shard.sites : [];
-      for (const s of sites) {
-        const type = String(s.type || '').toLowerCase();
-        (groups[type+'s'] ||= []).push({ x:s.x, y:s.y, name:s.name, type });
-      }
+  const poiImgs = {};
+  const poiVariantCache = new Map();
+  const poiTypes = ['town','village','dungeon','city','port','volcano'];
+  for (const t of poiTypes) {
+    poiImgs[t] = [];
+    for (let i=1;i<=3;i++) {
+      const img = new Image();
+      img.onload = () => { poiImgs[t].push(img); render(); };
+      img.src = `${POI_BASE}${t}_${i}.png`;
     }
-
-    const draw = (pts, core, glowIn) => {
-      const r = Math.max(3, Math.floor(state.tile.w * 0.35));
-      for (const s of pts) {
-        const X = cx((s.x ?? s[0])|0), Y = cy((s.y ?? s[1])|0);
-        // glow
-        const g = pctx.createRadialGradient(X, Y, 1, X, Y, r * 2.0);
-        g.addColorStop(0, glowIn); g.addColorStop(1, 'rgba(255,255,255,0)');
-        pctx.fillStyle = g; pctx.beginPath(); pctx.arc(X, Y, r * 2.0, 0, Math.PI*2); pctx.fill();
-        // core
-        pctx.fillStyle = core; pctx.beginPath(); pctx.arc(X, Y, r, 0, Math.PI*2); pctx.fill();
-        // label
-        const label = s.name || s.label;
-        if (label && state.tile.w >= 8) {
-          pctx.font = '12px ui-sans-serif, system-ui, Segoe UI, Roboto';
-          pctx.textBaseline = 'top';
-          pctx.fillStyle = colors.label;
-          pctx.fillText(label, X + r + 3, Y - r - 1);
-        }
-      }
-    };
-
-    pctx.save();
-    draw(groups.cities,   colors.city,   'rgba(255,220,120,.80)');
-    draw(groups.towns,    colors.town,   'rgba(255,240,160,.70)');
-    draw(groups.villages, colors.village,'rgba(220,255,160,.65)');
-    draw(groups.ports,    colors.port,   'rgba(150,220,255,.70)');
-    pctx.restore();
   }
 
-  function drawReticle() {
-    const x = px(state.pos.x), y = py(state.pos.y);
-    pctx.save();
-    pctx.strokeStyle = colors.reticle;
-    pctx.lineWidth = 2;
-    pctx.beginPath();
-    pctx.moveTo(x, y + state.tile.h/2);
-    pctx.lineTo(x + state.tile.w, y + state.tile.h/2);
-    pctx.moveTo(x + state.tile.w/2, y);
-    pctx.lineTo(x + state.tile.w/2, y + state.tile.h);
-    pctx.stroke();
-    pctx.restore();
+  function drawPOI() {
+    pctx.clearRect(0,0,poiCanvas.width, poiCanvas.height);
+    for (const s of state.pois) {
+      const type = String(s.type||'').toLowerCase();
+      const imgs = poiImgs[type];
+      if (!imgs || !imgs.length) continue;
+      const key = `${type}:${s.x},${s.y}`;
+      let idx = poiVariantCache.get(key);
+      if (idx == null) { idx = Math.floor(Math.random()*imgs.length); poiVariantCache.set(key, idx); }
+      const img = imgs[idx] || imgs[0];
+      const size = Math.min(state.tile.w, state.tile.h);
+      const dx = px(s.x) + (state.tile.w - size)/2;
+      const dy = py(s.y) + (state.tile.h - size)/2;
+      pctx.drawImage(img, dx, dy, size, size);
+    }
+  }
+
+  function drawPlayer() {
+    const biome = state.shard?.grid?.[state.pos.y]?.[state.pos.x];
+    const img = biome === 'ocean' ? tokenImgs.boat : tokenImgs.character;
+    if (!img.complete) return;
+    const size = Math.min(state.tile.w, state.tile.h);
+    const dx = px(state.pos.x) + (state.tile.w - size)/2;
+    const dy = py(state.pos.y) + (state.tile.h - size)/2;
+    pctx.drawImage(img, dx, dy, size, size);
   }
 
   function render() {
     drawBiomes();
     drawWaterRoads();
-    drawSettlements();
-    drawReticle();
+    drawPOI();
+    drawPlayer();
   }
 
   // -------- events --------
@@ -357,9 +330,7 @@ export function initOverlayMap({ devMode = false } = {}) {
     if (root.classList.contains('hidden')) return;
     fitCanvases(); render();
   });
-  bottom.addEventListener('change', (e) => {
-    if (e.target.matches('input[type="checkbox"]')) render();
-  });
+
 
   // passive updates from game
   window.addEventListener('game:moved', (ev)=>{ const d=ev.detail||{}; if(Number.isFinite(d.x)&&Number.isFinite(d.y)) setPos(d.x,d.y); });
@@ -375,6 +346,5 @@ export function initOverlayMap({ devMode = false } = {}) {
     parent.appendChild(node);
     return node;
   }
-  function arr(a){ return Array.isArray(a) ? a : []; }
   function stub(){ return { setShard(){}, setPos(){}, setTitle(){}, setDev(){}, render(){} }; }
 }
