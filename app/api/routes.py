@@ -63,10 +63,8 @@ def api_move():
 
     # opportunistic encounter
     biome = WORLD.biome_at(*player.pos)
-    try:
-        enemy = maybe_spawn(biome)
-    except TypeError:
-        enemy = None
+    on_road = (player.pos in WORLD.road_tiles)
+    enemy = maybe_spawn(biome, on_road)
     if enemy:
         log += resolve_combat(player, enemy)
 
