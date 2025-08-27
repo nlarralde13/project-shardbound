@@ -27,7 +27,7 @@ bp = Blueprint("actions_api", __name__, url_prefix="/api")
 from app.player_service import get_player, save_player
 
 # Replace with your real player accessor; consistent with app/api/routes.py singletons:
-from app.api.routes import PLAYER as CURRENT_PLAYER, _interactions  # reuse the same player singleton
+from app.api.routes import api_state as CURRENT_PLAYER, _interactions  # reuse the same player singleton
 
 
 @bp.post("/action")

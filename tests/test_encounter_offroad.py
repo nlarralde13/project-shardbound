@@ -49,3 +49,5 @@ def test_encounter_offroad(client, monkeypatch):
     resp = client.post("/api/move", json={"dx": 1, "dy": 0})
     data = resp.get_json()
     assert any("A wild" in entry for entry in data["log"])
+
+

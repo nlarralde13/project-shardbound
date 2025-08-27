@@ -15,7 +15,7 @@ from shardEngine.endpoints import bp as shard_gen_v2_bp, api_bp
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 socketio = SocketIO(app, cors_allowed_origins="*")
-
+app.config["SECRET_KEY"] = "dev"
 # ---- Blueprints --------------------------------------------------------------
 # Shard generation v2 (unchanged)
 app.register_blueprint(shard_gen_v2_bp, url_prefix="/api/shard-gen-v2")

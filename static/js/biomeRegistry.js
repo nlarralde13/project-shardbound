@@ -94,7 +94,7 @@ export const BIOMES = Object.fromEntries(
 
 // ---- Asset wiring from /static/assets/ --------------------------------------
 
-const ASSET_BASE = "/static/assets/biomes";
+const ASSET_BASE = "/static/assets/2d/";
 const asset = (p) => `${ASSET_BASE}/${p}`;
 
 // Optional: simple ocean loop

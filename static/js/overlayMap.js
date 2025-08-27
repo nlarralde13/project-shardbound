@@ -35,11 +35,6 @@ export function initOverlayMap({ devMode = false } = {}) {
   const top = ensure(panel, '.map-top', () => {
     const t = document.createElement('header');
     t.className = 'map-top';
-    t.innerHTML = `
-      <div class="map-top__inner">
-        <div class="map-title">World Map</div>
-        <button type="button" class="btn btn--blue map-close" id="mapCloseBtn">Close (M)</button>
-      </div>`;
     return t;
   });
 
