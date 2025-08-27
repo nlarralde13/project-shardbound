@@ -7,9 +7,11 @@ def create_app():
     app = Flask(__name__, static_folder="../static", template_folder="../templates")
 
     # Minimal config; adjust later
-    app.config.setdefault("SECRET_KEY", "dev")
-    app.config.setdefault("SQLALCHEMY_DATABASE_URI", "sqlite:///app.db")
-    app.config.setdefault("SQLALCHEMY_TRACK_MODIFICATIONS", False)
+    app.config.update(
+        SECRET_KEY="dev",
+        SQLALCHEMY_DATABASE_URI="sqlite:///app.db",
+        SQLALCHEMY_TRACK_MODIFICATIONS=False,
+    )
 
     # Extensions
     db.init_app(app)
@@ -21,6 +23,6 @@ def create_app():
 
     # Ensure models are imported so migrations see them
     with app.app_context():
-        import app.models  # noqa: F401
+        from . import models  # noqa: F401
 
     return app
