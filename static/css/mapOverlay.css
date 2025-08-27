@@ -42,19 +42,15 @@
 #overlayMap .map-box canvas{ position:absolute; inset:0; image-rendering:pixelated }
 #overlayMap .map-base{ z-index:1 } #overlayMap #mapFX{ z-index:2; pointer-events:none } #overlayMap #mapPOI{ z-index:3; pointer-events:none }
 
-/* Bottom banner (legend + toggles) */
+/* Bottom banner (legend only) */
 #overlayMap .map-bottom{ padding:10px 14px; background:linear-gradient(180deg, rgba(240,232,210,.02), rgba(240,232,210,.06));
   border-top:1px solid rgba(255,255,255,.08) }
-#overlayMap .map-bottom__inner{ display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap }
+#overlayMap .map-bottom__inner{ display:flex; align-items:center; justify-content:center; gap:16px; flex-wrap:wrap }
 #overlayMap .legend-list{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; color:var(--label); font-size:12px }
 #overlayMap .legend-item{ display:inline-flex; align-items:center; gap:8px }
 #overlayMap .swatch{ width:16px; height:12px; border-radius:3px; display:inline-block; box-shadow: inset 0 0 0 1px rgba(255,255,255,.18) }
 #overlayMap .swatch.ocean{ background:#0b3a74 } #overlayMap .swatch.coast{ background:#d9c38c } #overlayMap .swatch.plains{ background:#91c36e } #overlayMap .swatch.forest{ background:#2e7d32 }
-#overlayMap .dot{ width:10px; height:10px; border-radius:50%; display:inline-block; box-shadow:0 0 0 1px rgba(255,255,255,.25) inset }
-#overlayMap .dot.city{ background:#ffd24a } #overlayMap .dot.town{ background:#ffef9f } #overlayMap .dot.village{ background:#d8f1a6 } #overlayMap .dot.port{ background:#a6f1ff }
-#overlayMap .legend-toggles{ display:flex; gap:16px; align-items:center; color:var(--label) }
-#overlayMap .legend-toggles label{ display:inline-flex; align-items:center; gap:6px; font-size:12px; opacity:.95 }
-#overlayMap .legend-toggles input[type="checkbox"]{ accent-color: var(--accent-blue) }
+#overlayMap .legend-icon{ width:14px; height:14px; image-rendering:pixelated }
 
 /* Responsive */
 @media (max-width:980px){
