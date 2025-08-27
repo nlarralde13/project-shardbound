@@ -2,15 +2,40 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Tuple, Dict, Set, Optional
+from collections import OrderedDict
 import json, time, random
 
+from . import persistence
+
 Coord = Tuple[int, int]
+
+# ------------------------ In-memory LRU cache for rooms ------------------------
+
+class LRURoomCache(OrderedDict):
+    """Basic LRU cache for storing Room instances."""
+
+    def __init__(self, maxsize: int = 256):
+        super().__init__()
+        self.maxsize = maxsize
+
+    def __getitem__(self, key):
+        value = super().__getitem__(key)
+        self.move_to_end(key)
+        return value
+
+    def __setitem__(self, key, value):
+        if key in self:
+            self.move_to_end(key)
+        super().__setitem__(key, value)
+        if len(self) > self.maxsize:
+            self.popitem(last=False)
 
 # ------------------------ World & Room Models ------------------------
 
 @dataclass
 class Room:
     """Ephemeral-but-cached per-tile state."""
+    world_id: str
     x: int
     y: int
     biome: str
@@ -51,7 +76,7 @@ class World:
     seed: int = 0
 
     # cache of rolled rooms
-    _rooms: Dict[Coord, Room] = field(default_factory=dict, repr=False)
+    _rooms: Dict[Coord, Room] = field(default_factory=lambda: LRURoomCache(maxsize=256), repr=False)
 
     def biome_at(self, x: int, y: int) -> str:
         W, H = self.size
@@ -251,17 +276,26 @@ def get_room(world: World, x: int, y: int) -> Room:
             _lazy_respawn(n)
         return room
 
+    # try to load persisted room first
+    room = persistence.load_room(world.id, *key)
+    if room is not None:
+        for n in room.resources:
+            _lazy_respawn(n)
+        world._rooms[key] = room
+        return room
+
     biome = world.biome_at(*key)
     rng = _rng_for(world, *key)
     tags = _compute_tags(world, x, y, biome)
 
-    room = Room(x=key[0], y=key[1], biome=biome, tags=tags)
+    room = Room(world_id=world.id, x=key[0], y=key[1], biome=biome, tags=tags)
     room.resources   = _roll_resources(world, x, y, biome, tags, rng)
     room.searchables = _roll_searchables(biome, tags, rng)
     room.enemies     = _roll_enemies(biome, tags, rng)
     room.quests      = _roll_quests(world, x, y, tags, rng)
 
     world._rooms[key] = room
+    persistence.save_room(room)
     return room
 
 # ------- Convenience adapters for older calls expecting a string room_id -------

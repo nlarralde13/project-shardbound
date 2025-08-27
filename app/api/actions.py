@@ -9,14 +9,19 @@ from __future__ import annotations
 from flask import Blueprint, request, jsonify
 from server.player_engine import Player  # type hints
 from server.actionRegistry import get_action
-from server.services import idempotency, cooldowns
+from server.services import idempotency, cooldowns, rooms
 
 # Import handlers so decorators run
 from server.actions import *  # noqa: F401,F403
 
 bp = Blueprint("actions_api", __name__, url_prefix="/api")
 
+
 from app.player_service import get_player, save_player
+
+# Replace with your real player accessor; consistent with app/api/routes.py singletons:
+from app.api.routes import PLAYER as CURRENT_PLAYER, _interactions  # reuse the same player singleton
+
 
 @bp.post("/action")
 def do_action():
@@ -48,6 +53,15 @@ def do_action():
         result = handler(player=player, payload=payload)
     except Exception as e:
         return jsonify({"ok": False, "error":"server_exception", "detail": str(e)}), 500
+
+    # append interaction hints for the player's current room
+    try:
+        room = rooms.for_player(player)
+        room_data = room.export()
+        result["interactions"] = _interactions(room_data)
+    except Exception:
+        # don't block action result if room lookup fails
+        pass
 
     idempotency.persist(player.id, action_id, verb, payload, result)
     save_player(player)
