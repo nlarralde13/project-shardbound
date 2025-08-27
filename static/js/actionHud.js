@@ -2,9 +2,12 @@
 // Emits: "game:log" (events[]), "game:moved" ({x,y})
 
 import { API } from "/static/js/api.js";
+import { io } from "https://cdn.socket.io/4.7.5/socket.io.esm.min.js";
 
 let els = {};
 let busy = false;
+let socket;
+let currentInteractions = {};
 
 const DIRS = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] };
 
@@ -65,14 +68,12 @@ export function initActionHUD({ mount = ".room-stage" } = {}) {
   // Core verbs
   els.search.addEventListener("click", async () => doAction("search"));
   els.gather.addEventListener("click", async () => {
-    const st = await API.state();
-    const first = st?.interactions?.gather_nodes?.[0];
+    const first = currentInteractions?.gather_nodes?.[0];
     if (!first) return toast("Nothing to gather here.");
     await doAction("gather", { node_id: first });
   });
   els.attack.addEventListener("click", async () => {
-    const st = await API.state();
-    const first = st?.interactions?.enemies?.[0];
+    const first = currentInteractions?.enemies?.[0];
     if (!first) return toast("No enemies in this room.");
     await doAction("attack", { target_id: first });
   });
@@ -91,14 +92,30 @@ export function initActionHUD({ mount = ".room-stage" } = {}) {
       if (out?.log) window.dispatchEvent(new CustomEvent("game:log", { detail: out.log.map(t => ({ text: t })) }));
     } finally {
       setBusy(false);
-      const st = await API.state();
-      updateActionHUD({ interactions: st.interactions });
     }
+  });
+
+  socket = io();
+  socket.on("movement", (d) => {
+    if (d?.log) window.dispatchEvent(new CustomEvent("game:log", { detail: d.log.map(t => ({ text: t })) }));
+    if (d?.room_delta) window.patchRoom?.(d.room_delta);
+    if (d?.interactions) updateActionHUD({ interactions: d.interactions });
+  });
+  socket.on("combat", (d) => {
+    if (d?.events) window.dispatchEvent(new CustomEvent("game:log", { detail: d.events }));
+    if (d?.room_delta) window.patchRoom?.(d.room_delta);
+    if (d?.interactions) updateActionHUD({ interactions: d.interactions });
+  });
+  socket.on("resource_update", (d) => {
+    if (d?.events) window.dispatchEvent(new CustomEvent("game:log", { detail: d.events }));
+    if (d?.room_delta) window.patchRoom?.(d.room_delta);
+    if (d?.interactions) updateActionHUD({ interactions: d.interactions });
   });
 }
 
 export function updateActionHUD({ interactions }) {
   if (!interactions) return;
+  currentInteractions = interactions;
   toggle(els.search,  interactions.can_search);
   toggle(els.gather,  interactions.can_gather);
   toggle(els.attack,  interactions.can_attack);
@@ -145,12 +162,16 @@ async function doAction(verb, payload = {}) {
     out = await API.action(verb, payload);
     if (out?.events?.length) window.dispatchEvent(new CustomEvent("game:log", { detail: out.events }));
     if (out?.room_delta) window.patchRoom?.(out.room_delta);
+    if (out?.interactions) updateActionHUD({ interactions: out.interactions });
   } catch (err) {
     toast(`Action failed: ${verb}`);
     console.error(err);
   } finally {
     setBusy(false);
+
+
     if (out?.interactions) updateActionHUD({ interactions: out.interactions });
+
   }
 }
 

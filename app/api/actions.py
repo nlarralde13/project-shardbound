@@ -6,10 +6,17 @@ Actions API (Blueprint)
 - Server-authoritative (stamina, cooldowns, etc.).
 """
 from __future__ import annotations
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from server.player_engine import Player  # type hints
 from server.actionRegistry import get_action
+
+from server.services import idempotency, cooldowns
+from server.services.rooms import for_player
+
+from app.api.routes import _interactions
+
 from server.services import idempotency, cooldowns, rooms
+
 
 # Import handlers so decorators run
 from server.actions import *  # noqa: F401,F403
@@ -54,6 +61,17 @@ def do_action():
     except Exception as e:
         return jsonify({"ok": False, "error":"server_exception", "detail": str(e)}), 500
 
+
+    room = for_player(player).export()
+    result.setdefault("interactions", _interactions(room))
+
+    socketio = current_app.extensions.get("socketio")
+    if socketio:
+        if verb == "attack":
+            socketio.emit("combat", result)
+        elif verb in ("gather", "search"):
+            socketio.emit("resource_update", result)
+
     # append interaction hints for the player's current room
     try:
         room = rooms.for_player(player)
@@ -62,6 +80,7 @@ def do_action():
     except Exception:
         # don't block action result if room lookup fails
         pass
+
 
     idempotency.persist(player.id, action_id, verb, payload, result)
     save_player(player)
