@@ -78,54 +78,8 @@
     </section>
   </main>
 
-  <!-- World Map Overlay -->
-  <div id="overlayMap" class="overlay hidden" role="dialog" aria-modal="true" aria-label="World Map">
-    <div class="panel">
-      <div class="panel-header">
-        <div id="mapUserToken" class="token dim"></div>
-        <div>World Map — Shard</div>
-        <button class="btn ghost" data-close="map">Close (M)</button>
-      </div>
-      <div class="map-frame">
-        <div class="map-legend">
-          <span class="dot town"></span> Town
-          <span class="dot port"></span> Port
-          <span class="dot gate"></span> Shardgate
-        </div>
-
-        <!-- Dev-only toggles (auto-hidden if not in ?devmode) -->
-        <div id="mapToggles" class="hidden">
-          <label><input id="toggleHydro" type="checkbox" checked> Hydrology</label>
-          <label><input id="togglePOI" type="checkbox" checked> POIs</label>
-        </div>
-
-        <!-- Map layers -->
-        <div class="map-box">
-          <div   id="miniGrid" class="mini-grid" aria-label="Mini Map"></div>
-          <canvas id="mapFX"></canvas>
-          <div   id="mapPOI" class="map-layer"></div>
-        </div>
-
-        <footer class="map-footer">
-          <div class="legend">
-            <span class="legend-item"><i class="dot city"></i> City</span>
-            <span class="legend-item"><i class="dot town"></i> Town</span>
-            <span class="legend-item"><i class="dot village"></i> Village</span>
-            <span class="legend-item"><i class="dot port"></i> Port</span>
-            <span class="legend-item"><i class="swatch road"></i> Road</span>
-            <span class="legend-item"><i class="swatch river"></i> River</span>
-          </div>
-
-          <div id="mapToggles">
-            <label><input type="checkbox" id="toggleHydro" checked> Hydrology</label>
-            <label><input type="checkbox" id="togglePOI" checked> POIs</label>
-          </div>
-
-          <div class="map-hint dim">Press M or ESC to close. Arrows / buttons move the player.</div>
-        </footer>
-      </div>
-    </div>
-  </div>
+  <!-- World Map Overlay (structure populated by overlayMap.js) -->
+  <div id="overlayMap" class="overlay hidden" role="dialog" aria-modal="true" aria-label="World Map"></div>
 
   <!-- Character Panel -->
   <div id="overlayChar" class="overlay hidden" role="dialog" aria-modal="true" aria-label="Character Panel">
@@ -198,7 +152,8 @@
         updateActionHUD({ interactions: st.interactions });
       } catch {
         // If state isn't ready (e.g., first load), spawn then refresh
-        await API.spawn({ x: 6, y: 6 });
+        const DEV = new URLSearchParams(location.search).has('devmode');
+        await API.spawn({ x: 6, y: 6, devmode: DEV });
         const st2 = await API.state();
         window.currentRoom = st2.room;
         updateActionHUD({ interactions: st2.interactions });
