@@ -133,7 +133,7 @@ export function initOverlayMap({ devMode = false } = {}) {
   function setTitle(text) {
     state.title = String(text || '');
     const el = top.querySelector('.map-title');
-    if (el) el.textContent = state.title ? `World Map — ${state.title}` : 'World Map';
+    if (el) el.textContent = state.title ? `World Map; ${state.title}` : 'World Map';
   }
   function setShard(shard) {
     state.shard = shard || null;

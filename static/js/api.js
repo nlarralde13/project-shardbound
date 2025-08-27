@@ -5,9 +5,12 @@ export const API = {
     return r.json();
   },
 
-  async spawn({ x = 12, y = 15, noclip = false } = {}) {
-    const qs = noclip ? '?noclip=1' : '';
-    const r = await fetch('/api/spawn' + qs, {
+  async spawn({ x = 12, y = 15, noclip = false, devmode = false } = {}) {
+    const params = new URLSearchParams();
+    if (noclip) params.set('noclip', '1');
+    if (devmode) params.set('devmode', '1');
+    const qs = params.toString();
+    const r = await fetch('/api/spawn' + (qs ? `?${qs}` : ''), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ x, y }),

@@ -22,6 +22,7 @@ class Player:
     flags: Dict[str, bool] = field(
         default_factory=lambda: {
             "noclip": False,
+            "devmode": False,
             "has_boat": False,
             "can_climb": False,
             "can_swim": False,
@@ -48,7 +49,7 @@ IMPASSABLE_BIOMES = {"Mountains", "Volcano"}
 
 def can_enter(world, x: int, y: int, player: Player) -> tuple[bool, str]:
     # dev noclip bypass
-    if player.flags.get("noclip"):
+    if player.flags.get("noclip") and player.flags.get("devmode"):
         return True, "noclip"
 
     W, H = world.size
