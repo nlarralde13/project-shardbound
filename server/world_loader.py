@@ -1,10 +1,41 @@
 # server/world_loader.py
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Tuple, Dict, Set
-import json
+from typing import List, Tuple, Dict, Set, Optional
+import json, time, random
 
 Coord = Tuple[int, int]
+
+# ------------------------ World & Room Models ------------------------
+
+@dataclass
+class Room:
+    """Ephemeral-but-cached per-tile state."""
+    x: int
+    y: int
+    biome: str
+    tags: List[str] = field(default_factory=list)
+    # rolled at room creation
+    resources: List[Dict] = field(default_factory=list)   # [{id,type,qty,respawn_s,depleted_at}]
+    searchables: List[Dict] = field(default_factory=list) # [{id,type,table,once}]
+    enemies: List[Dict] = field(default_factory=list)     # [{id,type,hp,level,hostile}]
+    quests: List[Dict] = field(default_factory=list)      # [{id, title, status}]
+
+    def id(self) -> str:
+        return f"{self.x},{self.y}"
+
+    def export(self) -> Dict:
+        """Public shape for the client/UI."""
+        return {
+            "id": self.id(),
+            "x": self.x, "y": self.y,
+            "biome": self.biome,
+            "tags": self.tags,
+            "resources": self.resources,
+            "searchables": self.searchables,
+            "enemies": self.enemies,
+            "quests": self.quests,
+        }
 
 @dataclass
 class World:
@@ -17,6 +48,10 @@ class World:
     bridge_tiles: Set[Coord]
     blocked_land: Set[Coord]
     requires_boat: Set[Coord]
+    seed: int = 0
+
+    # cache of rolled rooms
+    _rooms: Dict[Coord, Room] = field(default_factory=dict, repr=False)
 
     def biome_at(self, x: int, y: int) -> str:
         W, H = self.size
@@ -31,6 +66,8 @@ class World:
             if px == x and py == y:
                 return p
         return None
+
+# ------------------------ Helpers to ingest shard JSON ------------------------
 
 def _to_set(coords) -> Set[Coord]:
     out = set()
@@ -53,10 +90,14 @@ def _paths_to_set(paths: List[List]) -> Set[Coord]:
                 tiles.add((int(p.get("x")), int(p.get("y"))))
     return tiles
 
+# ------------------------ Load world from file ------------------------
+
+_CURRENT_WORLD: Optional[World] = None  # optional singleton for legacy helpers
+
 def load_world(path: str | Path) -> World:
     data = json.loads(Path(path).read_text())
 
-    grid = data["grid"]
+    grid = data["grid"]  # fast access heatmap
     H = len(grid)
     W = len(grid[0]) if H else 0
 
@@ -81,7 +122,6 @@ def load_world(path: str | Path) -> World:
         for p in (data.get("pois") or [])
     ]
 
-    # Roads + bridges
     road_layer = (layers.get("roads") or {})
     road_paths = road_layer.get("paths") or []
     bridges    = road_layer.get("bridges") or []
@@ -92,7 +132,7 @@ def load_world(path: str | Path) -> World:
     blocked     = _to_set(((layers.get("movement") or {}).get("blocked_for") or {}).get("land"))
     needs_boat  = _to_set(((layers.get("movement") or {}).get("requires")   or {}).get("boat"))
 
-    return World(
+    world = World(
         id=(data.get("meta") or {}).get("name", "shard"),
         size=(W, H),
         grid=grid,
@@ -102,4 +142,140 @@ def load_world(path: str | Path) -> World:
         bridge_tiles=bridge_tiles,
         blocked_land=blocked,
         requires_boat=needs_boat,
+        seed=(data.get("meta") or {}).get("seed", 0),
     )
+
+    # expose as "current" for simple adapters that don't pass world
+    global _CURRENT_WORLD
+    _CURRENT_WORLD = world
+    return world
+
+# ------------------------ Room generation / respawn ------------------------
+
+def _rng_for(world: World, x: int, y: int) -> random.Random:
+    """Deterministic RNG per room so rolls are stable across sessions until state changes."""
+    return random.Random(f"{world.seed}:{world.id}:{x},{y}")
+
+def _roll_resources(world: World, x: int, y: int, biome: str, tags: List[str], rng: random.Random) -> List[Dict]:
+    out: List[Dict] = []
+    # super lightweight spawn tables; tweak as needed
+    def node(_type: str, base_qty: Tuple[int,int]=(1,3), respawn_s: int=900) -> Dict:
+        qty = rng.randint(*base_qty)
+        return {"id": f"{_type}-{x}-{y}-{rng.randint(100,999)}", "type": _type, "qty": qty, "respawn_s": respawn_s, "depleted_at": None}
+
+    if "settlement" in tags:
+        # towns are safer; fewer wild resources
+        if biome in ("plains","forest") and rng.random() < 0.5:
+            out.append(node("wood", (1,2), respawn_s=600))
+        if rng.random() < 0.3:
+            out.append(node("herb", (1,2), respawn_s=600))
+        return out
+
+    if biome in ("forest","plains"):
+        if rng.random() < 0.8: out.append(node("wood", (1,3)))
+        if rng.random() < 0.6: out.append(node("herb", (1,3)))
+        if rng.random() < 0.3: out.append(node("berry", (1,2), respawn_s=300))
+    elif biome in ("hills","mountains"):
+        if rng.random() < 0.7: out.append(node("stone", (1,3), respawn_s=1200))
+        if rng.random() < 0.25: out.append(node("ore", (1,2), respawn_s=1800))
+        if rng.random() < 0.3: out.append(node("herb", (1,2)))
+    elif biome in ("coast","marsh-lite"):
+        if rng.random() < 0.6: out.append(node("reeds", (1,3), respawn_s=600))
+        if rng.random() < 0.4: out.append(node("shells", (1,2), respawn_s=600))
+    # oceans: keep empty for now
+    return out
+
+def _roll_searchables(biome: str, tags: List[str], rng: random.Random) -> List[Dict]:
+    out = []
+    table = "meadow_common"
+    if biome in ("forest",): table = "forest_common"
+    if biome in ("coast","marsh-lite"): table = "shore_common"
+    # a couple of searchable spots
+    n = 1 + (1 if rng.random() < 0.4 else 0)
+    for i in range(n):
+        out.append({"id": f"search-{i}", "type": "forage", "table": table, "once": False})
+    return out
+
+def _roll_enemies(biome: str, tags: List[str], rng: random.Random) -> List[Dict]:
+    out = []
+    if "settlement" in tags or biome in ("ocean","void"):
+        return out
+    if biome in ("plains","forest","hills","marsh-lite","coast"):
+        if rng.random() < 0.35:
+            out.append({"id": f"rat-{rng.randint(100,999)}", "type":"rat", "hp": 5, "level": 1, "hostile": True})
+        if rng.random() < 0.20 and biome in ("forest","hills"):
+            out.append({"id": f"wolf-{rng.randint(100,999)}", "type":"wolf", "hp": 12, "level": 2, "hostile": True})
+    return out
+
+def _roll_quests(world: World, x: int, y: int, tags: List[str], rng: random.Random) -> List[Dict]:
+    out = []
+    if "settlement" in tags and rng.random() < 0.25:
+        out.append({"id": f"errand-{x}-{y}", "title":"A Neighborly Errand", "status":"available"})
+    return out
+
+def _compute_tags(world: World, x: int, y: int, biome: str) -> List[str]:
+    t: List[str] = []
+    if world.poi_at(x,y):
+        t.append("settlement")
+    if (x,y) in world.road_tiles:
+        t.append("road")
+    if (x,y) in world.bridge_tiles:
+        t.append("bridge")
+    if (x,y) in world.blocked_land:
+        t.append("blocked_land")
+    if (x,y) in world.requires_boat:
+        t.append("requires_boat")
+    if biome == "coast":
+        t.append("coast")
+    if biome == "ocean":
+        t.append("ocean")
+    return t
+
+def _lazy_respawn(node: Dict) -> None:
+    """If depleted and respawn time elapsed, restore quantity."""
+    if node.get("qty",0) > 0: return
+    respawn_s = node.get("respawn_s")
+    depleted_at = node.get("depleted_at")
+    if not (respawn_s and depleted_at): return
+    if (time.time() - depleted_at) >= respawn_s:
+        # simple restore to 1–2
+        node["qty"] = 1
+
+def get_room(world: World, x: int, y: int) -> Room:
+    """Fetch (or roll) room state for (x,y)."""
+    key = (int(x), int(y))
+    if key in world._rooms:
+        room = world._rooms[key]
+        # on access, allow lazy respawn updates
+        for n in room.resources:
+            _lazy_respawn(n)
+        return room
+
+    biome = world.biome_at(*key)
+    rng = _rng_for(world, *key)
+    tags = _compute_tags(world, x, y, biome)
+
+    room = Room(x=key[0], y=key[1], biome=biome, tags=tags)
+    room.resources   = _roll_resources(world, x, y, biome, tags, rng)
+    room.searchables = _roll_searchables(biome, tags, rng)
+    room.enemies     = _roll_enemies(biome, tags, rng)
+    room.quests      = _roll_quests(world, x, y, tags, rng)
+
+    world._rooms[key] = room
+    return room
+
+# ------- Convenience adapters for older calls expecting a string room_id -------
+
+def get_room_by_id(room_id: str) -> Room:
+    """
+    Accepts 'x,y' or 'worldId:x,y'. Uses the current world loaded via load_world().
+    """
+    if _CURRENT_WORLD is None:
+        raise RuntimeError("No current world loaded")
+    # parse coordinates
+    if ":" in room_id:
+        _, coords = room_id.split(":", 1)
+    else:
+        coords = room_id
+    x_s, y_s = coords.split(",", 1)
+    return get_room(_CURRENT_WORLD, int(x_s), int(y_s))

@@ -7,6 +7,8 @@
 
   <!-- Your base theme -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/mvp3.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/mapOverlay.css') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600..900&family=IM+Fell+English:ital@0;1&family=Crimson+Text:wght@400;600&display=swap" rel="stylesheet">
 
   <script>
     /* Prefer grid as canonical biome source; viewers can fallback to tiles if needed */
@@ -50,7 +52,7 @@
   <main class="main">
     <section class="room">
       <div class="room-header">
-        <h1 id="roomTitle">Shadowed Grove</h1>
+        <h1 id="roomTitle">Starter Shard</h1>
         <span id="roomBiome" class="tag">Forest</span>
       </div>
 
@@ -72,29 +74,7 @@
           <button id="cmdSend" class="btn">Send</button>
         </div>
 
-        <div class="console-actions">
-          <div class="group">
-            <span class="hint">Exits</span>
-            <div class="btns">
-              <button class="btn" data-qa="moveN">N</button>
-              <button class="btn" data-qa="moveE">E</button>
-              <button class="btn" data-qa="moveS">S</button>
-              <button class="btn" data-qa="moveW">W</button>
-            </div>
-          </div>
-
-          <div class="group">
-            <span class="hint">Actions</span>
-            <div class="btns">
-              <button class="btn" data-qa="search">Search</button>
-              <button class="btn" data-qa="harvest">Harvest</button>
-              <button class="btn" data-qa="rest">Rest</button>
-              <button class="btn" data-qa="enter">Enter</button>
-              <button class="btn ghost" data-qa="help">Help</button>
-            </div>
-          </div>
         </div>
-      </div>
     </section>
   </main>
 
@@ -113,7 +93,7 @@
           <span class="dot gate"></span> Shardgate
         </div>
 
-        <!-- Dev‑only toggles (auto-hidden if not in ?devmode) -->
+        <!-- Dev-only toggles (auto-hidden if not in ?devmode) -->
         <div id="mapToggles" class="hidden">
           <label><input id="toggleHydro" type="checkbox" checked> Hydrology</label>
           <label><input id="togglePOI" type="checkbox" checked> POIs</label>
@@ -140,10 +120,9 @@
             <label><input type="checkbox" id="toggleHydro" checked> Hydrology</label>
             <label><input type="checkbox" id="togglePOI" checked> POIs</label>
           </div>
-  
 
-
-        <div class="map-hint dim">Press M or ESC to close. Arrows / buttons move the player.</div>
+          <div class="map-hint dim">Press M or ESC to close. Arrows / buttons move the player.</div>
+        </footer>
       </div>
     </div>
   </div>
@@ -188,7 +167,56 @@
     </div>
   </div>
 
-  <!-- ES modules (orchestrator imports overlayMap.js and wires it) -->
+  <!-- Action Bar mount (new) -->
+  <div id="action-root" class="action-root"></div>
+
+  <!-- ES modules -->
   <script type="module" src="{{ url_for('static', filename='js/mvp3.js') }}"></script>
+
+  <!-- Boot the Action HUD & log wiring (new) -->
+  <script type="module">
+    import { initActionHUD, updateActionHUD } from "/static/js/actionHud.js";
+    import { API } from "/static/js/api.js";
+    import { applyRoomDelta } from "/static/js/roomPatcher.js";
+
+    // Dev convenience (console): API.*
+    window.API = API;
+
+    // Optional global: patch current room then let your renderer refresh if needed
+    window.patchRoom = (delta) => {
+      window.currentRoom = applyRoomDelta(window.currentRoom || {}, delta);
+      // TODO: call your renderer update hooks here if you have them
+      // e.g., window.renderer?.updateResources(window.currentRoom.resources);
+    };
+
+    // Initialize Action HUD and sync with current state
+    (async () => {
+      initActionHUD(document.getElementById("action-root"));
+      try {
+        const st = await API.state();
+        window.currentRoom = st.room;
+        updateActionHUD({ interactions: st.interactions });
+      } catch {
+        // If state isn't ready (e.g., first load), spawn then refresh
+        await API.spawn({ x: 6, y: 6 });
+        const st2 = await API.state();
+        window.currentRoom = st2.room;
+        updateActionHUD({ interactions: st2.interactions });
+      }
+    })();
+
+    // Route server log events into the visible console panel
+    const consoleEl = document.getElementById("console");
+    window.addEventListener("game:log", (ev) => {
+      const events = ev.detail || [];
+      for (const e of events) {
+        const div = document.createElement("div");
+        div.className = "line";
+        div.textContent = e.text || JSON.stringify(e);
+        consoleEl?.appendChild(div);
+        consoleEl?.scrollTo({ top: consoleEl.scrollHeight, behavior: "smooth" });
+      }
+    });
+  </script>
 </body>
 </html>
