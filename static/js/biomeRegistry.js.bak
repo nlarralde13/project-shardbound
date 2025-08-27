@@ -1,9 +1,9 @@
-// biomeRegistry.js — Master biome registry (canonical keys + aliases + art)
-// Keeps original exports. Adds art paths from /static/assets/biomes and optional frames.
+// biomeRegistry.js — Master biome registry (canonical keys + aliases)
+// Everything (generator, viewer, overlays) should use canonical keys from here.
 
 const gradient = (a, b) => `linear-gradient(180deg, ${a} 0%, ${b} 100%)`;
 
-// Canonical biome definitions (unchanged)
+// Canonical biome definitions
 export const BIOME_MASTER = {
   Ocean:       { display: 'Ocean',            colors: { mapFill: '#2F7AA2', mapStroke: '#205772', uiTintStart: '#123849', uiTintEnd: '#0B1F2A' }, tags: { temp: 'any', moist: 'wet', elev: 'low',  terrain: 'water' } },
   Coast:       { display: 'Coast / Beach',    colors: { mapFill: '#CFAE74', mapStroke: '#7E6B45', uiTintStart: '#2B3D49', uiTintEnd: '#16232C' }, tags: { temp: 'any', moist: 'var', elev: 'low',  terrain: 'sand' } },
@@ -36,20 +36,20 @@ export const BIOME_MASTER = {
   Urban:       { display: 'Urban',            colors: { mapFill: '#9AA0A8', mapStroke: '#6A7076', uiTintStart: '#2D3238', uiTintEnd: '#171A1D' }, tags: { temp: 'any', moist: 'var', elev: 'low', terrain: 'urban' } },
 };
 
-// Aliases → canonical (unchanged, with a couple more)
+// Aliases → canonical keys (lowercase on the left)
 export const ALIASES = {
   ocean:'Ocean', sea:'Ocean', deep_ocean:'Ocean',
-  coast:'Coast', beach:'Coast', shore:'Coast', ocean_port:'Coast',
+  coast:'Coast', beach:'Coast', shore:'Coast',
   reef:'Reef', coral:'Reef', lagoon:'Reef',
   river:'River', stream:'River', brook:'River',
   lake:'Lake', pond:'Lake',
   wetland:'Wetland', marsh:'Wetland', swamp:'Wetland', mangrove:'Wetland',
 
-  grassland:'Plains', prairie:'Plains', steppe:'Plains', plains:'Plains',
+  grassland:'Plains', prairie:'Plains', steppe:'Plains',
   savanna:'Savanna', savannah:'Savanna',
   shrubland:'Shrubland', scrub:'Shrubland', chaparral:'Shrubland',
 
-  forest:'Forest', woodland:'Forest', dark_forest:'Forest',
+  forest:'Forest', woodland:'Forest',
   taiga:'Taiga', boreal:'Taiga',
   jungle:'Jungle', rainforest:'Jungle', tropic_forest:'Jungle',
 
@@ -84,45 +84,15 @@ export const BIOME_COLORS = Object.fromEntries(
   Object.entries(BIOME_MASTER).map(([k, v]) => [k, v.colors.mapFill])
 );
 
-// Back-compat "BIOMES" object used by the viewer (tint + optional art/frames)
+// Back-compat "BIOMES" object used by the viewer (tint + optional art)
 export const BIOMES = Object.fromEntries(
   Object.entries(BIOME_MASTER).map(([k, v]) => [
     k,
-    { tint: gradient(v.colors.uiTintStart, v.colors.uiTintEnd), art: null, art_combat: null, frames: null, frame_ms: 120 }
+    { tint: gradient(v.colors.uiTintStart, v.colors.uiTintEnd), art: null }
   ])
 );
 
-// ---- Asset wiring from /static/assets/ --------------------------------------
-
-const ASSET_BASE = "/static/assets/biomes";
-const asset = (p) => `${ASSET_BASE}/${p}`;
-
-// Optional: simple ocean loop
-const OCEAN_FRAMES = Array.from({ length: 8 }, (_, i) =>
-  asset(`webm/ocean_frames/ocean_frame_${i + 1}.png`)
-);
-
-function setArt(key, { art, combat, frames, frame_ms }) {
-  if (!BIOMES[key]) return;
-  if (art) BIOMES[key].art = art;
-  if (combat) BIOMES[key].art_combat = combat;
-  if (frames) BIOMES[key].frames = frames;
-  if (frame_ms) BIOMES[key].frame_ms = frame_ms;
-}
-
-// Map the assets you actually have today
-setArt('Plains',     { art: asset('plains.png') });
-setArt('Forest',     { art: asset('dark_forest.png') });       // placeholder for forest/taiga
-setArt('Tundra',     { art: asset('tundra.png') });
-setArt('DesertSand', { art: asset('desert.png') });
-setArt('Volcano',    { art: asset('volcano.png') });
-setArt('Urban',      { art: asset('town.png') });              // settlements / city feel
-setArt('Coast',      { art: asset('ocean_port.png') });        // nice coastal placeholder
-
-// Ocean gets a gentle animated frameset if you want to use it
-setArt('Ocean', { frames: OCEAN_FRAMES, frame_ms: 120 });
-
-// Titles (unchanged)
+// Flavor titles per biome (truncate or expand later)
 const TITLE_BANK = {
   Coast: ['Salt-stung Strand', 'Driftwood Bay', 'Whispering Dunes'],
   Ocean: ['Slatewater Expanse', 'The Green Current'],
@@ -165,14 +135,3 @@ export function randomTitleFor(biome) {
 
 // Useful in editors/tools
 export const ALL_BIOME_KEYS = Object.keys(BIOME_MASTER);
-
-// Convenience: art accessors (optional)
-export function artFor(biome, mode = 'idle') {
-  const key = canonicalBiome(biome);
-  const b = BIOMES[key];
-  return mode === 'combat' ? (b.art_combat || b.art) : b.art;
-}
-export function framesFor(biome) {
-  const key = canonicalBiome(biome);
-  return BIOMES[key]?.frames || null;
-}

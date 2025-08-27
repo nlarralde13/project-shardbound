@@ -1,330 +1,380 @@
-// /static/js/overlayMap.js — ensures scaffold exists, removes top legend, footer legend at bottom
-export function initOverlayMap({
-  devMode = false,
-  getBiomeColor = () => '#a0a0a0',
-  getPoiClass   = () => 'poi',
-  onTileClick   = null,
-} = {}) {
-  const overlay = document.getElementById('overlayMap');
-  if (!overlay) return { setShard(){}, setPos(){}, setDev(){}, setToken(){}, setFullBoard(){}, render(){}, _syncToggles(){} };
+// overlayMap.js — Map overlay (logic only; styling lives in mapOverlay.css)
+//
+// initOverlayMap({ devMode=false }):
+//   .setShard(shard)      // expects .grid + optional .layers.* or .sites[]
+//   .setPos(x,y)
+//   .setTitle(text)
+//   .render()
+//
+// Layers supported (if present):
+//   shard.grid                               -> biome tiles
+//   shard.layers.rivers.paths                -> polylines
+//   shard.layers.lakes.{cells|polygons}      -> water fills
+//   shard.layers.roads.paths                 -> polylines
+//   shard.layers.bridges[]                   -> small rects
+//   shard.layers.settlements.{cities,towns,villages,ports}  OR  shard.sites[]
+//
+// Nothing here injects CSS. Include /static/css/mapOverlay.css in your HTML.
 
-  // ---------- Ensure map scaffold exists (and nuke old top legend) ----------
-  function ensureScaffold() {
-    let frame = overlay.querySelector('.map-frame');
-    if (!frame) {
-      frame = document.createElement('div');
-      frame.className = 'map-frame';
-      overlay.appendChild(frame);
-    }
-    // Remove any legacy top legend rows
-    frame.querySelectorAll('.map-legend').forEach(n => n.remove());
+export function initOverlayMap({ devMode = false } = {}) {
+  const root = document.getElementById('overlayMap');
+  if (!root) return stub();
 
-    // Map holder (fixed 640x640 via CSS)
-    let holder = frame.querySelector('.map-holder');
-    if (!holder) {
-      holder = document.createElement('div');
-      holder.className = 'map-holder';
-      // Insert as first child so footer can append after
-      frame.insertBefore(holder, frame.firstChild);
-    }
+  // -------- scaffold (structure only) --------
+  // root
+  root.classList.add('overlay'); // shell display controlled by mvp3.js (add/remove .hidden)
 
-    // Map box
-    let box = holder.querySelector('.map-box');
-    if (!box) {
-      box = document.createElement('div');
-      box.className = 'map-box';
-      holder.appendChild(box);
-    }
+  // panel (paper shell)
+  const panel = ensure(root, '.map-panel', () => {
+    const p = document.createElement('div');
+    p.className = 'map-panel';
+    return p;
+  });
 
-    // Mini grid
-    let gridEl = box.querySelector('#miniGrid');
-    if (!gridEl) {
-      gridEl = document.createElement('div');
-      gridEl.id = 'miniGrid';
-      gridEl.className = 'mini-grid';
-      box.appendChild(gridEl);
-    }
+  // top banner
+  const top = ensure(panel, '.map-top', () => {
+    const t = document.createElement('header');
+    t.className = 'map-top';
+    t.innerHTML = `
+      <div class="map-top__inner">
+        <div class="map-title">World Map</div>
+        <button type="button" class="btn btn--blue map-close" id="mapCloseBtn">Close (M)</button>
+      </div>`;
+    return t;
+  });
 
-    // FX canvas
-    let fx = box.querySelector('#mapFX');
-    if (!fx) {
-      fx = document.createElement('canvas');
-      fx.id = 'mapFX';
-      box.appendChild(fx);
-    }
+  // frame + holder + canvases
+  const frame = ensure(panel, '.map-frame', () => {
+    const f = document.createElement('section'); f.className = 'map-frame'; return f;
+  });
+  const holder = ensure(frame, '.map-holder', () => {
+    const d = document.createElement('div'); d.className = 'map-holder'; return d;
+  });
+  const box = ensure(holder, '.map-box', () => {
+    const b = document.createElement('div'); b.className = 'map-box'; return b;
+  });
 
-    // POI layer
-    let poiEl = box.querySelector('#mapPOI');
-    if (!poiEl) {
-      poiEl = document.createElement('div');
-      poiEl.id = 'mapPOI';
-      box.appendChild(poiEl);
-    }
+  // canvas layers: base grid, hydrology/roads, poi
+  const gridCanvas = ensure(box, 'canvas.map-base', () => {
+    const c = document.createElement('canvas'); c.className = 'map-base'; c.width = 640; c.height = 640; return c;
+  });
+  const fxCanvas = ensure(box, 'canvas#mapFX', () => {
+    const c = document.createElement('canvas'); c.id = 'mapFX'; c.width = 640; c.height = 640; return c;
+  });
+  const poiCanvas = ensure(box, 'canvas#mapPOI', () => {
+    const c = document.createElement('canvas'); c.id = 'mapPOI'; c.width = 640; c.height = 640; return c;
+  });
 
-    return { frame, holder, box, gridEl, fx, poiEl };
-  }
-
-  // Footer (legend + toggles) — build it once if missing
-  let toggles = null, tHydro = null, tPOI = null;
-  function ensureFooter(frame) {
-    let footer = frame.querySelector('.map-footer');
-    if (!footer) {
-      footer = document.createElement('footer');
-      footer.className = 'map-footer';
-      footer.innerHTML = `
-        <div class="legend">
-          <span class="legend-item"><i class="dot port"></i> Port</span>
-          <span class="legend-item"><i class="dot village"></i> Village</span>
-          <span class="legend-item"><i class="swatch road"></i> Road</span>
-          <span class="legend-item"><i class="swatch river"></i> River</span>
+  // bottom banner (legend + toggles)
+  const bottom = ensure(panel, '.map-bottom', () => {
+    const b = document.createElement('footer');
+    b.className = 'map-bottom';
+    b.innerHTML = `
+      <div class="map-bottom__inner">
+        <div class="legend-list">
+          <span class="legend-item"><span class="swatch ocean"></span>Ocean</span>
+          <span class="legend-item"><span class="swatch coast"></span>Coast</span>
+          <span class="legend-item"><span class="swatch plains"></span>Plains</span>
+          <span class="legend-item"><span class="swatch forest"></span>Forest</span>
+          <span class="legend-item"><span class="dot city"></span>City</span>
+          <span class="legend-item"><span class="dot town"></span>Town</span>
+          <span class="legend-item"><span class="dot village"></span>Village</span>
+          <span class="legend-item"><span class="dot port"></span>Port</span>
         </div>
-        <div id="mapToggles" class="${devMode ? '' : 'hidden'}">
-          <label><input type="checkbox" id="toggleHydro" checked> Hydrology</label>
-          <label><input type="checkbox" id="togglePOI" checked> POIs</label>
+        <div class="legend-toggles" id="mapToggles">
+          <label><input id="tGrid"  type="checkbox" checked> Grid</label>
+          <label><input id="tRiv"   type="checkbox" checked> Rivers</label>
+          <label><input id="tLakes" type="checkbox" checked> Lakes</label>
+          <label><input id="tRoads" type="checkbox" checked> Roads</label>
+          <label><input id="tSet"   type="checkbox" checked> Settlements</label>
         </div>
-        <div class="map-hint">Press M or ESC to close.</div>`;
-      frame.appendChild(footer);
-    }
-    toggles = footer.querySelector('#mapToggles');
-    tHydro  = footer.querySelector('#toggleHydro');
-    tPOI    = footer.querySelector('#togglePOI');
-  }
+      </div>`;
+    return b;
+  });
 
-  // Build scaffold first, then footer, then grab drawing refs
-  const { frame, box, gridEl, fx, poiEl } = ensureScaffold();
-  ensureFooter(frame);
-  const ctx = fx.getContext('2d');
+  // Close button toggles handled by mvp3 hotkey, but wire the button too:
+  top.querySelector('#mapCloseBtn')?.addEventListener('click', () => {
+    root.classList.add('hidden');
+  });
 
-  // Player token pin
-  const tokenEl = document.createElement('div');
-  tokenEl.id = 'mapYou';
-  tokenEl.title = 'You';
-  poiEl.appendChild(tokenEl);
-
-  // ---------- State ----------
+  // -------- state --------
   const state = {
-    shard: null,
-    pos: { x: 8, y: 8 },
     devMode: !!devMode,
-    view: { vx: 0, vy: 0, vw: 16, vh: 16, W: 16, H: 16 },
-    token: { raw: '', short: '' },
-    fullBoard: true, // show whole shard; CSS locks canvas to 640×640
+    shard: null,
+    gridW: 0, gridH: 0,
+    pos: { x: 0, y: 0 },
+    tile: { w: 8, h: 8 },
+    title: 'World Map',
   };
-  const clamp = (n,a,b)=>Math.max(a,Math.min(b,n));
 
-  function biomeAt(x, y) {
-    const S = state.shard;
-    if (!S) return 'Forest';
-    const [W, H] = S.size || [0, 0];
-    if (x < 0 || y < 0 || x >= W || y >= H) return 'Coast';
-    return S.grid?.[y]?.[x] ?? 'Coast';
-  }
+  // -------- utils --------
+  const gctx = gridCanvas.getContext('2d');
+  const fctx = fxCanvas.getContext('2d');
+  const pctx = poiCanvas.getContext('2d');
 
-  // ---------- Data helpers ----------
-  function getHydrology() {
-    const lay = state.shard?.layers || {};
-    const h = lay.hydrology || lay.water || {};
-    return { rivers: h.rivers || h.streams || [], lakes: h.lakes || h.ponds || [] };
+  function fitCanvases() {
+    // Match canvases to the .map-box rendered size (device pixels)
+    const { width, height } = box.getBoundingClientRect();
+    for (const c of [gridCanvas, fxCanvas, poiCanvas]) {
+      const ratio = window.devicePixelRatio || 1;
+      c.width = Math.max(1, Math.floor(width * ratio));
+      c.height = Math.max(1, Math.floor(height * ratio));
+      c.style.width = `${Math.floor(width)}px`;
+      c.style.height = `${Math.floor(height)}px`;
+      (c.getContext('2d')).setTransform(ratio, 0, 0, ratio, 0, 0);
+    }
+    // compute tile size
+    state.tile.w = Math.max(4, Math.floor(gridCanvas.width / (window.devicePixelRatio || 1) / Math.max(1, state.gridW)));
+    state.tile.h = Math.max(4, Math.floor(gridCanvas.height / (window.devicePixelRatio || 1) / Math.max(1, state.gridH)));
   }
-  function getRoads() {
-    const r = state.shard?.layers?.roads || {};
-    return { paths: r.paths || [], bridges: r.bridges || [] };
-  }
-  function getSettlements() {
-    const S = state.shard?.layers?.settlements || {};
-    const norm = (arr, type) => (arr || []).map(p => ({ x: p.x ?? p[0], y: p.y ?? p[1], type }));
-    const fromLayers = [
-      ...norm(S.cities,   'city'),
-      ...norm(S.towns,    'town'),
-      ...norm(S.villages, 'village'),
-      ...norm(S.ports,    'port'),
-    ];
-    const fromSites = (state.shard?.sites || []).map(s => ({
-      x: s.x ?? s.pos?.[0], y: s.y ?? s.pos?.[1], type: s.type, name: s.name
-    }));
-    const fromPois  = (state.shard?.pois  || []).map(p => ({
-      x: p.x, y: p.y, type: p.type || 'poi', name: p.name
-    }));
-    const seen = new Set(), out = [];
-    [...fromLayers, ...fromSites, ...fromPois].forEach(o => {
-      if (o.x == null || o.y == null) return;
-      const k = `${o.type}:${o.x},${o.y}`;
-      if (!seen.has(k)) { seen.add(k); out.push(o); }
-    });
-    return out;
-  }
+  const px = (x) => x * state.tile.w;
+  const py = (y) => y * state.tile.h;
+  const cx = (x) => x * state.tile.w + state.tile.w / 2;
+  const cy = (y) => y * state.tile.h + state.tile.h / 2;
 
-  // ---------- View + layout ----------
-  function computeView() {
-    const S = state.shard;
-    const W = Number(S?.size?.[0] ?? 32);
-    const H = Number(S?.size?.[1] ?? 32);
-    if (state.fullBoard || state.devMode) { state.view = { vx:0, vy:0, vw:W, vh:H, W,H }; return; }
-    const vw = Math.min(16, W), vh = Math.min(16, H);
-    const vx = clamp(state.pos.x - Math.floor(vw/2), 0, Math.max(0, W - vw));
-    const vy = clamp(state.pos.y - Math.floor(vh/2), 0, Math.max(0, H - vh));
-    state.view = { vx, vy, vw, vh, W, H };
+  // -------- public API --------
+  function setTitle(text) {
+    state.title = String(text || 'World Map');
+    const el = top.querySelector('.map-title');
+    if (el) el.textContent = state.title;
+  }
+  function setShard(shard) {
+    state.shard = shard || null;
+    const g = shard?.grid || [];
+    state.gridH = g.length;
+    state.gridW = g[0]?.length || 0;
+    fitCanvases();
+    render();
+  }
+  function setPos(x, y) {
+    state.pos.x = x | 0;
+    state.pos.y = y | 0;
+    render();
   }
 
-  function layoutBox() {
-    const { vw, vh } = state.view;
-    const width  = box.clientWidth;
-    const height = box.clientHeight;
-    gridEl.style.gridTemplateColumns = `repeat(${vw}, 1fr)`;
-    gridEl.style.gridTemplateRows    = `repeat(${vh}, 1fr)`;
-    if (fx && ctx) { fx.width = width; fx.height = height; ctx.clearRect(0, 0, width, height); }
-  }
+  // -------- colors (atlas) --------
+  const biomeColor = (id)=>{
+    switch(String(id).toLowerCase()){
+      case 'ocean':return '#0b3a74';
+      case 'coast': case 'beach': return '#d9c38c';
+      case 'plains':return '#91c36e';
+      case 'forest':return '#2e7d32';
+      case 'hills':return '#97b06b';
+      case 'mountains':return '#8e3c3c';
+      case 'tundra':return '#b2c2c2';
+      case 'desert':return '#e0c067';
+      case 'wetland': case 'marsh': return '#8fae84';
+      default:return '#7f93aa';
+    }
+  };
+  const colors = {
+    bg:'#0a1220', grid:'#233042',
+    river:'#3aa2ff', riverGlow:'rgba(90,170,255,.35)',
+    lake:'#2c6bb3', lakeEdge:'rgba(255,255,255,.2)',
+    road:'#b79053', roadEdge:'#5a4a2a',
+    city:'#ffd24a', town:'#ffef9f', village:'#d8f1a6', port:'#a6f1ff',
+    label:'rgba(230,240,255,.95)', reticle:'#ff3a3a'
+  };
 
-  function renderGrid() {
-    const { vx, vy, vw, vh } = state.view;
-    gridEl.innerHTML = '';
-    const frag = document.createDocumentFragment();
-    for (let y = vy; y < vy + vh; y++) {
-      for (let x = vx; x < vx + vw; x++) {
-        const d = document.createElement('div');
-        d.className = 'cell';
-        const b = biomeAt(x, y);
-        d.style.background = getBiomeColor(b);
-        d.title = `${b} (${x},${y})`;
-        if (typeof onTileClick === 'function') d.addEventListener('click', () => onTileClick(x, y));
-        frag.appendChild(d);
+  // -------- draw helpers --------
+  function drawBiomes() {
+    const g = state.shard?.grid; if (!g) return;
+    fitCanvases();
+    // base
+    gctx.clearRect(0,0,gridCanvas.width, gridCanvas.height);
+    gctx.fillStyle = colors.bg;
+    gctx.fillRect(0,0,gridCanvas.width, gridCanvas.height);
+    // cells
+    for (let y=0;y<state.gridH;y++) {
+      for (let x=0;x<state.gridW;x++) {
+        gctx.fillStyle = biomeColor(g[y][x]);
+        gctx.fillRect(px(x), py(y), state.tile.w, state.tile.h);
       }
     }
-    gridEl.appendChild(frag);
-    const lx = state.pos.x - vx, ly = state.pos.y - vy;
-    if (lx >= 0 && ly >= 0 && lx < vw && ly < vh) gridEl.children[ly * vw + lx]?.classList.add('here');
+    // grid (toggle)
+    const gridOn = bottom.querySelector('#tGrid')?.checked;
+    if (gridOn) {
+      gctx.save();
+      gctx.globalAlpha = 0.25;
+      gctx.strokeStyle = colors.grid;
+      gctx.lineWidth = 1;
+      gctx.beginPath();
+      for (let x=0;x<=state.gridW;x++) { const X=px(x); gctx.moveTo(X,0); gctx.lineTo(X,py(state.gridH)); }
+      for (let y=0;y<=state.gridH;y++) { const Y=py(y); gctx.moveTo(0,Y); gctx.lineTo(px(state.gridW),Y); }
+      gctx.stroke();
+      gctx.restore();
+    }
   }
 
-  // ---------- Layers ----------
-  function renderHydrology() {
-    if (!ctx) return;
-    ctx.clearRect(0, 0, fx.width, fx.height);
-    const show = state.devMode ? !!tHydro?.checked : true;
-    if (!show) return;
-    const { vx, vy, vw, vh } = state.view;
-    const cw = fx.width / vw, ch = fx.height / vh;
-    const { rivers, lakes } = getHydrology();
+  function drawWaterRoads() {
+    fctx.clearRect(0,0,fxCanvas.width, fxCanvas.height);
 
-    ctx.fillStyle = 'rgba(40,140,220,0.22)';
-    lakes?.forEach(L => {
-      const p = Array.isArray(L) ? L : (L?.pos || [L?.x, L?.y]);
-      const [x, y] = p || [];
-      if (x == null || y == null) return;
-      if (x < vx || y < vy || x >= vx + vw || y >= vy + vh) return;
-      ctx.fillRect((x - vx) * cw, (y - vy) * ch, cw, ch);
-    });
-
-    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    ctx.strokeStyle = 'rgba(30,120,210,0.9)';
-    ctx.lineWidth = Math.max(1, Math.floor(Math.min(cw, ch) * 0.18));
-    rivers?.forEach(r => {
-      const pts = r?.path || r?.points || r?.coords || r;
-      if (!Array.isArray(pts) || pts.length < 2) return;
-      ctx.beginPath();
-      let first = true;
-      for (const p of pts) {
-        const q = Array.isArray(p) ? p : (p?.pos || [p?.x, p?.y]);
-        const [x, y] = q || [];
-        if (x == null || y == null) continue;
-        const cx = (x - vx) * cw + cw * 0.5, cy = (y - vy) * ch + ch * 0.5;
-        if (first) { ctx.moveTo(cx, cy); first = false; } else { ctx.lineTo(cx, cy); }
+    // Lakes
+    if (bottom.querySelector('#tLakes')?.checked) {
+      const lakes = state.shard?.layers?.lakes;
+      if (lakes) {
+        fctx.save();
+        fctx.fillStyle = colors.lake;
+        fctx.strokeStyle = colors.lakeEdge;
+        fctx.lineWidth = 1;
+        if (Array.isArray(lakes.cells)) {
+          for (const c of lakes.cells) {
+            const x=(c.x??c[0])|0, y=(c.y??c[1])|0;
+            fctx.fillRect(px(x),py(y),state.tile.w,state.tile.h);
+            fctx.strokeRect(px(x)+.5,py(y)+.5,state.tile.w-1,state.tile.h-1);
+          }
+        }
+        if (Array.isArray(lakes.polygons)) {
+          for (const poly of lakes.polygons) {
+            const pts=(poly||[]).map(p=>[(p.x??p[0])|0,(p.y??p[1])|0]); if (pts.length<3) continue;
+            fctx.beginPath(); fctx.moveTo(px(pts[0][0]),py(pts[0][1]));
+            for (let i=1;i<pts.length;i++) fctx.lineTo(px(pts[i][0]),py(pts[i][1]));
+            fctx.closePath(); fctx.fill(); fctx.stroke();
+          }
+        }
+        fctx.restore();
       }
-      ctx.stroke();
-    });
-  }
+    }
 
-  function renderRoads() {
-    if (!ctx || !fx) return;
-    const { vx, vy, vw, vh } = state.view;
-    const { paths, bridges } = getRoads();
-    const cw = fx.width / vw, ch = fx.height / vh;
-
-    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    ctx.strokeStyle = 'rgba(245,215,122,0.95)'; // road gold
-    ctx.lineWidth = Math.max(1, Math.floor(Math.min(cw, ch) * 0.22));
-
-    paths?.forEach(seg => {
-      if (!Array.isArray(seg) || seg.length < 2) return;
-      ctx.beginPath();
-      let first = true;
-      for (const p of seg) {
-        const [x, y] = Array.isArray(p) ? p : [p?.x, p?.y];
-        if (x == null || y == null) continue;
-        const cx = (x - vx) * cw + cw * 0.5;
-        const cy = (y - vy) * ch + ch * 0.5;
-        if (first) { ctx.moveTo(cx, cy); first = false; } else { ctx.lineTo(cx, cy); }
+    // Rivers
+    if (bottom.querySelector('#tRiv')?.checked) {
+      const rivers = state.shard?.layers?.rivers?.paths;
+      if (Array.isArray(rivers) && rivers.length) {
+        const s=Math.max(1.2,state.tile.w*.14);
+        fctx.save();
+        fctx.lineJoin='round'; fctx.lineCap='round';
+        fctx.strokeStyle = colors.riverGlow; fctx.lineWidth = s*3; for (const p of rivers) path(p);
+        fctx.strokeStyle = colors.river;     fctx.lineWidth = s*1.6; for (const p of rivers) path(p);
+        fctx.restore();
       }
-      ctx.stroke();
-    });
+    }
 
-    ctx.fillStyle = 'rgba(245,215,122,0.95)';
-    bridges?.forEach(b => {
-      const [x, y] = Array.isArray(b) ? b : [b?.x, b?.y];
-      if (x == null || y == null) return;
-      if (x < vx || y < vy || x >= vx + vw || y >= vy + vh) return;
-      ctx.fillRect((x - vx) * cw + cw * 0.25, (y - vy) * ch + ch * 0.25, cw * 0.5, ch * 0.5);
-    });
+    // Roads + Bridges
+    if (bottom.querySelector('#tRoads')?.checked) {
+      const roads = state.shard?.layers?.roads?.paths;
+      if (Array.isArray(roads) && roads.length) {
+        const w=Math.max(1.5,state.tile.w*.18);
+        fctx.save();
+        fctx.lineJoin='round'; fctx.lineCap='round';
+        fctx.strokeStyle=colors.roadEdge; fctx.globalAlpha=.35; fctx.lineWidth=w*2.2; for(const p of roads) path(p);
+        fctx.strokeStyle=colors.road;     fctx.globalAlpha=.95; fctx.lineWidth=w;     for(const p of roads) path(p);
+        fctx.restore();
+      }
+      const bridges = state.shard?.layers?.bridges;
+      if (Array.isArray(bridges) && bridges.length) {
+        fctx.save();
+        for (const b of bridges) {
+          const x=(b.x??b[0])|0, y=(b.y??b[1])|0;
+          const pad=Math.max(1,Math.floor(state.tile.w*.18));
+          fctx.fillStyle = '#e6d4a8';
+          fctx.strokeStyle = '#3b3422';
+          const bx=px(x)+pad, by=py(y)+pad, bw=state.tile.w-2*pad, bh=state.tile.h-2*pad;
+          fctx.fillRect(bx,by,bw,bh); fctx.strokeRect(bx+.5,by+.5,bw-1,bh-1);
+        }
+        fctx.restore();
+      }
+    }
+
+    function path(p){ if(!Array.isArray(p)||p.length<2) return;
+      fctx.beginPath(); fctx.moveTo(cx(p[0][0]|0), cy(p[0][1]|0));
+      for(let i=1;i<p.length;i++) fctx.lineTo(cx(p[i][0]|0), cy(p[i][1]|0));
+      fctx.stroke();
+    }
   }
 
-  function renderPOI() {
-    poiEl.querySelectorAll('.poi').forEach(n => n.remove());
-    const show = state.devMode ? !!tPOI?.checked : true;
-    if (!show) return;
-    const { vx, vy, vw, vh } = state.view;
-    const cw = box.clientWidth / vw, ch = box.clientHeight / vh;
+  function drawSettlements() {
+    pctx.clearRect(0,0,poiCanvas.width, poiCanvas.height);
+    if (!bottom.querySelector('#tSet')?.checked) return;
 
-    getSettlements().forEach(s => {
-      const x = s.x, y = s.y;
-      if (x < vx || y < vy || x >= vx + vw || y >= vy + vh) return;
-      const el = document.createElement('div');
-      el.className = getPoiClass(s.type);
-      el.classList.add('poi');
-      el.style.position = 'absolute';
-      el.style.left = `${(x - vx) * cw + (cw / 2) - 7}px`;
-      el.style.top  = `${(y - vy) * ch + (ch / 2) - 7}px`;
-      el.style.width = '14px';
-      el.style.height = '14px';
-      el.style.borderRadius = '50%';
-      el.title = s.name || s.type;
-      poiEl.appendChild(el);
-    });
+    // collect groups
+    const lay = state.shard?.layers?.settlements || {};
+    const groups = {
+      cities:   arr(lay.cities),
+      towns:    arr(lay.towns),
+      villages: arr(lay.villages),
+      ports:    arr(lay.ports),
+    };
+    if (!groups.cities.length && !groups.towns.length && !groups.villages.length && !groups.ports.length) {
+      const sites = Array.isArray(state.shard?.sites) ? state.shard.sites : [];
+      for (const s of sites) {
+        const type = String(s.type || '').toLowerCase();
+        (groups[type+'s'] ||= []).push({ x:s.x, y:s.y, name:s.name, type });
+      }
+    }
+
+    const draw = (pts, core, glowIn) => {
+      const r = Math.max(3, Math.floor(state.tile.w * 0.35));
+      for (const s of pts) {
+        const X = cx((s.x ?? s[0])|0), Y = cy((s.y ?? s[1])|0);
+        // glow
+        const g = pctx.createRadialGradient(X, Y, 1, X, Y, r * 2.0);
+        g.addColorStop(0, glowIn); g.addColorStop(1, 'rgba(255,255,255,0)');
+        pctx.fillStyle = g; pctx.beginPath(); pctx.arc(X, Y, r * 2.0, 0, Math.PI*2); pctx.fill();
+        // core
+        pctx.fillStyle = core; pctx.beginPath(); pctx.arc(X, Y, r, 0, Math.PI*2); pctx.fill();
+        // label
+        const label = s.name || s.label;
+        if (label && state.tile.w >= 8) {
+          pctx.font = '12px ui-sans-serif, system-ui, Segoe UI, Roboto';
+          pctx.textBaseline = 'top';
+          pctx.fillStyle = colors.label;
+          pctx.fillText(label, X + r + 3, Y - r - 1);
+        }
+      }
+    };
+
+    pctx.save();
+    draw(groups.cities,   colors.city,   'rgba(255,220,120,.80)');
+    draw(groups.towns,    colors.town,   'rgba(255,240,160,.70)');
+    draw(groups.villages, colors.village,'rgba(220,255,160,.65)');
+    draw(groups.ports,    colors.port,   'rgba(150,220,255,.70)');
+    pctx.restore();
   }
 
-  function positionToken() {
-    const { vx, vy, vw, vh } = state.view;
-    const cw = box.clientWidth / vw, ch = box.clientHeight / vh;
-    const lx = state.pos.x - vx, ly = state.pos.y - vy;
-    if (lx < 0 || ly < 0 || lx >= vw || ly >= vh) { tokenEl.style.display = 'none'; return; }
-    tokenEl.style.display = 'grid';
-    tokenEl.style.left = `${lx * cw + (cw / 2) - 7}px`;
-    tokenEl.style.top  = `${ly * ch + (ch / 2) - 7}px`;
-    tokenEl.textContent = state.token.short || '•';
-    tokenEl.title = state.token.raw || 'You';
+  function drawReticle() {
+    const x = px(state.pos.x), y = py(state.pos.y);
+    pctx.save();
+    pctx.strokeStyle = colors.reticle;
+    pctx.lineWidth = 2;
+    pctx.beginPath();
+    pctx.moveTo(x, y + state.tile.h/2);
+    pctx.lineTo(x + state.tile.w, y + state.tile.h/2);
+    pctx.moveTo(x + state.tile.w/2, y);
+    pctx.lineTo(x + state.tile.w/2, y + state.tile.h);
+    pctx.stroke();
+    pctx.restore();
   }
 
   function render() {
-    layoutBox();
-    renderGrid();
-    renderHydrology();
-    renderRoads();
-    renderPOI();
-    positionToken();
+    drawBiomes();
+    drawWaterRoads();
+    drawSettlements();
+    drawReticle();
   }
 
-  // ---------- Public API ----------
-  function setShard(s){ state.shard = s || null; computeView(); render(); }
-  function setPos(x,y){ state.pos = { x:Number(x)||0, y:Number(y)||0 }; computeView(); if(!overlay.classList.contains('hidden')) render(); }
-  function setDev(on){ state.devMode = !!on; toggles?.classList.toggle('hidden', !state.devMode); computeView(); render(); }
-  function setToken(token){ const raw=String(token||''); const tail=raw.slice(-5); state.token={raw,short:tail}; positionToken(); }
-  function setFullBoard(on){ state.fullBoard = !!on; computeView(); render(); }
-  function _syncToggles(){ toggles?.classList.toggle('hidden', !state.devMode); }
-
-  // Events
+  // -------- events --------
   window.addEventListener('resize', () => {
-    if (!overlay.classList.contains('hidden')) { layoutBox(); renderHydrology(); renderPOI(); positionToken(); }
+    if (root.classList.contains('hidden')) return;
+    fitCanvases(); render();
   });
-  tHydro?.addEventListener('change', () => { renderHydrology(); renderRoads(); });
-  tPOI?.addEventListener('change',   () => { renderPOI(); });
+  bottom.addEventListener('change', (e) => {
+    if (e.target.matches('input[type="checkbox"]')) render();
+  });
 
-  return { setShard, setPos, setDev, setToken, setFullBoard, render, _syncToggles };
+  // passive updates from game
+  window.addEventListener('game:moved', (ev)=>{ const d=ev.detail||{}; if(Number.isFinite(d.x)&&Number.isFinite(d.y)) setPos(d.x,d.y); });
+
+  // expose
+  return { setShard, setPos, setTitle, setDev(v){state.devMode=!!v}, render };
+
+  // helpers
+  function ensure(parent, sel, maker) {
+    const found = parent.querySelector(sel);
+    if (found) return found;
+    const node = maker();
+    parent.appendChild(node);
+    return node;
+  }
+  function arr(a){ return Array.isArray(a) ? a : []; }
+  function stub(){ return { setShard(){}, setPos(){}, setTitle(){}, setDev(){}, render(){} }; }
 }

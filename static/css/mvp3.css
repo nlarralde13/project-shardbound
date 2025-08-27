@@ -1,292 +1,255 @@
-/* =======================================================================
-   Shardbound — MVP3 (SNES x high-fantasy MUD vibe)
-   Master CSS consolidating app + overlay + new console frame & action overlay
-   ======================================================================= */
+/* ============================================================
+   projectMMO — MVP3 UI (D&D Journal Theme)
+   - App chrome, room card, HUD, console, overlay shells
+   - Map visuals are OWNED by overlayMap.js (no internal map rules here)
+   ============================================================ */
 
-/* == THEME & SIZES ===================================================== */
+/* ---------- Theme Tokens ---------- */
 :root{
-  /* Palette */
-  --bg:#120b22; --bg-2:#0b0716;
-  --panel:#111925; --panel-2:#0b121a;
-  --ink:#e9e7ef; --ink-2:#bfb7d9;
-  --edge-light:#c9c3de; --edge-dark:#3a2d62;
-  --border:rgba(255,255,255,.08);
-  --shadow:0 10px 30px rgba(0,0,0,.45);
+  /* Parchment + ink */
+  --paper:#f4ecd8;
+  --paper-2:#efe6cf;
+  --paper-edge:#c7bda4;
+  --ink:#221a11;
+  --ink-soft:#3c2e1f;
 
-  /* HUD */
-  --hp:#e15a5a; --mp:#79a5ff; --sta:#63c27b;
+  /* Night UI frame (outer site background) */
+  --night-0:#0b0f15;
+  --night-1:#0e141d;
+  --night-2:#101927;
+
+  /* Accents */
+  --wax-red:#b23a3a;
+  --wax-blue:#3267c7;
+  --wax-green:#2e7d5e;
+  --gold:#d5b46a;
+
+  /* Lines/edges/shadows */
+  --edge:rgba(0,0,0,.35);
+  --edge-soft:rgba(0,0,0,.18);
+  --hair:rgba(0,0,0,.12);
+  --glow:0 10px 28px rgba(0,0,0,.35);
 
   /* Layout */
-  --topbar-h:56px;
-  --card-w:1020px;               /* room card width */
-  --card-ratio:0.55;              /* art height = card-w * ratio */
-  --card-pad:14px;
-  --radius-xl:18px; --radius:12px; --radius-sm:8px;
+  --card-w: 1020px;
+  --card-ratio: 0.54;
+  --rad-xl: 18px;
+  --rad: 12px;
 
-  /* Overlay sizing */
-  --overlay-window: 720px;        /* dialog content size */
-  --overlay-canvas: 640px;        /* internal map canvas */
-  --overlay-tiles: 16;            /* 16×16 grid */
-  --tile-size: calc(var(--overlay-canvas) / var(--overlay-tiles)); /* 40px */
+  /* HUD bars */
+  --hp:#c84747;
+  --mp:#557fe6;
+  --sta:#51b66f;
 
-  /* Console lines shown (JS reads this var) */
-  --console-lines: 8;
+  /* Z */
+  --z-overlay:100;
 }
 
-/* == GLOBAL BASE ======================================================= */
-*{ box-sizing:border-box }
-html,body{ height:100% }
+/* ---------- Resets & Base ---------- */
+*{box-sizing:border-box}
+html,body{height:100%}
 body.app{
-  margin:0; color:var(--ink);
-  background: radial-gradient(1200px 600px at 50% -20%, #15202c 0%, var(--bg) 45%, #081018 100%);
-  font:14px/1.5 "Inter",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-  letter-spacing:.2px;
+  margin:0;
+  color:var(--ink);
+  background:
+    radial-gradient(1200px 600px at 50% -20%, rgba(20,26,38,.65), rgba(8,12,18,.85)),
+    linear-gradient(180deg, var(--night-1), var(--night-0));
+  /* Body copy: a readable serif; add a <link> for Crimson Text if you want */
+  font: 15px/1.55 "Crimson Text", "Georgia", "Times New Roman", serif;
 }
-a{ color:#a9c9ff; text-decoration:none }
-a:hover{ text-decoration:underline }
+
+/* Optional fantasy display font for headings:
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600..900&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+Then uncomment the next block. */
+/*
+h1,h2,h3,.display {
+  font-family: "Cinzel", "IM Fell English", "Crimson Text", Georgia, serif;
+  letter-spacing: .5px;
+}
+*/
+
+a{color:#264eaf;text-decoration:none}
+a:hover{text-decoration:underline}
+
 ::-webkit-scrollbar{width:10px;height:10px}
-::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:8px}
+::-webkit-scrollbar-thumb{background:rgba(0,0,0,.35);border-radius:8px}
 ::-webkit-scrollbar-track{background:transparent}
 
-/* ======================================================================
-   TOP BAR + HUD
-   ====================================================================== */
-.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 20px}
-.topbar .title{font-weight:700;font-size:18px;color:#e8f0ff;text-shadow:0 1px 0 rgba(0,0,0,.35)}
-.hud{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-.bar{position:relative;height:14px;min-width:120px;padding-left:34px;background:#0b1320;border:1px solid var(--border);border-radius:999px;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
-.bar span{position:absolute;left:6px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--ink-2)}
-.bar i{position:absolute;left:32px;top:1px;bottom:1px;right:1px;border-radius:999px;background:linear-gradient(90deg,rgba(255,255,255,.15),rgba(255,255,255,.02))}
-.bar.hp i{background:var(--hp)} .bar.mp i{background:var(--mp)} .bar.sta i{background:var(--sta)}
-nav.actions{display:flex;gap:8px;flex-wrap:wrap}
-.btn{appearance:none;border:none;cursor:pointer;color:#cfe0ff;background:#1b2636;border:1px solid rgba(255,255,255,.12);padding:8px 12px;border-radius:999px;transition:background .15s,transform .02s;box-shadow:0 1px 0 rgba(255,255,255,.04),0 6px 16px rgba(0,0,0,.25);user-select:none}
-.btn:hover{background:#223146} .btn:active{transform:translateY(1px)} .btn.small{padding:5px 9px;font-size:12px}
-
-/* ======================================================================
-   MAIN LAYOUT + ROOM CARD
-   ====================================================================== */
-.main{max-width:1400px;margin:0 auto;padding:14px 18px 60px;min-height:calc(100vh - var(--topbar-h));display:flex;flex-direction:column;align-items:center}
-.room{width:100%;display:flex;flex-direction:column;align-items:center}
-.room-header{display:flex;align-items:center;justify-content:center;gap:10px;margin:6px 2px 12px;text-align:center}
-.room-header h1{font-size:22px;margin:0}
-.tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:3px 9px;border-radius:999px;color:#cfe0ff;background:#0b121a;border:1px solid var(--border)}
-.tag::before{content:"";width:8px;height:8px;border-radius:50%;display:inline-block;background:#4ea3ff}
-
-.room-card{width:var(--card-w);margin:0 auto;padding:var(--card-pad);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow);background:linear-gradient(#110a20,#0d0818)}
-.room-stage{position:relative}
-.room-art{
-  width:100%;
-  height:calc(var(--card-w) * var(--card-ratio));
-  border-radius:calc(var(--radius-xl) - 6px);
-  background:#09111a center/contain no-repeat;
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);
-}
-
-/* ======================================================================
-   CONSOLE — Arcane frame + Input
-   ====================================================================== */
-.console,
-.console-input {
-  position: relative;
-  background: linear-gradient(180deg, #0d111b, #0a0f16);
-  border: 2px solid var(--edge-dark);
-  box-shadow:
-    0 0 0 2px rgba(255,255,255,.06) inset,
-    0 10px 28px rgba(0,0,0,.35);
-}
-.console{
-  font-size:13px;
-  line-height:1.25;
-  height:calc(var(--console-lines) * 1.25em + 16px);
-  overflow:hidden;
-  padding:10px 12px;
-  border-radius:14px 14px 0 0;
-}
-.console-input{
-  display:grid;
-  grid-template-columns:1fr auto;
-  gap:8px;
-  padding:10px 12px;
-  border-top:none;
-  border-radius:0 0 14px 14px;
-  background:linear-gradient(180deg, #0a0f16, #080c12);
-}
-.console-input input{min-height:34px}
-.console .line{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
-/* Corner runes */
-.console::before,.console-input::after{
-  content:"";position:absolute;inset:-6px;border-radius:18px;pointer-events:none;
-  box-shadow:0 0 20px rgba(124,155,255,.18),0 0 2px rgba(124,155,255,.26) inset;
-}
-.console::after,.console-input::before{
-  content:"";position:absolute;width:14px;height:14px;border-radius:50%;
+/* ---------- Utilities ---------- */
+.paper{
   background:
-    radial-gradient(circle at 50% 50%, rgba(164,212,255,.9), rgba(164,212,255,0) 60%),
-    radial-gradient(circle at 50% 50%, rgba(180,140,255,.8), rgba(180,140,255,0) 60%);
-  filter:blur(.2px);opacity:.55;
+    radial-gradient(800px 600px at 20% -10%, rgba(255,255,255,.35), rgba(255,255,255,0) 60%),
+    linear-gradient(180deg, var(--paper), var(--paper-2));
+  border: 1px solid var(--paper-edge);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.5) inset,
+    0 0 0 1px rgba(0,0,0,.06),
+    var(--glow);
 }
-.console::after{left:-7px;top:-7px}
-.console-input::before{right:-7px;bottom:-7px}
+.ink{ color: var(--ink); }
+.ink-soft{ color: var(--ink-soft); }
+.grid-center{ display:grid; place-items:center; }
 
-/* ======================================================================
-   ACTION BAR — Transparent overlay on viewport
-   ====================================================================== */
+.btn{
+  appearance:none; cursor:pointer; user-select:none;
+  border-radius: 999px; border: 1px solid rgba(0,0,0,.25);
+  color: var(--paper); background:
+    linear-gradient(180deg, rgba(20,28,40,.9), rgba(12,18,28,.9));
+  padding: 8px 14px; font-weight:600;
+  box-shadow: 0 1px 0 rgba(255,255,255,.08), 0 6px 16px rgba(0,0,0,.35);
+  transition: transform .02s, filter .15s;
+}
+.btn:hover{ filter:brightness(1.08); }
+.btn:active{ transform: translateY(1px); }
+.btn--red   { background: linear-gradient(#8e2f2f,#6f2424); border-color: #3d1515; }
+.btn--blue  { background: linear-gradient(#2b4070,#1c2b4d); border-color: #131e33; }
+.btn--green { background: linear-gradient(#275e49,#1a3e31); border-color: #0f241d; }
+.badge{ display:inline-flex; gap:6px; align-items:center; font-size:12px;
+  padding:2px 8px; border:1px solid rgba(0,0,0,.2); border-radius:999px; background:#eadfbf; color:#3f2a18; }
+
+/* ---------- Top bar (thin) ---------- */
+.topbar{
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  padding:12px 18px;
+  color:#e9e7ef;
+}
+.topbar .title{
+  font-weight:800; letter-spacing:.3px;
+  text-shadow: 0 1px 0 rgba(0,0,0,.45);
+}
+
+/* ---------- Main & Room Card ---------- */
+.main{ max-width:1400px; margin:0 auto; padding:16px 18px 64px; }
+
+.room{ display:flex; flex-direction:column; align-items:center; width:100%; }
+
+.room-header{
+  display:flex; gap:10px; align-items:center; justify-content:center;
+  margin:8px 2px 12px; text-align:center;
+}
+.room-header h1{ font-size:22px; margin:0; }
+.tag{
+  display:inline-flex; align-items:center; gap:6px; font-size:12px;
+  padding:3px 9px; border-radius:999px; color:#1e2430;
+  background:#e6dcbd; border:1px solid rgba(0,0,0,.2);
+}
+.tag::before{ content:""; width:8px; height:8px; border-radius:50%; background:var(--gold); }
+
+.room-card{
+  width: var(--card-w);
+  margin: 0 auto;
+  padding: 14px;
+  border-radius: var(--rad-xl);
+  background:
+    linear-gradient(180deg, #3a2f21 0%, #2a231a 6%, #2b2319 94%, #3a2f21 100%); /* wood board */
+  box-shadow: 0 6px 16px rgba(0,0,0,.45);
+  border: 1px solid rgba(0,0,0,.45);
+}
+.room-stage{ position:relative; }
+#roomArt{
+  width:100%;
+  height: calc(var(--card-w) * var(--card-ratio));
+  border-radius: 14px;
+  background: var(--paper) center/contain no-repeat;
+  border: 1px solid var(--paper-edge);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.5) inset,
+    0 0 0 1px rgba(0,0,0,.06),
+    var(--glow);
+  transition: opacity 120ms linear;
+}
+#roomArt.fade-out{ opacity:.65; }
+
+/* ---------- HUD (action & stats) ---------- */
+.hud{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+
+.bar{
+  position:relative; height:16px; min-width:140px; padding-left:36px;
+  border-radius:999px; background:#101720; border:1px solid rgba(0,0,0,.35);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+  color:#c8c0a4; font-size:12px;
+}
+.bar span{ position:absolute; left:8px; top:50%; transform:translateY(-50%);}
+.bar i{
+  position:absolute; left:34px; top:1px; bottom:1px; right:1px; border-radius:999px;
+  background: linear-gradient(90deg, rgba(255,255,255,.15), rgba(255,255,255,.03));
+}
+.bar.hp i{ background: var(--hp); }
+.bar.mp i{ background: var(--mp); }
+.bar.sta i{ background: var(--sta); }
+
 .action-overlay{
-  position:absolute;left:50%;transform:translateX(-50%);bottom:10px;width:calc(100% - 32px);
-  display:flex;justify-content:center;pointer-events:none;z-index:50;
+  position:absolute; left:50%; transform:translateX(-50%);
+  bottom:10px; width:calc(100% - 32px);
+  display:flex; justify-content:center; pointer-events:none; z-index:50;
 }
 .action-overlay .console-actions{
-  pointer-events:auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;
-  border-radius:999px;background:rgba(12,16,24,.38);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(6px);
-  box-shadow:0 8px 24px rgba(0,0,0,.35);
+  pointer-events:auto; display:flex; align-items:center; gap:12px;
+  padding:8px 12px; border-radius:999px;
+  background: rgba(12,16,24,.38);
+  border: 1px solid rgba(0,0,0,.35);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.35);
 }
-.console-actions .group{display:flex;align-items:center;gap:8px}
-.console-actions .group .label{font-size:12px;color:var(--ink-2);opacity:.9}
-.console-actions .group .btns{display:flex;gap:8px;flex-wrap:wrap}
 
-/* ======================================================================
-   MODAL OVERLAYS — Map / Character / Inventory
-   ====================================================================== */
-/* Fullscreen dimmed layer, centered content */
-#overlayMap, #overlayChar, #overlayInv{
-  position: fixed;
-  inset: 0;
-  display: none;                 /* shown when .hidden is removed */
-  place-items: center;           /* center the inner content */
-  padding: 28px;
-  z-index: 100;                  /* above the action overlay (z=50) */
+/* ---------- Console (journal footer) ---------- */
+.console-wrap{ width: var(--card-w); margin: 14px auto 0; }
+.console{
+  position: relative;
+  height: 156px; overflow: auto; resize: vertical;
+  padding: 10px 12px;
+  border-radius: 14px 14px 0 0;
+  border: 1px solid rgba(0,0,0,.25);
   background:
-    radial-gradient(800px 400px at 50% 0, rgba(22, 26, 40, .72), rgba(10, 14, 20, .88)),
-    rgba(6, 10, 16, .65);
+    linear-gradient(180deg, #f7efda, #efe6cf);
+  box-shadow: var(--glow), inset 0 0 0 1px rgba(255,255,255,.35);
+  color: var(--ink);
+  font-size: 14px; line-height: 1.3;
+}
+.console .line{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+.console-input{
+  display:grid; grid-template-columns: 1fr auto; gap:8px;
+  padding:10px 12px; border-radius: 0 0 14px 14px;
+  border: 1px solid rgba(0,0,0,.25); border-top:none;
+  background: linear-gradient(180deg, #efe6cf, #e7dbbf);
+  box-shadow: var(--glow), inset 0 0 0 1px rgba(255,255,255,.35);
+}
+.console-input input{
+  min-height:36px; border-radius: 10px; border:1px solid rgba(0,0,0,.25);
+  padding: 8px 10px; background: #fffaf0; color:#2d2418;
+}
+
+/* ---------- Overlay shells (Map / Char / Inv) ----------
+   The overlay internals (map frame contents) are styled & rendered by overlayMap.js. */
+#overlayMap, #overlayChar, #overlayInv{
+  position: fixed; inset: 0; display: none; place-items: center; padding: 28px;
+  z-index: var(--z-overlay);
+  background:
+    radial-gradient(800px 400px at 50% 0, rgba(16,22,34,.72), rgba(8,12,18,.88)),
+    rgba(6, 10, 16, .62);
   backdrop-filter: blur(4px);
 }
-/* unhide when toggled by JS */
-#overlayMap:not(.hidden),
-#overlayChar:not(.hidden),
-#overlayInv:not(.hidden){
-  display: grid;
-}
-/* generic panel shells for char/inventory (map has its own frame) */
-#overlayChar .panel,
-#overlayInv  .panel{
-  box-shadow: 0 16px 48px rgba(0,0,0,.6);
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 16px;
-  background: linear-gradient(#0e1320,#0a0f18);
+#overlayMap:not(.hidden), #overlayChar:not(.hidden), #overlayInv:not(.hidden){ display:grid; }
+
+/* Basic panels for Char/Inv content (map keeps its own style in overlayMap.js) */
+#overlayChar .panel, #overlayInv .panel{
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f4ecd8, #efe6cf);
+  border: 1px solid rgba(0,0,0,.25);
+  box-shadow: var(--glow), inset 0 0 0 1px rgba(255,255,255,.35);
+  color: var(--ink);
+  min-width: 640px;
 }
 
-/* ======================================================================
-   OVERLAY MAP — WINDOW + MAP AREA
-   ====================================================================== */
-#overlayMap .map-frame{
-  width: var(--overlay-window);
-  height: var(--overlay-window);
-  margin: 0 auto;
-  padding: 16px;
-  display: grid;
-  grid-template-rows: 1fr auto;  /* map | footer banner */
-  gap: 12px;
-}
-#overlayMap .map-holder{
-  width: var(--overlay-canvas);
-  height: var(--overlay-canvas);
-  margin: 0 auto;
-  display: flex; align-items: center; justify-content: center;
-}
-#overlayMap .map-box{
-  position: relative;
-  width: 100%;
-  height: 100%;
-  image-rendering: pixelated;
-  background: rgba(10,14,20,.55);
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 4px 16px rgba(0,0,0,.35);
-}
-#overlayMap .mini-grid{
-  position: absolute; inset: 0;
-  display: grid;
-  grid-template-columns: repeat(var(--overlay-tiles), 1fr);
-  grid-template-rows:    repeat(var(--overlay-tiles),  1fr);
-}
-#overlayMap .mini-grid .cell{
-  border-right: 1px solid rgba(255,255,255,.04);
-  border-bottom: 1px solid rgba(255,255,255,.04);
-  background: rgba(255,255,255,.02);
-}
-#overlayMap .mini-grid .here{
-  background: rgba(255,217,94,.9);
-  box-shadow: inset 0 0 0 2px rgba(0,0,0,.4);
-}
-/* FX canvas & POI layer */
-#overlayMap canvas#mapFX{position:absolute;inset:0;z-index:2;pointer-events:none;image-rendering:pixelated}
-#mapPOI{position:absolute;inset:0;pointer-events:none;z-index:3}
-#mapPOI .poi{box-shadow:0 0 0 1px rgba(0,0,0,.45),0 0 6px rgba(0,0,0,.25);width:14px;height:14px;border-radius:50%}
-#mapPOI .poi.city{background:#8ec5ff}
-#mapPOI .poi.town{background:#86b6ff}
-#mapPOI .poi.village{background:#b7e07a}
-#mapPOI .poi.port{background:#7fe7b0;border:1px solid rgba(0,0,0,.45)}
-#mapYou{position:absolute;z-index:4;width:14px;height:14px;border-radius:50%;display:grid;place-items:center;font-size:9px;font-weight:700;color:#0b0f16;background:linear-gradient(#ffd87a,#ffbd52);box-shadow:0 0 0 1px rgba(0,0,0,.45),0 0 8px rgba(0,0,0,.25)}
-/* Bottom banner: Legend + Toggles + Hint */
-#overlayMap .map-footer{
-  display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:16px;
-  padding:10px 14px;background:var(--panel-2);border-top:1px solid var(--border);border-radius:10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)
-}
-#overlayMap .legend{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
-#overlayMap .legend-item{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-2)}
-#overlayMap .dot{width:10px;height:10px;border-radius:50%;display:inline-block;box-shadow:0 0 0 1px rgba(0,0,0,.35),0 0 6px rgba(0,0,0,.18);background:#86b6ff}
-#overlayMap .dot.port{background:#7fe7b0}
-#overlayMap .dot.village{background:#b7e07a}
-#overlayMap .swatch{position:relative;display:inline-block;width:22px;height:12px}
-#overlayMap .swatch::before{content:"";position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);border-top:3px solid;border-radius:2px}
-#overlayMap .swatch.road::before{border-color: rgba(245,215,122,0.95)}
-#overlayMap .swatch.river::before{border-color: rgba(30,120,210,0.90)}
-#overlayMap #mapToggles{display:flex;gap:14px;align-items:center}
-#overlayMap #mapToggles.hidden{display:none}
-#overlayMap #mapToggles label{display:inline-flex;gap:6px;font-size:12px;color:var(--ink-2)}
-#overlayMap .map-hint{text-align:right;font-size:12px;color:var(--ink-2);opacity:.9}
-/* Hide any legacy top legend row */
-#overlayMap .map-legend{display:none !important}
-
-/* ======================================================================
-   CHARACTER + INVENTORY PANELS
-   ====================================================================== */
-.char-grid{padding:12px 14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.char-col h3{margin:0 0 8px;font-size:14px;color:#eaf0ff}
-.slots,.stats{list-style:none;margin:0;padding:0}
-.slots li{display:flex;justify-content:space-between;padding:6px 8px;background:#0c1520;border:1px solid var(--border);border-radius:8px;margin-bottom:6px}
-.stats li{display:inline-block;margin:0 8px 8px 0;padding:6px 10px;background:#0c1520;border:1px solid var(--border);border-radius:999px}
-.inv-body{padding:12px 14px 16px}
-.inv-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.inv-list li{display:flex;justify-content:space-between;align-items:center;background:#0c1520;border:1px solid var(--border);border-radius:8px;padding:8px 10px}
-.inv-list .name{color:#eaf0ff}
-.inv-list .qty{color:#a8b2c5}
-
-/* ======================================================================
-   UTILITIES
-   ====================================================================== */
-.badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:2px 8px;border:1px solid var(--border);border-radius:999px;background:#0b121a;color:#cfe0ff}
-.badge .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
-.log-ok{color:#b7f7c3}.log-warn{color:#ffd27a}.log-bad{color:#ff9b9b}.log-note{color:var(--ink-2)}
-.hidden{display:none !important}
-
-/* ======================================================================
-   RESPONSIVE
-   ====================================================================== */
+/* ---------- Responsiveness ---------- */
 @media (max-width: 900px){
-  :root{ --card-w: 92vw; --overlay-window: 92vw; --overlay-canvas: 92vw; }
-  .room-header h1{font-size:20px}
+  :root{ --card-w: 92vw; }
+  .console-wrap{ width: var(--card-w); }
 }
-@media (max-width: 760px){
-  .topbar{flex-wrap:wrap;gap:10px}
-  .hud{order:3;width:100%;justify-content:flex-start;flex-wrap:wrap;gap:8px}
-  nav.actions{order:2}
-  #overlayMap .map-frame{ width:92vw; height:auto }
-  #overlayMap .map-holder{ width:92vw; height:92vw }
-}
-/* Short screens: reduce art + lines so page never scrolls */
-@media (max-height: 840px){ :root{ --card-ratio: 0.44; --console-lines: 7; } }
-@media (max-height: 760px){ :root{ --card-ratio: 0.40; --console-lines: 6; } }
-@media (max-height: 700px){ :root{ --card-ratio: 0.36; --console-lines: 5; } }
+@media (max-height: 840px){ :root{ --card-ratio: .46; } }
+@media (max-height: 760px){ :root{ --card-ratio: .41; } }
+@media (max-height: 700px){ :root{ --card-ratio: .36; } }
+
+/* ---------- Helpers ---------- */
+.hidden{ display:none !important; }

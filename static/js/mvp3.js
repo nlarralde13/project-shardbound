@@ -1,363 +1,207 @@
-// MVP3 Orchestrator — gameplay shell + shard loader + overlay wiring
-// Hotkeys: B/C/I open overlays; movement keys only in devmode&noclip.
-// Buttons use delegated clicks so they still work after DOM moves.
+// MVP3 Orchestrator (overlay-owned styling)
+// Purpose: orchestration only. No map styling here.
 
-import { poiClassFor, canonicalSettlement } from '/static/js/settlementRegistry.js';
-import { rollRoomEvent } from '/static/js/eventTables.js';
 import { initOverlayMap } from '/static/js/overlayMap.js';
-import { ALL_BIOME_KEYS, randomTitleFor, BIOMES, BIOME_COLORS, canonicalBiome } from '/static/js/biomeRegistry.js';
+import { setShard as setRoomShard, assertCanonicalGrid, buildRoom } from '/static/js/roomLoader.js';
 
-import { createMovementController } from '/static/js/movement/movementController.js';
-import { createMovementRules } from '/static/js/movement/movementRules.js';
+const QS = new URLSearchParams(location.search);
+const DEV_MODE = QS.has('devmode');
 
-(async function () {
-  // Wait for DOM so all buttons/fields exist before wiring events
-  if (document.readyState === 'loading') {
-    await new Promise(r => document.addEventListener('DOMContentLoaded', r, { once: true }));
+const USER_TOKEN = (() => {
+  const k = 'mvp3_user_token';
+  const q = QS.get('token');
+  if (q) { localStorage.setItem(k, q); return q; }
+  let v = localStorage.getItem(k);
+  if (!v) { v = crypto.getRandomValues(new Uint32Array(4)).join('-'); localStorage.setItem(k, v); }
+  return v;
+})();
+
+// ---- DOM ----
+const overlayMapEl = document.getElementById('overlayMap');
+const overlayChar  = document.getElementById('overlayChar');
+const overlayInv   = document.getElementById('overlayInv');
+
+const btnWorldMap  = document.getElementById('btnWorldMap');
+const btnCharacter = document.getElementById('btnCharacter');
+const btnInventory = document.getElementById('btnInventory');
+
+const shardSelect  = document.getElementById('shardSelect');
+const btnLoadShard = document.getElementById('btnLoadShard');
+const shardStatus  = document.getElementById('shardStatus');
+
+const roomTitle    = document.getElementById('roomTitle');
+const roomBiome    = document.getElementById('roomBiome');
+const roomArt      = document.getElementById('roomArt');
+
+const consoleEl    = document.getElementById('console');
+
+// ---- console log (light) ----
+const _log = [];
+function log(text, cls=''){ _log.push({text,cls}); if (_log.length>300) _log.shift(); if (!consoleEl) return;
+  const frag = document.createDocumentFragment();
+  for (const {text:t,cls:c} of _log.slice(-140)) { const d=document.createElement('div'); d.className='line'+(c?' '+c:''); d.textContent=t; frag.appendChild(d); }
+  consoleEl.replaceChildren(frag);
+}
+
+// ---- overlay instance (visuals live in overlayMap.js) ----
+const overlay = initOverlayMap?.({ devMode: DEV_MODE });
+
+// small helpers
+const toggle = (el, force) => { if (!el) return; const show = (typeof force==='boolean') ? force : el.classList.contains('hidden'); el.classList.toggle('hidden', !show); };
+const openMap = () => { overlayMapEl?.classList.remove('hidden'); overlay?.render?.(); };
+const closeMap = () => overlayMapEl?.classList.add('hidden');
+const toggleMap = () => overlayMapEl?.classList.contains('hidden') ? openMap() : closeMap();
+
+// ---- state ----
+let CurrentPos = { x: 0, y: 0 };
+
+// ---- room render (keeps your working art swap) ----
+let __anim = null;
+function renderRoomInfo(room, { flavor = true } = {}) {
+  if (__anim?.raf) cancelAnimationFrame(__anim.raf);
+  __anim = null;
+  roomTitle && (roomTitle.textContent = room.title || '');
+  roomBiome && (roomBiome.textContent = room.subtitle || '');
+
+  if (roomArt) roomArt.classList.add('fade-out');
+  roomArt.style.backgroundImage    = 'none';
+  roomArt.style.backgroundSize     = '';
+  roomArt.style.backgroundPosition = '';
+  roomArt.style.backgroundRepeat   = '';
+  void roomArt.offsetWidth;
+
+  const art = room.art || {};
+  roomArt.style.backgroundImage    = art.image || 'none';
+  roomArt.style.backgroundSize     = art.size || '';
+  roomArt.style.backgroundPosition = art.position || '';
+  roomArt.style.backgroundRepeat   = art.repeat || '';
+  setTimeout(()=>roomArt.classList.remove('fade-out'), 80);
+
+  if (flavor && room.description) {
+    const key = `${room.x},${room.y}:${room.biome}:${room.label||'none'}`;
+    if (renderRoomInfo._k !== key) { log(room.description, 'log-flavor'); renderRoomInfo._k = key; }
   }
 
-  // --- flags & token ---------------------------------------------------------
-  const QS = new URLSearchParams(location.search);
-  const DEV_MODE = QS.has('devmode');
-  const NOCLIP   = DEV_MODE && QS.has('noclip');
+  if (Array.isArray(art.frames) && art.frames.length>1 && typeof art.animIndex==='number') {
+    const frameMS = Math.max(60, Number(art.frame_ms || 120));
+    __anim = { idx:0, total:art.frames.length, animLayer:art.animIndex, base:Array.isArray(art.layers)?art.layers.slice():[], acc:0, ms:frameMS, raf:null, last:0 };
+    const step = (ts) => {
+      if (!__anim) return;
+      if (!__anim.last) __anim.last = ts;
+      const dt = ts - __anim.last; __anim.last = ts; __anim.acc += dt;
+      while (__anim.acc >= __anim.ms) {
+        __anim.acc -= __anim.ms; __anim.idx = (__anim.idx+1) % __anim.total;
+        const layers = __anim.base.slice(); layers[__anim.animLayer] = `url("${art.frames[__anim.idx]}")`;
+        roomArt.style.backgroundImage    = layers.join(', ');
+        roomArt.style.backgroundSize     = new Array(layers.length).fill('cover').join(', ');
+        roomArt.style.backgroundPosition = new Array(layers.length).fill('center').join(', ');
+        roomArt.style.backgroundRepeat   = new Array(layers.length).fill('no-repeat').join(', ');
+      }
+      __anim.raf = requestAnimationFrame(step);
+    };
+    __anim.raf = requestAnimationFrame(step);
+  }
+}
 
-  const USER_TOKEN = (() => {
-    const k = 'mvp3_user_token';
-    const q = QS.get('token');
-    if (q) { localStorage.setItem(k, q); return q; }
-    let v = localStorage.getItem(k);
-    if (!v) {
-      v = crypto.getRandomValues(new Uint32Array(4)).join('-');
-      localStorage.setItem(k, v);
-    }
-    return v;
-  })();
+// ---- movement events (from HUD/server only; no keyboard here) ----
+window.addEventListener('game:moved', (ev) => {
+  const d = ev?.detail || {}; if (!Number.isFinite(d.x) || !Number.isFinite(d.y)) return;
+  CurrentPos = { x: d.x, y: d.y };
+  const room = buildRoom(d.x, d.y);
+  renderRoomInfo(room);
+  overlay?.setPos?.(d.x, d.y); overlay?.render?.();
+});
 
-  // --- DOM -------------------------------------------------------------------
-  const consoleEl    = document.getElementById('console');
-  const btnWorldMap  = document.getElementById('btnWorldMap');
-  const btnCharacter = document.getElementById('btnCharacter');
-  const btnInventory = document.getElementById('btnInventory');
-  const overlayMapEl = document.getElementById('overlayMap');
-  const overlayChar  = document.getElementById('overlayChar');
-  const overlayInv   = document.getElementById('overlayInv');
-  const shardSelect  = document.getElementById('shardSelect');
-  const btnLoadShard = document.getElementById('btnLoadShard');
-  const shardStatus  = document.getElementById('shardStatus');
-  const roomTitle    = document.getElementById('roomTitle');
-  const roomBiome    = document.getElementById('roomBiome');
-  const roomArt      = document.getElementById('roomArt');
-  const actionBar    = document.querySelector('.console-actions');
-  const roomStage    = document.querySelector('.room-stage');
+// ---- keyboard for overlays only (M/C/I/ESC) ----
+const isTyping = (t)=>!t?false:(t.tagName==='TEXTAREA')||(t.tagName==='INPUT'&&!['checkbox','radio','button','range','submit','reset','file','color'].includes((t.type||'').toLowerCase()))||t.isContentEditable===true;
+window.addEventListener('keydown', (e)=>{
+  if (isTyping(e.target)) return;
+  const k = e.key?.toLowerCase?.();
+  if (k==='m'){ e.preventDefault(); toggleMap(); }
+  if (k==='c'){ e.preventDefault(); toggle(overlayChar); }
+  if (k==='i'){ e.preventDefault(); toggle(overlayInv); }
+  if (k==='escape'){ e.preventDefault(); closeMap(); overlayChar?.classList.add('hidden'); overlayInv?.classList.add('hidden'); }
+});
 
-  // --- console tail buffer (syncs with CSS --console-lines) ------------------
-  const cssVar = getComputedStyle(document.documentElement).getPropertyValue('--console-lines');
-  let MAX_LOG_LINES = parseInt(cssVar, 10) || 8;
-  const qsLines = parseInt(QS.get('lines'), 10);
-  if (!Number.isNaN(qsLines) && qsLines > 0) {
-    MAX_LOG_LINES = qsLines;
-    document.documentElement.style.setProperty('--console-lines', String(qsLines));
+// ---- shard picker ----
+function normalizeShardList(items){ const out=[]; if(!Array.isArray(items)) return out;
+  for(const it of items){
+    if (typeof it==='string'){ const s=it.trim(); if(s) out.push({name:s.replace(/^.*\//,''), url:s}); continue; }
+    if (it && typeof it==='object'){ const url=typeof it.url==='string'?it.url:null; if(!url) continue; const name=(typeof it.name==='string'&&it.name.trim())?it.name.trim():url.replace(/^.*\//,''); out.push({name,url}); }
+  } return out;
+}
+
+async function fetchShardList(){
+  try{
+    const r=await fetch('/api/shards',{headers:{'Accept':'application/json'}}); if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    const raw=await r.json(); const list=normalizeShardList(raw); if(list.length) return list; throw new Error('empty');
+  }catch{
+    return normalizeShardList([
+      { name:'Starter (local)', url:'/static/public/shards/00089451_test123.json' },
+      '/static/public/shards/00089451_test123.json'
+    ]);
+  }
+}
+
+async function populateShardPicker(items){
+  if(!shardSelect) return;
+  const list = normalizeShardList(items); shardSelect.replaceChildren();
+  if(!list.length){ const o=document.createElement('option'); o.value=''; o.textContent='— No shards found —'; shardSelect.appendChild(o); return; }
+  for(const {name,url} of list){ const o=document.createElement('option'); o.value=url; o.textContent=name; shardSelect.appendChild(o); }
+  const d='/static/public/shards/00089451_test123.json';
+  if (![...shardSelect.options].some(o=>o.value===d)){ const o=document.createElement('option'); o.value=d; o.textContent='Starter (default)'; shardSelect.appendChild(o); }
+  if(!shardSelect.value) shardSelect.value = d;
+}
+
+// ---- shard load ----
+async function loadShard(url){
+  if(!url||typeof url!=='string'){ shardStatus&&(shardStatus.textContent='Invalid shard URL'); throw new Error('bad url'); }
+  shardStatus&&(shardStatus.textContent='Loading…');
+  const res = await fetch(url); if(!res.ok){ shardStatus&&(shardStatus.textContent=`Load failed (${res.status})`); throw new Error('fetch fail'); }
+  const shard = await res.json();
+
+  // dev fallback so POIs exist
+  if (DEV_MODE && (!Array.isArray(shard.sites) || shard.sites.length===0)){
+    const gw = shard.grid?.[0]?.length || 40, gh = shard.grid?.length || 40;
+    shard.sites = [{x:Math.floor(gw/2),y:Math.floor(gh/2)-1,type:'town',name:'Larkstead'},{x:3,y:3,type:'port',name:'Drift Haven'}];
   }
 
-  const _logBuffer = [];
-  function renderConsole() {
-    if (!consoleEl) return;
-    const tail = _logBuffer.slice(-MAX_LOG_LINES);
-    consoleEl.replaceChildren(...tail.map(({text, cls}) => {
-      const div = document.createElement('div');
-      div.className = 'line' + (cls ? (' ' + cls) : '');
-      div.textContent = text;
-      return div;
-    }));
-  }
-  function log(text, cls=''){
-    _logBuffer.push({ text:String(text), cls });
-    if (_logBuffer.length > 400) _logBuffer.splice(0, _logBuffer.length - 400);
-    renderConsole();
-  }
-  function logLines(arr){
-    (arr || []).forEach(s => log(s, s?.toLowerCase?.().includes('warn') ? 'log-warn' : 'log-note'));
-  }
+  assertCanonicalGrid(shard.grid);
+  setRoomShard(shard);
 
-  // --- move existing action bar into an overlay above the viewport ----------
-  if (roomStage && actionBar) {
-    const overlay = document.createElement('div');
-    overlay.className = 'action-overlay';
-    overlay.appendChild(actionBar);
-    roomStage.appendChild(overlay);
-  }
+  const gw=shard.grid?.[0]?.length||0, gh=shard.grid?.length||0;
+  const spawn = shard.spawn || [Math.floor(gw/2), Math.floor(gh/2)];
+  CurrentPos = { x:spawn[0], y:spawn[1] };
 
-  // --- state -----------------------------------------------------------------
-  let shard = null;
-  let rules = null;
-  const actor = { hp: 20, mp: 10, sta: 12, boat: false, canClimb: false };
-  const pos   = { x: 12, y: 15, biome: 'Forest', title: 'Shadowed Grove' }; // default spawn
+  renderRoomInfo(buildRoom(CurrentPos.x, CurrentPos.y), { flavor:true });
 
-  const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
-  const ALLOWED_BIOMES = new Set(ALL_BIOME_KEYS);
-  let warnedNonCanonical = false;
+  // overlay sync (overlay fully owns visuals)
+  overlay?.setToken?.(USER_TOKEN);
+  overlay?.setPos?.(CurrentPos.x, CurrentPos.y);
+  overlay?.setShard?.(shard);
+  overlay?.render?.();
 
-  // --- overlay ---------------------------------------------------------------
-  const overlay = initOverlayMap({
-    devMode: DEV_MODE,
-    getBiomeColor: (k) => BIOME_COLORS[(canonicalBiome?.(k) ?? k)] || '#a0a0a0',
-    getPoiClass:    (t) => poiClassFor?.(t) || 'poi',
-  });
+  window.__lastShard = shard;
+  shardStatus && (shardStatus.textContent = 'Loaded');
+}
 
-  // --- helpers ---------------------------------------------------------------
-  function setShardStatus(msg, kind = 'info') {
-    if (!shardStatus) return;
-    const color = kind === 'error' ? '#e57373' : kind === 'warn' ? '#ffb74d' : '#9e9e9e';
-    shardStatus.textContent = msg || '';
-    shardStatus.style.color = color;
-  }
-  function assertCanonicalGrid(grid) {
-    if (warnedNonCanonical) return;
-    const bad = new Set();
-    for (let y = 0; y < grid.length; y++)
-      for (let x = 0; x < grid[0].length; x++)
-        if (!ALLOWED_BIOMES.has(grid[y][x])) bad.add(grid[y][x]);
-    if (bad.size) { warnedNonCanonical = true; console.warn('[Shard] Non-canonical biomes:', [...bad]); }
-  }
-  function biomeAt(x, y) {
-    if (!shard) return 'Forest';
-    const [W, H] = shard.size || [0, 0];
-    if (x < 0 || y < 0 || x >= W || y >= H) return 'Coast';
-    return shard.grid?.[y]?.[x] ?? 'Coast';
-  }
-  function applyArt(biomeKey) {
-    const b = BIOMES[biomeKey] || BIOMES.Forest;
-    roomArt.style.backgroundImage = b.tint;
-    roomArt.style.backgroundColor = 'transparent';
-    if (b.art) {
-      roomArt.style.backgroundImage = `${b.tint}, url("${b.art}")`;
-      roomArt.style.backgroundSize = 'cover, contain';
-      roomArt.style.backgroundPosition = 'center, center';
-      roomArt.style.backgroundRepeat = 'no-repeat, no-repeat';
-    } else {
-      roomArt.style.backgroundSize = 'cover';
-      roomArt.style.backgroundPosition = 'center';
-      roomArt.style.backgroundRepeat = 'no-repeat';
-    }
-  }
-  function describe(b) { return {
-    Forest: 'Tall trunks crowd the path; spores drift like dust in a sunbeam.',
-    Plains: 'Grass bows to a steady wind. The horizon feels endless.',
-    Coast: 'Gulls cry over slate water; salt stings your lips.',
-    'marsh-lite': 'Wet ground sucks at your boots; frogs trill unseen.',
-    Hills: 'Ridges roll like sleeping beasts beneath the sod.',
-    Mountains: 'Jagged stone juts toward a pale sky.',
-    Volcano: 'Ash crunches underfoot. The air tastes of metal.',
-    Tundra: 'Cold bites the lungs; the world speaks in pale whispers.',
-  }[b] || 'You stand at a crossroads of the unknown.'; }
-  function setRoom(next) {
-    const b = next.biome;
-    roomTitle.textContent = next.title || 'Unknown Place';
-    roomBiome.textContent = b;
-    applyArt(b);
-    log(describe(b), 'log-note');
-  }
-  function refreshBars() {
-    const hpI = document.querySelector('.bar.hp i');
-    const mpI = document.querySelector('.bar.mp i');
-    const staI = document.querySelector('.bar.sta i');
-    if (hpI) hpI.style.width = Math.max(0, Math.min(100, actor.hp / 20 * 100)) + '%';
-    if (mpI) mpI.style.width = Math.max(0, Math.min(100, actor.mp / 10 * 100)) + '%';
-    if (staI) staI.style.width = Math.max(0, Math.min(100, actor.sta / 12 * 100)) + '%';
-  }
-  const siteAt = (x, y) => shard?.sites?.find(s => (s.pos?.[0] ?? s.x) === x && (s.pos?.[1] ?? s.y) === y) || null;
+// ---- UI wires ----
+btnLoadShard?.addEventListener('click', async ()=>{ const url=shardSelect?.value; if(!url) return; try{ await loadShard(url); }catch{} });
+shardSelect?.addEventListener('change', ()=>btnLoadShard?.click());
+btnWorldMap?.addEventListener('click', ()=>toggleMap());
+btnCharacter?.addEventListener('click', ()=>toggle(overlayChar));
+btnInventory?.addEventListener('click', ()=>toggle(overlayInv));
 
-  // --- movement plumbing -----------------------------------------------------
-  function afterMoveEffects() {
-    overlay.setPos(pos.x, pos.y);
-    const here = siteAt(pos.x, pos.y);
-    if (here) log(`You see ${canonicalSettlement(here.type)} — ${here.name || canonicalSettlement(here.type)}.`, 'log-warn');
-  }
-  async function tryMove(dir) {
-    if (!shard?.size) return false;
-    const res = rules.evaluateStep(actor, pos, dir, { devMode: DEV_MODE, noclip: NOCLIP });
-    if (!res.ok) { if (res.reason) log(res.reason, 'log-note'); return false; }
-
-    // costs
-    if (res.costs?.sta) {
-      actor.sta = Math.max(0, actor.sta - res.costs.sta);
-      refreshBars();
-      if (res.costs.sta >= 2) log('That terrain slows you down.', 'log-note');
-    }
-
-    // commit
-    pos.x = res.to.x; pos.y = res.to.y;
-    pos.biome = res.to.biome || biomeAt(pos.x, pos.y);
-    pos.title = randomTitleFor(pos.biome);
-    setRoom({ title: pos.title, biome: pos.biome });
-    log(`You move ${dir}. (${pos.x},${pos.y}) • ${pos.title} • ${pos.biome}`, 'log-note');
-    afterMoveEffects();
-    return true;
-  }
-
-  function tryInteract() {
-    const here = siteAt(pos.x, pos.y);
-    if (!here) { log('Nothing obvious to enter here.', 'log-note'); return; }
-    const label = canonicalSettlement(here.type);
-    log(`You enter ${label}.`, 'log-ok');
-  }
-  function tryRest() {
-    const heal = 2;
-    actor.hp = Math.min(20, actor.hp + heal);
-    actor.sta = Math.min(12, actor.sta + 2);
-    refreshBars();
-    log(`You rest. (+${heal} HP, +2 STA)`, 'log-ok');
-  }
-
-  // Delegated clicks so moving DOM around (action overlay) never breaks handlers
-  document.addEventListener('click', (ev) => {
-    const el = ev.target.closest('[data-qa]');
-    if (!el) return;
-    const qa = el.dataset.qa;
-    if (qa?.startsWith('move'))       { tryMove(qa.slice(-1).toUpperCase()); }
-    else if (qa === 'search')         { log('You search carefully…', 'log-note'); }
-    else if (qa === 'harvest')        { log('There is nothing obvious to harvest here.', 'log-note'); }
-    else if (qa === 'rest')           { tryRest(); }
-    else if (qa === 'enter')          { tryInteract(); }
-    else if (qa === 'open-map')       { toggle(overlayMapEl); }
-    else if (qa === 'open-char')      { toggle(overlayChar); }
-    else if (qa === 'open-inventory') { toggle(overlayInv); }
-  }, { capture: true });
-
-  // Overlay toggling
-  function toggle(el, show) {
-    const forceClose = show === false;
-    el.classList.toggle('hidden', forceClose ? true : el.classList.contains('hidden') ? false : true);
-    if (el === overlayMapEl && !el.classList.contains('hidden')) {
-      document.getElementById('mapUserToken')?.replaceChildren(document.createTextNode(`Token: ${USER_TOKEN}`));
-      overlay._syncToggles?.();
-      overlay.setDev(DEV_MODE);
-      overlay.setToken(USER_TOKEN);
-      overlay.setFullBoard(true);
-      overlay.setPos(pos.x, pos.y);
-      overlay.render();
-    }
-  }
-
-  // Keyboard controller (arrows/WASD only when devmode&noclip; B/C/I hotkeys always)
-  const controller = createMovementController({
-    devMode: DEV_MODE,
-    noclip: NOCLIP,
-    tryMove,
-    tryInteract,
-    tryRest,
-    onHotkey: {
-      map:   () => toggle(overlayMapEl),
-      char:  () => toggle(overlayChar),
-      inv:   () => toggle(overlayInv),
-      escape:() => { toggle(overlayMapEl, false); toggle(overlayChar, false); toggle(overlayInv, false); },
-    },
-    allowDiagonals: false,
-  });
-  controller.attachToWindow();
-
-  // ---- shard loader ----------------------------------------------------------
-  async function fetchShardList() {
-    try { const r = await fetch('/api/shards'); if (!r.ok) throw new Error('HTTP ' + r.status); return await r.json(); }
-    catch { return null; }
-  }
-  function labelForItem(it) {
-    const disp = it?.meta?.displayName || it?.meta?.name;
-    return disp ? `${disp} (${it.file})` : it.file;
-  }
-  async function populateShardPicker(items) {
-    if (!shardSelect) return;
-    if (!Array.isArray(items) || !items.length) return;
-    const seen = new Set(Array.from(shardSelect.options).map(o => o.value));
-    items.forEach(it => {
-      if (seen.has(it.path)) return;
-      const opt = document.createElement('option');
-      opt.value = it.path; opt.dataset.name = it.file; opt.textContent = labelForItem(it);
-      shardSelect.appendChild(opt);
-    });
-  }
-  function assertAndNormalize(data) {
-    let grid = data.grid;
-    if (!grid && Array.isArray(data.tiles))
-      grid = data.tiles.map(row => row.map(cell => (typeof cell === 'string' ? cell : cell?.biome)));
-    if (!Array.isArray(grid) || !Array.isArray(grid[0])) throw new Error('Invalid shard: grid missing or malformed');
-    const W = (Array.isArray(data.size) && data.size[0]) || data?.meta?.width  || grid[0].length;
-    const H = (Array.isArray(data.size) && data.size[1]) || data?.meta?.height || grid.length;
-    const sites = data.sites || (Array.isArray(data.pois) ? data.pois.map(p => ({ name: p.name, type: p.type, pos: p.pos ? p.pos.slice() : [p.x, p.y], meta: p.meta })) : []);
-    assertCanonicalGrid(grid);
-    return { ...data, grid, size: [Number(W), Number(H)], sites };
-  }
-  async function loadShard(url) {
-    setShardStatus('Loading…', 'info');
-    const res = await fetch(url);
-    if (!res.ok) { setShardStatus('Failed to load shard.', 'error'); throw new Error(`HTTP ${res.status} for ${url}`); }
-    const data = await res.json();
-    shard = assertAndNormalize(data);
-
-    // rebuild movement rules for this shard
-    rules = createMovementRules(shard);
-
-    const [W, H] = shard.size;
-    if (Array.isArray(shard.spawn)) {
-      pos.x = clamp(shard.spawn[0], 0, W - 1);
-      pos.y = clamp(shard.spawn[1], 0, H - 1);
-    } else {
-      pos.x = clamp(pos.x, 0, W - 1);
-      pos.y = clamp(pos.y, 0, H - 1);
-    }
-    pos.biome = biomeAt(pos.x, pos.y);
-    pos.title = randomTitleFor(pos.biome);
-    setRoom({ title: pos.title, biome: pos.biome });
-    refreshBars();
-
-    overlay.setShard(shard);
-    overlay.setPos(pos.x, pos.y);
-
-    setShardStatus('Loaded.', 'info');
-    log('Shard loaded: ' + (shard.name || shard?.meta?.displayName || 'Unnamed Shard'), 'log-note');
-
-    if (shardSelect && url) {
-      for (const o of shardSelect.options) { if (o.value === url) { o.selected = true; break; } }
-    }
-  }
-
-  btnLoadShard?.addEventListener('click', async () => {
-    const url = shardSelect?.value; if (!url) return;
-    try { await loadShard(url); } catch (e) { console.warn(e); setShardStatus('Load failed', 'error'); }
-  });
-  shardSelect?.addEventListener('change', () => btnLoadShard?.click());
-
-  // overlay buttons (top bar)
-  btnWorldMap?.addEventListener('click', () => toggle(overlayMapEl));
-  btnCharacter?.addEventListener('click', () => toggle(overlayChar));
-  btnInventory?.addEventListener('click', () => toggle(overlayInv));
-  document.querySelectorAll('[data-close="map"]').forEach(el => el.addEventListener('click', () => toggle(overlayMapEl, false)));
-  document.querySelectorAll('[data-close="char"]').forEach(el => el.addEventListener('click', () => toggle(overlayChar, false)));
-  document.querySelectorAll('[data-close="inv"]').forEach(el => el.addEventListener('click', () => toggle(overlayInv, false)));
-
-  // ---- server spawn (sets same 12,15 default) --------------------------------
-  try {
-    await fetch('/api/world'); // touch
-    const spawn = await fetch('/api/spawn', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ x: 12, y: 15 })
-    }).then(r => r.json());
-    const { x, y } = (spawn.player && spawn.player.pos) || { x: 12, y: 15 };
-    overlay.setPos(x, y);
-    overlay.setToken(spawn.player?.id || USER_TOKEN);
-  } catch {}
-
-  // ---- boot ------------------------------------------------------------------
-  try {
+// ---- boot ----
+(async ()=>{
+  try{
     const items = await fetchShardList();
-    await populateShardPicker(items || []);
-    const current = shardSelect?.value
-      || document.getElementById('starterShardOption')?.value
-      || '/static/public/shards/00089451_test123.json';
+    await populateShardPicker(items);
+    const current = shardSelect?.value || '/static/public/shards/00089451_test123.json';
     await loadShard(current);
     document.getElementById('mapUserToken')?.replaceChildren(document.createTextNode(`Token: ${USER_TOKEN}`));
-  } catch (e) {
+  }catch(e){
     console.warn('Auto-load failed:', e);
-    setShardStatus('Please select a shard to load.', 'warn');
+    shardStatus && (shardStatus.textContent='Please select a shard to load.');
   }
 })();
