@@ -4,7 +4,7 @@ Core Game API (Blueprint) — now returns room state & interaction options on mo
 """
 from __future__ import annotations
 from pathlib import Path
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 
 from server.world_loader import load_world, get_room  # <-- import get_room
 from server.player_engine import Player, move, ensure_first_quest, check_quests
@@ -77,6 +77,12 @@ def api_move():
     res["log"] = log
     res["room"] = room
     res["interactions"] = _interactions(room)
+
+    socketio = current_app.extensions.get("socketio")
+    if socketio:
+        socketio.emit("movement", res)
+        if enemy:
+            socketio.emit("combat", {"events": log, "player": res["player"]})
     return jsonify(res)
 
 @bp.post("/interact")

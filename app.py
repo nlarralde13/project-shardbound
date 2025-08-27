@@ -7,12 +7,14 @@ App entrypoint.
 """
 
 from flask import Flask, render_template, send_from_directory
+from flask_socketio import SocketIO
 
 # Keep your existing shardEngine blueprints
 # (generator v2 + general API in shardEngine)
 from shardEngine.endpoints import bp as shard_gen_v2_bp, api_bp
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # ---- Blueprints --------------------------------------------------------------
 # Shard generation v2 (unchanged)
@@ -53,4 +55,4 @@ def static_passthrough(filename):
 # ---- Main --------------------------------------------------------------------
 if __name__ == "__main__":
     # Debug server for local development
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    socketio.run(app, host="0.0.0.0", port=5000, debug=True)
