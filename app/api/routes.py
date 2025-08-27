@@ -42,10 +42,19 @@ def api_world():
 def api_spawn():
     data = request.get_json(force=True) or {}
     player = get_player()
-    x, y = int(data.get("x", 12)), int(data.get("y", 15))
+    x, y = int(data.get("x", 0)), int(data.get("y", 0))
+    settle_types = {"city", "town", "village"}
+    poi = WORLD.poi_at(x, y)
+    if not (poi and poi.get("type") in settle_types):
+        for p in reversed(WORLD.pois):
+            if p.get("type") in settle_types:
+                x, y = int(p.get("x")), int(p.get("y"))
+                break
     player.spawn(x, y)
     if request.args.get("noclip") == "1":
         player.flags["noclip"] = True
+    if request.args.get("devmode") == "1":
+        player.flags["devmode"] = True
     ensure_first_quest(player)
     save_player(player)
     # include room snapshot on spawn for immediate UI
