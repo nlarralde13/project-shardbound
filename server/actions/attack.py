@@ -16,11 +16,7 @@ def attack(*, player, payload: dict) -> dict:
     if hasattr(combat_mod, "resolve_round"):
         result = combat_mod.resolve_round(player, target_id)
     else:
-        result = {"events":[{"type":"log","text":f"You strike {target_id} (stub)."}]}
-
-    defeated_ids = set(result.get("defeated_ids", []))
-    if defeated_ids:
-        room_obj.enemies = [e for e in room_obj.enemies if e.get("id") not in defeated_ids]
+        result = {"events": [{"type": "log", "text": f"You strike {target_id} (stub)."}], "defeated_ids": []}
 
     result.setdefault("player", player.as_public())
     result.setdefault("room_delta", {"enemies": room_obj.enemies})
