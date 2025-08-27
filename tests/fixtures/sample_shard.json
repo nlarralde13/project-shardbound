@@ -1,0 +1,22 @@
+{
+  "grid": [
+    ["plains", "forest"],
+    ["water", "water"]
+  ],
+  "layers": {
+    "settlements": {
+      "cities": [ {"x": 0, "y": 0} ]
+    },
+    "roads": {
+      "paths": [ [ {"x": 0, "y": 0}, {"x": 1, "y": 0} ] ]
+    },
+    "movement": {
+      "requires": {
+        "boat": [ {"x": 1, "y": 1} ]
+      }
+    }
+  },
+  "pois": [
+    {"x": 1, "y": 0, "type": "landmark", "name": "Forest Edge"}
+  ]
+}
