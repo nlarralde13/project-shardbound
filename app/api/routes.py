@@ -7,14 +7,15 @@ from pathlib import Path
 from flask import Blueprint, jsonify, request
 
 from server.world_loader import load_world, get_room  # <-- import get_room
-from server.player_engine import Player, move, ensure_first_quest, check_quests
+from server.player_engine import move, ensure_first_quest, check_quests
 from server.combat import maybe_spawn, resolve_combat
+
+from app.player_service import get_player, save_player
 
 bp = Blueprint("core_api", __name__, url_prefix="/api")
 
 STARTER_SHARD_PATH = Path("static/public/shards/00089451_test123.json")
 WORLD = load_world(STARTER_SHARD_PATH)
-PLAYER = Player()
 
 @bp.get("/shards")
 def api_shards():
@@ -40,56 +41,63 @@ def api_world():
 @bp.post("/spawn")
 def api_spawn():
     data = request.get_json(force=True) or {}
+    player = get_player()
     x, y = int(data.get("x", 12)), int(data.get("y", 15))
-    PLAYER.spawn(x, y)
+    player.spawn(x, y)
     if request.args.get("noclip") == "1":
-        PLAYER.flags["noclip"] = True
-    ensure_first_quest(PLAYER)
+        player.flags["noclip"] = True
+    ensure_first_quest(player)
+    save_player(player)
     # include room snapshot on spawn for immediate UI
-    room = get_room(WORLD, *PLAYER.pos).export()
-    return jsonify({"ok": True, "player": PLAYER.as_public(), "room": room, "interactions": _interactions(room)})
+    room = get_room(WORLD, *player.pos).export()
+    return jsonify({"ok": True, "player": player.as_public(), "room": room, "interactions": _interactions(room)})
 
 @bp.post("/move")
 def api_move():
     data = request.get_json(force=True) or {}
+    player = get_player()
     dx, dy = int(data.get("dx", 0)), int(data.get("dy", 0))
 
-    res = move(WORLD, PLAYER, dx, dy)
+    res = move(WORLD, player, dx, dy)
     log = res.get("log", [])
 
     # opportunistic encounter
-    biome = WORLD.biome_at(*PLAYER.pos)
+    biome = WORLD.biome_at(*player.pos)
     try:
         enemy = maybe_spawn(biome)
     except TypeError:
         enemy = None
     if enemy:
-        log += resolve_combat(PLAYER, enemy)
+        log += resolve_combat(player, enemy)
 
     # quest hooks
-    check_quests(WORLD, PLAYER, log)
+    check_quests(WORLD, player, log)
 
     # room snapshot + interaction options
-    room_obj = get_room(WORLD, *PLAYER.pos)
+    room_obj = get_room(WORLD, *player.pos)
     room = room_obj.export()
 
-    res["player"] = PLAYER.as_public()
+    res["player"] = player.as_public()
     res["log"] = log
     res["room"] = room
     res["interactions"] = _interactions(room)
+
+    save_player(player)
     return jsonify(res)
 
 @bp.post("/interact")
 def api_interact():
-    p = WORLD.poi_at(*PLAYER.pos)
+    player = get_player()
+    p = WORLD.poi_at(*player.pos)
     if not p:
         return jsonify({"ok": False, "log": ["Nothing to interact with here."]})
     return jsonify({"ok": True, "poi": p, "log": [f"You arrive at a {p['type']}"]})
 
 @bp.get("/state")
 def api_state():
-    room = get_room(WORLD, *PLAYER.pos).export()
-    return jsonify({"player": PLAYER.as_public(), "room": room, "interactions": _interactions(room)})
+    player = get_player()
+    room = get_room(WORLD, *player.pos).export()
+    return jsonify({"player": player.as_public(), "room": room, "interactions": _interactions(room)})
 
 # ------------------------------- helpers --------------------------------------
 

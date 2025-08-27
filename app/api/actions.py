@@ -16,12 +16,11 @@ from server.actions import *  # noqa: F401,F403
 
 bp = Blueprint("actions_api", __name__, url_prefix="/api")
 
-# Replace with your real player accessor; consistent with app/api/routes.py singletons:
-from app.api.routes import PLAYER as CURRENT_PLAYER  # reuse the same player singleton
+from app.player_service import get_player, save_player
 
 @bp.post("/action")
 def do_action():
-    player = CURRENT_PLAYER  # (later: get from session)
+    player = get_player()
     if not isinstance(player, Player):
         return jsonify({"error": "unauthorized"}), 401
 
@@ -51,4 +50,5 @@ def do_action():
         return jsonify({"ok": False, "error":"server_exception", "detail": str(e)}), 500
 
     idempotency.persist(player.id, action_id, verb, payload, result)
+    save_player(player)
     return jsonify(result), 200
