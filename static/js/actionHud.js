@@ -156,9 +156,10 @@ async function doMove(dir) {
 }
 
 async function doAction(verb, payload = {}) {
+  let out;
   try {
     setBusy(true);
-    const out = await API.action(verb, payload);
+    out = await API.action(verb, payload);
     if (out?.events?.length) window.dispatchEvent(new CustomEvent("game:log", { detail: out.events }));
     if (out?.room_delta) window.patchRoom?.(out.room_delta);
     if (out?.interactions) updateActionHUD({ interactions: out.interactions });
@@ -167,6 +168,10 @@ async function doAction(verb, payload = {}) {
     console.error(err);
   } finally {
     setBusy(false);
+
+
+    if (out?.interactions) updateActionHUD({ interactions: out.interactions });
+
   }
 }
 

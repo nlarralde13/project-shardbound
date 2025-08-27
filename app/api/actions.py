@@ -9,22 +9,30 @@ from __future__ import annotations
 from flask import Blueprint, request, jsonify, current_app
 from server.player_engine import Player  # type hints
 from server.actionRegistry import get_action
+
 from server.services import idempotency, cooldowns
 from server.services.rooms import for_player
 
 from app.api.routes import _interactions
+
+from server.services import idempotency, cooldowns, rooms
+
 
 # Import handlers so decorators run
 from server.actions import *  # noqa: F401,F403
 
 bp = Blueprint("actions_api", __name__, url_prefix="/api")
 
+
+from app.player_service import get_player, save_player
+
 # Replace with your real player accessor; consistent with app/api/routes.py singletons:
-from app.api.routes import PLAYER as CURRENT_PLAYER  # reuse the same player singleton
+from app.api.routes import PLAYER as CURRENT_PLAYER, _interactions  # reuse the same player singleton
+
 
 @bp.post("/action")
 def do_action():
-    player = CURRENT_PLAYER  # (later: get from session)
+    player = get_player()
     if not isinstance(player, Player):
         return jsonify({"error": "unauthorized"}), 401
 
@@ -53,6 +61,7 @@ def do_action():
     except Exception as e:
         return jsonify({"ok": False, "error":"server_exception", "detail": str(e)}), 500
 
+
     room = for_player(player).export()
     result.setdefault("interactions", _interactions(room))
 
@@ -63,5 +72,16 @@ def do_action():
         elif verb in ("gather", "search"):
             socketio.emit("resource_update", result)
 
+    # append interaction hints for the player's current room
+    try:
+        room = rooms.for_player(player)
+        room_data = room.export()
+        result["interactions"] = _interactions(room_data)
+    except Exception:
+        # don't block action result if room lookup fails
+        pass
+
+
     idempotency.persist(player.id, action_id, verb, payload, result)
+    save_player(player)
     return jsonify(result), 200

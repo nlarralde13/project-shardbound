@@ -19,7 +19,15 @@ class Player:
     level: int = 1
     xp: int = 0
     gold: int = 0
-    flags: Dict[str, bool] = field(default_factory=lambda: {"noclip": False, "has_boat": False, "can_climb": False})
+    flags: Dict[str, bool] = field(
+        default_factory=lambda: {
+            "noclip": False,
+            "has_boat": False,
+            "can_climb": False,
+            "can_swim": False,
+            "can_fly": False,
+        }
+    )
     inventory: Dict[str, int] = field(default_factory=dict)
     equipment: Dict[str, Optional[str]] = field(default_factory=dict)
     quests_active: Dict[str, QuestState] = field(default_factory=dict)
@@ -52,16 +60,29 @@ def can_enter(world, x: int, y: int, player: Player) -> tuple[bool, str]:
     on_bridge = (x, y) in world.bridge_tiles
 
     # Movement layer restrictions — allow road/bridge to override
-    if (x, y) in world.blocked_land and not (on_road or on_bridge):
+    if (x, y) in world.blocked_land and not (on_road or on_bridge or player.flags.get("can_fly")):
         return False, "blocked"
 
     # Boat requirement — bridge overrides
-    if (x, y) in world.requires_boat and not (on_bridge or player.flags.get("has_boot")):
+    if (
+        (x, y) in world.requires_boat
+        and not (
+            on_bridge
+            or player.flags.get("has_boat")
+            or player.flags.get("can_swim")
+            or player.flags.get("can_fly")
+        )
+    ):
         return False, "need_boat"
 
     # Terrain-based restrictions — road/bridge can carve a pass
     biome = world.biome_at(x, y)
-    if biome in IMPASSABLE_BIOMES and not (on_road or on_bridge or player.flags.get("can_climb")):
+    if biome in IMPASSABLE_BIOMES and not (
+        on_road
+        or on_bridge
+        or player.flags.get("can_climb")
+        or player.flags.get("can_fly")
+    ):
         return False, "too_steep"
 
     return True, "ok"
