@@ -15,7 +15,13 @@ export const API = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ x, y }),
     });
-    return r.json();
+    const out = await r.json();
+    if (Array.isArray(out.log)) {
+      window.dispatchEvent(new CustomEvent('game:log', {
+        detail: out.log.map(t => ({ text: t, ts: Date.now() })),
+      }));
+    }
+    return out;
   },
 
   async move(dx, dy) {
