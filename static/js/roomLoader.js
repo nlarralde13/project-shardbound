@@ -3,7 +3,7 @@
 //
 // Exposes:
 //   setShard(shard)
-//   assertCanonicalGrid(grid)
+//   assertCanonicalTiles(tiles)
 //   getBiomeAt(x,y)
 //   getSiteAt(x,y)
 //   buildRoom(x,y) -> { x, y, biome, title, subtitle, label?, site?, description, art:{image,size,position,repeat,stack,layers,frames?,frame_ms?,animIndex?} }
@@ -13,6 +13,7 @@ import { canonicalSettlement, imgForSettlement } from '/static/js/settlementRegi
 
 let Shard = null;
 const ALLOWED_BIOMES = new Set(ALL_BIOME_KEYS);
+const SETTLEMENT_TYPES = new Set(['city', 'town', 'village', 'port']);
 
 // --- lightweight caches -----------------------------------------------------
 const _artCache = new Map();  // key: `${biome}|${siteTypeOr-}` -> art object
@@ -30,17 +31,26 @@ export function setShard(shard) {
   _artCache.clear(); // safe to clear between shards
 }
 
-export function assertCanonicalGrid(grid) {
-  if (!Array.isArray(grid) || !grid.length || !Array.isArray(grid[0])) {
-    throw new Error('Shard grid must be a 2D array');
+export function assertCanonicalTiles(tiles) {
+  if (!Array.isArray(tiles) || !tiles.length || !Array.isArray(tiles[0])) {
+    throw new Error('Shard tiles must be a 2D array');
   }
   const bad = new Set();
-  for (let y = 0; y < grid.length; y++) {
-    for (let x = 0; x < grid[0].length; x++) {
-      const raw = grid[y][x];
+  for (let y = 0; y < tiles.length; y++) {
+    for (let x = 0; x < tiles[0].length; x++) {
+      let raw = tiles[y][x];
+      if (typeof raw === 'object') {
+        raw = raw?.tile ?? raw?.biome ?? raw?.type ?? raw?.tag;
+        tiles[y][x] = raw;
+      }
+      const lower = String(raw).toLowerCase();
+      if (SETTLEMENT_TYPES.has(lower)) {
+        tiles[y][x] = lower;
+        continue;
+      }
       const canon = canonicalBiome(raw);
       if (!ALLOWED_BIOMES.has(canon)) bad.add(raw);
-      grid[y][x] = canon; // normalize in place
+      tiles[y][x] = canon;
     }
   }
   if (bad.size) {
@@ -50,10 +60,12 @@ export function assertCanonicalGrid(grid) {
 }
 
 export function getBiomeAt(x, y) {
-  const g = Shard?.grid;
+  const g = Shard?.tiles;
   if (!g) return 'Plains';
   if (y < 0 || x < 0 || y >= g.length || x >= g[0].length) return 'Plains';
-  return canonicalBiome(g[y][x]);
+  const raw = g[y][x];
+  if (SETTLEMENT_TYPES.has(raw)) return 'Urban';
+  return canonicalBiome(raw);
 }
 export function getSiteAt(x, y) {
   const sites = Shard?.sites || [];
@@ -136,10 +148,10 @@ export function buildRoom(x, y, { mode = 'idle' } = {}) {
   const label = site ? canonicalSettlement(site.type) : null;
 
   const title    = site ? (site.name || label) : randomTitleFor(biome);
-  const subtitle = site ? `${label} • ${biome}` : biome;
+  const subtitle = site ? label : biome;
 
   const art = buildArtStack({ biome, site, mode });
-  const description = describe(biome);
+  const description = site?.flavor || describe(biome);
 
   return Object.freeze({
     x, y, biome, site, label, title, subtitle, description,

@@ -37,8 +37,8 @@ def _format_filename(seed: int, base_name: str) -> str:
     return f"{int(seed):08d}_{_safe_name(base_name)}.json"
 
 def _grid_to_legacy_tiles(grid: List[List[str]]) -> List[List[Dict[str, str]]]:
-    # legacy shape v1 viewers expect: tiles[y][x] = {"biome": "<id>"}
-    return [[{"biome": cell} for cell in row] for row in grid]
+    # legacy shape v1 viewers expect: tiles[y][x] = {"tile": "<id>"}
+    return [[{"tile": cell} for cell in row] for row in grid]
 
 def _sites_to_legacy_pois(sites: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     # legacy POIs are shallow dicts; keep v2 fields where possible

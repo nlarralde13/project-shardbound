@@ -139,7 +139,19 @@ _CURRENT_WORLD: Optional[World] = None  # optional singleton for legacy helpers
 def load_world(path: str | Path) -> World:
     data = json.loads(Path(path).read_text())
 
-    grid = data["grid"]  # fast access heatmap
+    grid = data.get("grid")
+    if not grid and "tiles" in data:
+        tiles = data["tiles"]
+        grid = []
+        for row in tiles:
+            line = []
+            for cell in row:
+                if isinstance(cell, dict):
+                    val = cell.get("tile") or cell.get("biome") or cell.get("type") or cell.get("tag")
+                else:
+                    val = cell
+                line.append(str(val))
+            grid.append(line)
     H = len(grid)
     W = len(grid[0]) if H else 0
 
