@@ -3,3 +3,4 @@
 from . import search  # noqa: F401
 from . import gather  # noqa: F401
 from . import attack  # noqa: F401
+from . import talk    # noqa: F401
