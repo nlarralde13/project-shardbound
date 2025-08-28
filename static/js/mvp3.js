@@ -3,6 +3,7 @@
 
 import { initOverlayMap } from '/static/js/overlayMap.js';
 import { setShard as setRoomShard, assertCanonicalGrid, buildRoom } from '/static/js/roomLoader.js';
+import { applyRoomDelta } from '/static/js/roomPatcher.js';
 
 const QS = new URLSearchParams(location.search);
 const DEV_MODE = QS.has('devmode');
@@ -54,6 +55,19 @@ const toggleMap = () => overlayMapEl?.classList.contains('hidden') ? openMap() :
 
 // ---- state ----
 let CurrentPos = { x: 0, y: 0 };
+
+// Room patching from server deltas
+window.patchRoom = (delta) => {
+  window.currentRoom = applyRoomDelta(window.currentRoom || {}, delta || {});
+  const hostiles = (window.currentRoom?.enemies || []).some(e => (e.hp_now ?? e.hp) > 0);
+  const room = buildRoom(CurrentPos.x, CurrentPos.y, { mode: hostiles ? 'combat' : 'idle' });
+  renderRoomInfo(room, { flavor: false });
+  if (Array.isArray(window.currentRoom?.quests) && window.currentRoom.quests.length) {
+    const q = window.currentRoom.quests[0];
+    const key = `${CurrentPos.x},${CurrentPos.y}:${q.id}`;
+    if (window.patchRoom._k !== key) { log(`Quest available: ${q.title}`, 'log-quest'); window.patchRoom._k = key; }
+  }
+};
 
 // ---- room render (keeps your working art swap) ----
 let __anim = null;
@@ -107,9 +121,19 @@ function renderRoomInfo(room, { flavor = true } = {}) {
 window.addEventListener('game:moved', (ev) => {
   const d = ev?.detail || {}; if (!Number.isFinite(d.x) || !Number.isFinite(d.y)) return;
   CurrentPos = { x: d.x, y: d.y };
-  const room = buildRoom(d.x, d.y);
+  const hostiles = window.currentRoom?.enemies?.some(e => (e.hp_now ?? e.hp) > 0);
+  const room = buildRoom(d.x, d.y, { mode: hostiles ? 'combat' : 'idle' });
   renderRoomInfo(room);
   overlay?.setPos?.(d.x, d.y); overlay?.render?.();
+});
+
+// Route server log events into local console
+window.addEventListener('game:log', (ev) => {
+  const events = ev.detail || [];
+  for (const e of events) {
+    const cls = e.type && e.type !== 'log' ? `log-${e.type}` : '';
+    log(e.text || String(e), cls);
+  }
 });
 
 // ---- keyboard for overlays only (M/C/I/ESC) ----
