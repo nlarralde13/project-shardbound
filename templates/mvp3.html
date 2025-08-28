@@ -29,11 +29,6 @@
   <!-- Top bar -->
   <header class="topbar">
     <div class="title">Shardbound • MVP3</div>
-    <div class="hud">
-      <div class="bar hp"><span>HP</span><i style="width:80%"></i></div>
-      <div class="bar mp"><span>MP</span><i style="width:60%"></i></div>
-      <div class="bar sta"><span>STA</span><i style="width:90%"></i></div>
-    </div>
 
     <nav class="actions">
       <button id="btnInventory" class="btn ghost">Inventory (I)</button>
@@ -91,6 +86,12 @@
         <div>Character</div>
         <button class="btn ghost" data-close="char">Close (C)</button>
       </div>
+      <div class="hud" id="charHud" style="margin:10px 0;">
+        <div class="bar hp"><span>HP</span><i id="statHP" style="width:80%"></i></div>
+        <div class="bar mp"><span>MP</span><i id="statMP" style="width:60%"></i></div>
+        <div class="bar sta"><span>STA</span><i id="statSTA" style="width:90%"></i></div>
+      </div>
+      <div class="dim" id="statHunger" style="font-size:12px;margin-bottom:10px;">Hunger: 0</div>
       <div class="char-grid">
         <div class="char-col">
           <h3>Equipment</h3>
@@ -124,6 +125,9 @@
     </div>
   </div>
 
+  <!-- Settings Panel -->
+  {% include 'user_settings.html' %}
+
   <!-- Action Bar mount -->
   <div id="action-root" class="action-root"></div>
 
@@ -154,8 +158,8 @@
       location.href = "/";
     });
 
-    // Lazy-load settings overlay
-    let settingsRoot = null;
+    // Settings overlay
+    const settingsRoot = document.getElementById('overlaySettings');
 
     function populateSettings(u) {
       document.getElementById('set_email').value = u.email || '';
@@ -170,7 +174,7 @@
     }
 
     function wireSettingsHandlers() {
-      settingsRoot.querySelector('[data-close="settings"]').addEventListener('click', () => {
+      settingsRoot?.querySelector('[data-close="settings"]').addEventListener('click', () => {
         settingsRoot.classList.add('hidden');
       });
       document.getElementById('btnCancelSettings').addEventListener('click', () => {
@@ -198,15 +202,9 @@
       });
     }
 
+    wireSettingsHandlers();
+
     async function openSettings() {
-      if (!settingsRoot) {
-        const html = await fetch('/user_settings', { credentials: 'include' }).then(r => r.text());
-        const tmp = document.createElement('div');
-        tmp.innerHTML = html.trim();
-        settingsRoot = tmp.firstElementChild;
-        document.body.appendChild(settingsRoot);
-        wireSettingsHandlers();
-      }
       try {
         const u = await API.me();
         window.__currentUser = u;
@@ -230,6 +228,7 @@
         window.patchRoom?.(st.room);
         initActionHUD(document.getElementById("action-root"));
         updateActionHUD({ interactions: st.interactions });
+        window.updateCharHud?.(st.player);
         if (pos.length === 2) {
           window.dispatchEvent(new CustomEvent('game:log', { detail: [{ text: `Player at (${pos[0]}, ${pos[1]})`, ts: Date.now() }] }));
         }
@@ -243,6 +242,7 @@
         window.patchRoom?.(st2.room);
         initActionHUD(document.getElementById("action-root"));
         updateActionHUD({ interactions: st2.interactions });
+        window.updateCharHud?.(st2.player);
         if (pos2.length === 2) {
           window.dispatchEvent(new CustomEvent('game:log', { detail: [{ text: `Player at (${pos2[0]}, ${pos2[1]})`, ts: Date.now() }] }));
         }

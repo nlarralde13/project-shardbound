@@ -40,6 +40,30 @@ const consoleEl    = document.getElementById('console');
 const cmdInput     = document.getElementById('cmd');
 const cmdSend      = document.getElementById('cmdSend');
 
+const statHP       = document.getElementById('statHP');
+const statMP       = document.getElementById('statMP');
+const statSTA      = document.getElementById('statSTA');
+const statHunger   = document.getElementById('statHunger');
+
+function updateCharHud(p = {}){
+  if(statHP && Number.isFinite(p.hp) && Number.isFinite(p.max_hp)){
+    statHP.style.width = Math.max(0, Math.min(100, (p.hp / p.max_hp) * 100)) + '%';
+  }
+  if(statMP && Number.isFinite(p.mp) && Number.isFinite(p.max_mp)){
+    statMP.style.width = Math.max(0, Math.min(100, (p.mp / p.max_mp) * 100)) + '%';
+  }
+  const stam = Number.isFinite(p.stamina) ? p.stamina : p.energy;
+  const maxStam = Number.isFinite(p.max_stamina) ? p.max_stamina : (p.max_energy ?? 100);
+  if(statSTA && Number.isFinite(stam) && Number.isFinite(maxStam)){
+    statSTA.style.width = Math.max(0, Math.min(100, (stam / maxStam) * 100)) + '%';
+  }
+  if(statHunger && Number.isFinite(p.hunger)){
+    statHunger.textContent = `Hunger: ${p.hunger}`;
+  }
+}
+
+window.updateCharHud = updateCharHud;
+
 // ---- console log (light) ----
 const _log = [];
 function log(text, cls='', ts=null){
@@ -243,6 +267,19 @@ async function runCommand(input){
     return;
   }
 
+  if(t==='stats' || (t==='get' && parts[1]==='stats')){
+    try{
+      const st = await API.state();
+      const p = st.player || {};
+      log(`HP ${p.hp}/${p.max_hp}` +
+          ` • MP ${p.mp ?? 0}` +
+          ` • STA ${(p.stamina ?? p.energy) ?? 0}` +
+          (p.hunger !== undefined ? ` • Hunger ${p.hunger}` : ''), 'log-note');
+      updateCharHud(p);
+    }catch(e){ console.error(e); }
+    return;
+  }
+
   if(t==='move' && parts[1]){
     const d = DIRS[parts[1][0].toLowerCase()];
     if(!d){ log('Unknown direction. Type "help".', 'log-note'); return; }
@@ -273,6 +310,7 @@ async function runCommand(input){
       if (pos.length === 2) window.dispatchEvent(new CustomEvent('game:moved',{ detail:{ x:pos[0], y:pos[1] }}));
       if(res?.log) window.dispatchEvent(new CustomEvent('game:log',{ detail: res.log.map(text=>({ text, ts: Date.now() })) }));
       if(res?.interactions) updateActionHUD({ interactions: res.interactions });
+      if(res?.player) updateCharHud(res.player);
     }catch(e){ console.error(e); }
     return;
   }
@@ -283,6 +321,7 @@ async function runCommand(input){
       if(out?.events) window.dispatchEvent(new CustomEvent('game:log',{ detail: out.events.map(e=>({ ...e, ts: e.ts||Date.now() })) }));
       if(out?.room_delta) window.patchRoom?.(out.room_delta);
       if(out?.interactions) updateActionHUD({ interactions: out.interactions });
+      if(out?.player) updateCharHud(out.player);
     }catch(e){ console.error(e); }
     return;
   }

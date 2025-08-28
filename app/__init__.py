@@ -1,6 +1,7 @@
 # app/__init__.py
 import os
 from flask import Flask, render_template, send_from_directory
+from flask_login import login_required
 from .db import db, migrate
 from .auth import auth_bp, login_manager
 
@@ -29,6 +30,7 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
+    login_manager.login_view = "index"
 
     # Ensure models are imported so migrations can see them
     with app.app_context():
@@ -63,18 +65,22 @@ def create_app():
         return render_template("index.html")
 
     @app.route("/mvp")
+    @login_required
     def mvp():
         return render_template("mvp3.html")
 
     @app.route("/api-playground")
+    @login_required
     def api_playground():
         return render_template("api-playground.html")
 
     @app.route("/shard-viewer")
+    @login_required
     def shard_viewer():
         return render_template("shard-viewer.html")
 
     @app.route("/shard-viewer-v2")
+    @login_required
     def shard_viewer_v2():
         return render_template("shard-viewer-v2.html")
 
@@ -83,6 +89,7 @@ def create_app():
         return send_from_directory(app.static_folder, filename)
     
     @app.route("/user_settings")
+    @login_required
     def user_settings_partial():
         return render_template("user_settings.html")
 
