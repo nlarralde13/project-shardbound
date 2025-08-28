@@ -245,6 +245,23 @@ async function loadShard(url){
   shardStatus && (shardStatus.textContent = 'Loaded');
 }
 
+
+// Close buttons inside panels
+overlayChar?.querySelector('[data-close="char"]')
+  ?.addEventListener('click', () => overlayChar.classList.add('hidden'));
+overlayInv?.querySelector('[data-close="inv"]')
+  ?.addEventListener('click', () => overlayInv.classList.add('hidden'));
+
+// Click on the dark backdrop closes (but not when clicking inside .panel)
+document.addEventListener('click', (e) => {
+  const target = e.target;
+  if (!(target instanceof Element)) return;
+  const overlay = target.closest('.overlay');
+  if (!overlay) return;
+  const panel = target.closest('.panel');
+  if (!panel) overlay.classList.add('hidden');
+});
+
 // ---- UI wires ----
 btnLoadShard?.addEventListener('click', async ()=>{ const url=shardSelect?.value; if(!url) return; try{ await loadShard(url); }catch{} });
 shardSelect?.addEventListener('change', ()=>btnLoadShard?.click());

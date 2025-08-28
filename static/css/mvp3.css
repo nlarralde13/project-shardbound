@@ -253,3 +253,113 @@ a:hover{text-decoration:underline}
 
 /* ---------- Helpers ---------- */
 .hidden{ display:none !important; }
+/* ===== Overlay base (fixes “opening under console”) ===== */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: none; /* default hidden; toggled by .hidden */
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: rgba(10, 8, 5, 0.55);
+  backdrop-filter: blur(2px);
+  z-index: 4000;              /* <- higher than console/map */
+}
+.overlay:not(.hidden) { display: flex; }
+.overlay .panel {
+  width: min(920px, 92vw);
+  max-height: 88vh;
+  overflow: auto;
+  border-radius: 14px;
+  box-shadow: 0 14px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04) inset;
+  background:
+    radial-gradient(80% 50% at 50% 0%, rgba(255,245,220,0.25), rgba(0,0,0,0) 70%),
+    linear-gradient(#efe7d0,#e6dabc 220px,#d9caa6 220px,#d9caa6);
+  background-blend-mode: overlay, normal;
+}
+
+/* Panel header (shared by Character/Inventory/Settings) */
+.panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 14px 16px;
+  border-bottom: 1px solid rgba(0,0,0,0.2);
+  font-family: "Cinzel", serif;
+  letter-spacing: 0.5px;
+}
+
+/* ===== Top banner spacing / vibe ===== */
+.topbar {
+  position: sticky; top: 0; z-index: 3000;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 18px;
+  padding: 10px 16px;
+  background: linear-gradient(180deg, #171310, #120f0c 80%);
+  border-bottom: 1px solid #2b221a;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.35);
+}
+.topbar .title {
+  font-family: "Cinzel", serif;
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: 0.6px;
+  color: #f3e6c1;
+  text-shadow: 0 1px 0 #000;
+  white-space: nowrap;
+}
+.topbar .actions {
+  display: inline-flex; gap: 8px; margin-left: 12px;
+}
+.topbar .btn { padding: 8px 12px; }
+
+/* shard picker looks less squished and aligns right */
+.topbar .shard-picker {
+  display: inline-flex; gap: 8px; align-items: center;
+}
+.topbar select.btn.ghost { min-width: 260px; }
+
+/* ===== Character panel (D&D/WoW-ish) ===== */
+#overlayChar .panel { width: min(1000px, 92vw); }
+#overlayChar .hud { display: grid; gap: 8px; }
+#overlayChar .bar {
+  position: relative; height: 18px; border-radius: 10px;
+  background: #2a2320; box-shadow: inset 0 1px 3px rgba(0,0,0,0.6);
+  overflow: hidden; font-size: 11px; color: #e9dec2;
+}
+#overlayChar .bar span {
+  position: absolute; left: 8px; top: 50%; transform: translateY(-50%); z-index: 2; opacity: .9;
+}
+#overlayChar .bar i {
+  position: absolute; inset: 0; width: 60%;
+  border-radius: 10px; transition: width .25s ease;
+}
+#overlayChar .bar.hp i  { background: linear-gradient(90deg, #7a1111, #c63838); }
+#overlayChar .bar.mp i  { background: linear-gradient(90deg, #213a7a, #3f69d1); }
+#overlayChar .bar.sta i { background: linear-gradient(90deg, #37601d, #66b13a); }
+
+#overlayChar .char-grid {
+  display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px;
+}
+#overlayChar .char-col {
+  background: rgba(0,0,0,0.08);
+  border: 1px solid rgba(0,0,0,0.2);
+  border-radius: 10px; padding: 12px;
+}
+#overlayChar h3 {
+  margin: 0 0 8px; font-family: "IM Fell English", serif; font-size: 18px;
+}
+#overlayChar ul { list-style: none; padding: 0; margin: 0; }
+#overlayChar .slots li,
+#overlayChar .stats li {
+  display: flex; justify-content: space-between; gap: 8px;
+  padding: 6px 8px; border-bottom: 1px dashed rgba(0,0,0,0.15);
+}
+#overlayChar .slots li:last-child,
+#overlayChar .stats li:last-child { border-bottom: 0; }
+
+/* Inventory body minor polish */
+#overlayInv .inv-body { padding: 10px; }
+
+/* Simple utility */
+.hidden { display: none !important; }
