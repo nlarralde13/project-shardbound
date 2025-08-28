@@ -1,28 +1,31 @@
-from .db import db
-from datetime import datetime
+import uuid, datetime as dt
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import UserMixin
 
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(255), unique=True, nullable=False)
-    password_hash = db.Column(db.String(255), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+db = SQLAlchemy()
 
-class Shard(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(120), nullable=False)
-    size_w = db.Column(db.Integer, default=16)
-    size_h = db.Column(db.Integer, default=16)
-    seed = db.Column(db.String(64))
-    data_json = db.Column(db.JSON, nullable=False)  # {spawn, grid, sites...}
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+def gen_uuid(): return str(uuid.uuid4())
 
-class Character(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    shard_id = db.Column(db.Integer, db.ForeignKey("shard.id"), nullable=False)
-    name = db.Column(db.String(64), nullable=False)
-    level = db.Column(db.Integer, default=1)
-    stats_json = db.Column(db.JSON, default=dict)
-    pos_x = db.Column(db.Integer, default=0)
-    pos_y = db.Column(db.Integer, default=0)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+class User(db.Model, UserMixin):
+    __tablename__ = "users"
+    user_id = db.Column(db.String, primary_key=True, default=gen_uuid)
+    email = db.Column(db.String, unique=True, nullable=False, index=True)
+    handle = db.Column(db.String, unique=True, index=True)
+    display_name = db.Column(db.String)
+    age = db.Column(db.SmallInteger)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=dt.datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=dt.datetime.utcnow, onupdate=dt.datetime.utcnow)
+    last_login_at = db.Column(db.DateTime)
+
+    # Flask-Login requirements
+    def get_id(self):
+        return self.user_id
+
+    @property
+    def is_authenticated(self):
+        return True
+
+    @property
+    def is_anonymous(self):
+        return False

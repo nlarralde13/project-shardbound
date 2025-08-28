@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CogSprocket Login</title>
+  <style>
+    :root { --bg: #0b0e13; --card: #121720cc; --text: #e8eef7; --muted:#9fb0c3; --accent:#7cc5ff; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      color: var(--text);
+      background: var(--bg) center/cover no-repeat fixed url("/static/assets/logos/cogsprocket.png");
+      backdrop-filter: blur(0.5px);
+    }
+    .overlay { background: rgba(0,0,0,0.35); position: fixed; inset: 0; }
+    .wrap {
+      position: absolute; inset: 0; display: grid; place-items: center; padding: 24px;
+    }
+    .card {
+      width: 100%; max-width: 420px; background: var(--card); border: 1px solid #1e2733;
+      border-radius: 16px; padding: 20px 20px 16px; box-shadow: 0 12px 40px rgba(0,0,0,.35);
+      backdrop-filter: blur(6px);
+    }
+    h1 { font-size: 18px; margin: 0 0 12px; letter-spacing: .4px; }
+    p.hint { color: var(--muted); margin: 0 0 16px; font-size: 13px; }
+    label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 6px; }
+    input {
+      width: 100%; padding: 12px 12px; border: 1px solid #2a3443; border-radius: 10px;
+      background: #0e131a; color: var(--text); outline: none;
+    }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+    button {
+      border: 1px solid #2a3443; background: #101620; color: var(--text);
+      padding: 12px 14px; border-radius: 10px; cursor: pointer;
+    }
+    button.primary { border-color: #2f6e94; background: #0f2130; }
+    button:hover { filter: brightness(1.06); }
+    .hidden { display: none; }
+    .error { color: #ff9aa5; font-size: 13px; margin-top: 10px; min-height: 1em; }
+    .success { color: #9dffb0; font-size: 13px; margin-top: 10px; min-height: 1em; }
+    .footer { margin-top: 10px; font-size: 12px; color: var(--muted); text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="overlay"></div>
+  <div class="wrap">
+    <div class="card">
+      <h1>Welcome to Shardbound</h1>
+      <p class="hint">Log in with your email, or create a new account.</p>
+
+      <label for="email">Email</label>
+      <input id="email" type="email" placeholder="you@example.com" autocomplete="email" required />
+
+      <div id="createFields" class="hidden">
+        <label for="display_name">Display name</label>
+        <input id="display_name" type="text" placeholder="Nick" maxlength="40" />
+
+        <label for="handle">Login handle (unique)</label>
+        <input id="handle" type="text" placeholder="pogslammer" maxlength="32" />
+
+        <label for="age">Age</label>
+        <input id="age" type="number" min="13" max="120" placeholder="18" />
+      </div>
+
+      <div class="btns">
+        <button id="loginBtn" class="primary">Log In</button>
+        <button id="createBtn">Create Account</button>
+      </div>
+
+      <div id="msg" class="error"></div>
+      <div id="ok" class="success"></div>
+      <div class="footer">By continuing, you agree to the rules of the realm ✨</div>
+    </div>
+  </div>
+
+  <script>
+    const emailEl = document.getElementById('email');
+    const createFields = document.getElementById('createFields');
+    const loginBtn = document.getElementById('loginBtn');
+    const createBtn = document.getElementById('createBtn');
+    const msg = document.getElementById('msg');
+    const ok = document.getElementById('ok');
+
+    function showError(text) { msg.textContent = text || ''; ok.textContent = ''; }
+    function showOk(text) { ok.textContent = text || ''; msg.textContent = ''; }
+
+    async function postJSON(url, payload) {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      , body: JSON.stringify(payload)});
+      const data = await r.json().catch(() => ({}));
+      return { ok: r.ok, status: r.status, data };
+    }
+
+    loginBtn.addEventListener('click', async () => {
+      showError('');
+      const email = (emailEl.value || '').trim();
+      if (!email) return showError('Please enter your email.');
+      const res = await postJSON('/api/auth/login', { email });
+      if (res.ok) {
+        showOk('Welcome back!');
+        window.location.href = '/mvp3.html';
+      } else {
+        if (res.status === 404) {
+          showError('No account found for that email. Click "Create Account" to register.');
+          createFields.classList.remove('hidden');
+        } else {
+          showError(res.data?.error || 'Login failed.');
+        }
+      }
+    });
+
+    createBtn.addEventListener('click', async () => {
+      // toggle fields on first click if hidden
+      if (createFields.classList.contains('hidden')) {
+        createFields.classList.remove('hidden');
+        showError('Fill in the extra fields to create your account.');
+        return;
+      }
+      const email = (emailEl.value || '').trim();
+      const display_name = document.getElementById('display_name').value.trim();
+      const handle = document.getElementById('handle').value.trim();
+      const age = parseInt(document.getElementById('age').value, 10);
+
+      if (!email || !display_name || !handle || !age) return showError('Please complete all fields.');
+      if (age < 13) return showError('You must be 13+ to play.');
+
+      const res = await postJSON('/api/auth/register', { email, display_name, handle, age });
+      if (res.ok) {
+        showOk('Account created. Redirecting...');
+        window.location.href = '/mvp3.html';
+      } else {
+        showError(res.data?.error || 'Registration failed.');
+      }
+    });
+  </script>
+</body>
+</html>
