@@ -135,6 +135,7 @@
       for (let x=0; x<row.length; x++) {
         const cell = row[x];
         if (typeof cell === "string") line[x] = cell;
+        else if (cell && typeof cell.tile  === "string") line[x] = cell.tile;
         else if (cell && typeof cell.biome === "string") line[x] = cell.biome;
         else if (cell && typeof cell.type  === "string") line[x] = cell.type;
         else if (cell && typeof cell.tag   === "string") line[x] = cell.tag;

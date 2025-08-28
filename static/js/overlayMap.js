@@ -1,13 +1,13 @@
 // overlayMap.js — Map overlay (logic only; styling lives in mapOverlay.css)
 //
 // initOverlayMap({ devMode=false }):
-//   .setShard(shard)      // expects .grid + optional .layers.* or .sites[]
+//   .setShard(shard)      // expects .tiles + optional .layers.* or .sites[]
 //   .setPos(x,y)
 //   .setTitle(text)
 //   .render()
 //
 // Layers supported (if present):
-//   shard.grid                               -> biome tiles
+//   shard.tiles                              -> biome tiles
 //   shard.layers.rivers.paths                -> polylines
 //   shard.layers.lakes.{cells|polygons}      -> water fills
 //   shard.layers.roads.paths                 -> polylines
@@ -15,6 +15,8 @@
 //   shard.layers.settlements.{cities,towns,villages,ports}  OR  shard.sites[]
 //
 // Nothing here injects CSS. Include /static/css/mapOverlay.css in your HTML.
+
+import { colorForSettlement } from '/static/js/settlementRegistry.js';
 
 export function initOverlayMap({ devMode = false } = {}) {
   const root = document.getElementById('overlayMap');
@@ -137,7 +139,7 @@ export function initOverlayMap({ devMode = false } = {}) {
   }
   function setShard(shard) {
     state.shard = shard || null;
-    const g = shard?.grid || [];
+    const g = shard?.tiles || [];
     state.gridH = g.length;
     state.gridW = g[0]?.length || 0;
     state.pois = Array.isArray(shard?.pois) ? shard.pois : (Array.isArray(shard?.sites) ? shard.sites : []);
@@ -152,8 +154,11 @@ export function initOverlayMap({ devMode = false } = {}) {
   }
 
   // -------- colors (atlas) --------
+  const SETTLEMENT_TYPES = new Set(['city','town','village','port']);
   const biomeColor = (id)=>{
-    switch(String(id).toLowerCase()){
+    const lc = String(id).toLowerCase();
+    if (SETTLEMENT_TYPES.has(lc)) return colorForSettlement(lc);
+    switch(lc){
       case 'ocean':return '#0b3a74';
       case 'coast': case 'beach': return '#d9c38c';
       case 'plains':return '#91c36e';
@@ -177,7 +182,7 @@ export function initOverlayMap({ devMode = false } = {}) {
 
   // -------- draw helpers --------
   function drawBiomes() {
-    const g = state.shard?.grid; if (!g) return;
+    const g = state.shard?.tiles; if (!g) return;
     fitCanvases();
     // base
     gctx.clearRect(0,0,gridCanvas.width, gridCanvas.height);
@@ -309,7 +314,7 @@ export function initOverlayMap({ devMode = false } = {}) {
   }
 
   function drawPlayer() {
-    const biome = state.shard?.grid?.[state.pos.y]?.[state.pos.x];
+    const biome = state.shard?.tiles?.[state.pos.y]?.[state.pos.x];
     const img = biome === 'ocean' ? tokenImgs.boat : tokenImgs.character;
     if (!img.complete) return;
     const size = Math.min(state.tile.w, state.tile.h);

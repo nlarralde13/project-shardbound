@@ -5,7 +5,7 @@
 
 import { BIOMES, BIOME_COLORS, ALL_BIOME_KEYS, randomTitleFor } from './biomeRegistry.js';
 import { rollRoomEvent } from './eventTables.js';
-import { poiClassFor, canonicalSettlement } from './settlementRegistry.js';
+import { poiClassFor, canonicalSettlement, colorForSettlement } from './settlementRegistry.js';
 
 (function () {
   // ===== DOM refs =====
@@ -36,6 +36,7 @@ import { poiClassFor, canonicalSettlement } from './settlementRegistry.js';
   // ===== Shard data & helpers =====
   let shard = null;
   const colorForBiome = (b) => BIOME_COLORS[b] || '#a0a0a0';
+  const SETTLEMENT_TYPES = new Set(['city','town','village','port']);
   const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
   const ALLOWED_BIOMES = new Set(ALL_BIOME_KEYS);
   let warnedNonCanonical = false;
@@ -47,12 +48,19 @@ import { poiClassFor, canonicalSettlement } from './settlementRegistry.js';
     shardStatus.style.color = color;
   }
 
-  function assertCanonicalGrid(grid) {
+  function assertCanonicalTiles(tiles) {
     if (warnedNonCanonical) return;
     const bad = new Set();
-    for (let y = 0; y < grid.length; y++) {
-      for (let x = 0; x < grid[0].length; x++) {
-        if (!ALLOWED_BIOMES.has(grid[y][x])) bad.add(grid[y][x]);
+    for (let y = 0; y < tiles.length; y++) {
+      for (let x = 0; x < tiles[0].length; x++) {
+        let raw = tiles[y][x];
+        if (typeof raw === 'object') {
+          raw = raw?.tile ?? raw?.biome ?? raw?.type ?? raw?.tag;
+          tiles[y][x] = raw;
+        }
+        const lower = String(raw).toLowerCase();
+        if (SETTLEMENT_TYPES.has(lower)) { tiles[y][x] = lower; continue; }
+        if (!ALLOWED_BIOMES.has(raw)) bad.add(raw);
       }
     }
     if (bad.size) {
@@ -65,13 +73,15 @@ import { poiClassFor, canonicalSettlement } from './settlementRegistry.js';
     if (!shard) return 'Forest';
     const [W, H] = shard.size || [0, 0];
     if (x < 0 || y < 0 || x >= W || y >= H) return 'Coast';
-    if (!Array.isArray(shard.grid) || !Array.isArray(shard.grid[0])) return 'Coast';
-    return shard.grid[y]?.[x] ?? 'Coast';               // assumes canonical keys
+    if (!Array.isArray(shard.tiles) || !Array.isArray(shard.tiles[0])) return 'Coast';
+    const raw = shard.tiles[y]?.[x];
+    if (SETTLEMENT_TYPES.has(raw)) return 'Urban';
+    return raw ?? 'Coast';               // assumes canonical keys
   }
 
   function siteAt(x, y) {
     if (!Array.isArray(shard?.sites)) return null;
-    return shard.sites.find(s => s.pos?.[0] === x && s.pos?.[1] === y) || null;
+    return shard.sites.find(s => s.x === x && s.y === y) || null;
   }
 
   // ===== Console log =====
@@ -118,9 +128,10 @@ import { poiClassFor, canonicalSettlement } from './settlementRegistry.js';
   function setRoom(next) {
     const b = next.biome;
     roomTitle.textContent = next.title || 'Unknown Place';
-    roomBiome.textContent = b;
+    roomBiome.textContent = next.label || b;
     applyArt(b);
-    log(describe(b), 'log-note');
+    const desc = next.description || describe(b);
+    if (desc) log(desc, 'log-note');
   }
 
   // ===== Mini-map window (overlay) =====
@@ -201,15 +212,16 @@ import { poiClassFor, canonicalSettlement } from './settlementRegistry.js';
 
     mapPOI.innerHTML = '';
     (shard.sites || []).forEach(s => {
-      const [x, y] = s.pos || [0, 0];
+      const x = s.x ?? (Array.isArray(s.pos)?s.pos[0]:0);
+      const y = s.y ?? (Array.isArray(s.pos)?s.pos[1]:0);
       if (x < vx || y < vy || x >= vx + vw || y >= vy + vh) return;
 
       const el = document.createElement('div');
       el.className = poiClassFor(s.type);
 
-      // Settlements adopt local biome color
-      if (canonicalSettlement(s.type) === 'Settlement') {
-        el.style.background = colorForBiome(biomeAt(x, y));
+      // Settlements use their own color
+      if (SETTLEMENT_TYPES.has(String(s.type).toLowerCase())) {
+        el.style.background = colorForSettlement(s.type);
       }
 
       const lx = x - vx, ly = y - vy;
@@ -279,20 +291,24 @@ import { poiClassFor, canonicalSettlement } from './settlementRegistry.js';
 
     pos.x = nx; pos.y = ny;
 
-    pos.biome = biomeAt(pos.x, pos.y);
-    pos.title = randomTitleFor(pos.biome);
-
-    setRoom({ title: pos.title, biome: pos.biome });
-    log(`You move ${dir}. (${pos.x},${pos.y}) • ${pos.title} • ${pos.biome}`, 'log-note');
-
     const here = siteAt(pos.x, pos.y);
-    if (here) log(`You see ${canonicalSettlement(here.type)} — ${here.name}.`, 'log-warn');
+    if (here) {
+      pos.biome = 'Urban';
+      pos.title = here.name || canonicalSettlement(here.type);
+      setRoom({ title: pos.title, biome: pos.biome, label: canonicalSettlement(here.type), description: here.flavor });
+      log(`You move ${dir}. (${pos.x},${pos.y}) • ${pos.title}`, 'log-note');
+    } else {
+      pos.biome = biomeAt(pos.x, pos.y);
+      pos.title = randomTitleFor(pos.biome);
+      setRoom({ title: pos.title, biome: pos.biome });
+      log(`You move ${dir}. (${pos.x},${pos.y}) • ${pos.title} • ${pos.biome}`, 'log-note');
+      onEnterRoom(pos.biome);
+    }
 
     lastSeen.resource = null; lastSeen.hotspot = null;
 
     renderMiniGrid();
     renderPOI();
-    onEnterRoom(pos.biome);
   }
 
   // ===== Inventory (stub) =====
@@ -478,32 +494,36 @@ import { poiClassFor, canonicalSettlement } from './settlementRegistry.js';
     const data = await res.json();
 
     // Prefer canonical forms if present; still accept legacy `tiles`/`pois`
-    let grid = data.grid;
-    if (!grid && Array.isArray(data.tiles)) {
-      grid = data.tiles.map(row => row.map(cell => (typeof cell === 'string' ? cell : cell?.biome)));
+    let tiles = data.grid;
+    if (!tiles && Array.isArray(data.tiles)) {
+      tiles = data.tiles.map(row => row.map(cell => {
+        if (typeof cell === 'string') return cell;
+        if (cell && typeof cell.tile === 'string') return cell.tile;
+        return cell?.biome;
+      }));
     }
-    if (!Array.isArray(grid) || !Array.isArray(grid[0])) {
+    if (!Array.isArray(tiles) || !Array.isArray(tiles[0])) {
       console.error('Shard JSON keys:', Object.keys(data));
-      setShardStatus('Shard grid missing or malformed.', 'error');
-      throw new Error('Invalid shard: grid missing or malformed');
+      setShardStatus('Shard tiles missing or malformed.', 'error');
+      throw new Error('Invalid shard: tiles missing or malformed');
     }
 
     const W = (Array.isArray(data.size) && data.size[0]) ||
               (data.meta && data.meta.width) ||
-              grid[0].length;
+              tiles[0].length;
 
     const H = (Array.isArray(data.size) && data.size[1]) ||
               (data.meta && data.meta.height) ||
-              grid.length;
+              tiles.length;
 
     const sites = data.sites || (Array.isArray(data.pois) ? data.pois.map(p => ({
       name: p.name, type: p.type, pos: p.pos ? p.pos.slice() : [p.x, p.y], meta: p.meta
     })) : []);
 
     // Warn (once) if shard isn't canonical, but don't block rendering
-    assertCanonicalGrid(grid);
+    assertCanonicalTiles(tiles);
 
-    shard = { ...data, grid, size: [Number(W), Number(H)], sites };
+    shard = { ...data, tiles, size: [Number(W), Number(H)], sites };
 
     // Clamp/seed pos inside bounds
     const [cW, cH] = shard.size;
@@ -566,7 +586,7 @@ import { poiClassFor, canonicalSettlement } from './settlementRegistry.js';
     get shard(){ return shard; },
     get pos(){ return pos; },
     get size(){ return shard?.size; },
-    get grid(){ return shard?.grid; },
+    get tiles(){ return shard?.tiles; },
     getViewWindow,
     renderMiniGrid,
     renderPOI,

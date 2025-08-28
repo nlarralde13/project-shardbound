@@ -30,9 +30,9 @@ export function createMovementRules(shard) {
   const IMPASSABLE = new Set(["Mountains", "Volcano"]);
 
   const biomeAt = (x, y) => {
-    if (!shard?.grid) return "Forest";
+    if (!shard?.tiles) return "Forest";
     if (x < 0 || y < 0 || x >= W || y >= H) return "void";
-    return shard.grid[y][x];
+    return shard.tiles[y][x];
   };
   const key = (x, y) => `${x},${y}`;
   const onRoad   = (x, y) => roadSet.has(key(x, y));
