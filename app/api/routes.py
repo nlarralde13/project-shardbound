@@ -6,7 +6,7 @@ from __future__ import annotations
 from pathlib import Path
 from flask import Blueprint, jsonify, request, current_app
 
-from server.world_loader import load_world, get_room  # <-- import get_room
+from server.world_loader import load_world, get_room, add_safe_zone  # <-- import get_room
 from server.player_engine import move, ensure_first_quest, check_quests
 from server.combat import maybe_spawn, resolve_combat
 
@@ -16,6 +16,9 @@ bp = Blueprint("core_api", __name__, url_prefix="/api")
 
 STARTER_SHARD_PATH = Path("static/public/shards/00089451_test123.json")
 WORLD = load_world(STARTER_SHARD_PATH)
+add_safe_zone(12, 15)
+add_safe_zone(13, 15)
+WORLD.pois.append({"x": 12, "y": 15, "type": "town"})
 
 @bp.get("/shards")
 def api_shards():
@@ -42,7 +45,7 @@ def api_world():
 def api_spawn():
     data = request.get_json(force=True) or {}
     player = get_player()
-    x, y = int(data.get("x", 0)), int(data.get("y", 0))
+    x, y = int(data.get("x", 12)), int(data.get("y", 15))
     settle_types = {"city", "town", "village"}
     poi = WORLD.poi_at(x, y)
     if not (poi and poi.get("type") in settle_types):
@@ -126,6 +129,8 @@ def _interactions(room: dict) -> Dict:
         "can_gather": any(n.get("qty", 0) > 0 for n in (room.get("resources") or [])),
         "can_attack": bool(room.get("enemies")),
         "has_quests": bool(room.get("quests")),
+        "can_talk":   bool(room.get("npcs")),
         "gather_nodes": [n["id"] for n in (room.get("resources") or []) if n.get("qty",0) > 0],
-        "enemies":     [e["id"] for e in (room.get("enemies") or [])],
+        "enemies":     [e["id"] for e in (room.get("enemies") or []) if e.get("hp_now", e.get("hp",0)) > 0],
+        "npcs":        [n.get("id") for n in (room.get("npcs") or [])],
     }

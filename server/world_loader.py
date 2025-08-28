@@ -9,6 +9,21 @@ from . import persistence
 
 Coord = Tuple[int, int]
 
+# Tiles that should be treated as "safe" even if the shard data does not
+# explicitly mark them as a settlement.  Filled by other modules at runtime.
+EXTRA_SAFE_TILES: Set[Coord] = set()
+
+
+def add_safe_zone(x: int, y: int) -> None:
+    """Register an extra tile as a safe zone/settlement."""
+    EXTRA_SAFE_TILES.add((int(x), int(y)))
+
+
+# Enemy spawning knobs – keeping the numbers simple for now but exposed so
+# other modules (or eventually game settings) can tweak density/respawn rate.
+ENEMY_DENSITY = 0.35
+ENEMY_RESPAWN_S = 300
+
 # ------------------------ In-memory LRU cache for rooms ------------------------
 
 class LRURoomCache(OrderedDict):
@@ -43,8 +58,9 @@ class Room:
     # rolled at room creation
     resources: List[Dict] = field(default_factory=list)   # [{id,type,qty,respawn_s,depleted_at}]
     searchables: List[Dict] = field(default_factory=list) # [{id,type,table,once}]
-    enemies: List[Dict] = field(default_factory=list)     # [{id,type,hp,level,hostile}]
+    enemies: List[Dict] = field(default_factory=list)     # [{id,type,hp,level,hostile,respawn_s,defeated_at,hp_now}]
     quests: List[Dict] = field(default_factory=list)      # [{id, title, status}]
+    npcs: List[Dict] = field(default_factory=list)        # [{id,name,...}]
 
     def id(self) -> str:
         return f"{self.x},{self.y}"
@@ -60,6 +76,7 @@ class Room:
             "searchables": self.searchables,
             "enemies": self.enemies,
             "quests": self.quests,
+            "npcs": self.npcs,
         }
 
 @dataclass
@@ -221,15 +238,51 @@ def _roll_searchables(biome: str, tags: List[str], rng: random.Random) -> List[D
         out.append({"id": f"search-{i}", "type": "forage", "table": table, "once": False})
     return out
 
-def _roll_enemies(biome: str, tags: List[str], rng: random.Random) -> List[Dict]:
-    out = []
-    if "settlement" in tags or biome in ("ocean","void"):
+def _roll_npcs(world: World, x: int, y: int, tags: List[str], rng: random.Random) -> List[Dict]:
+    npcs: List[Dict] = []
+    # Hardcoded demo NPCs for the starter shard
+    if (x, y) == (13, 15):
+        npcs.append({
+            "id": "villager",
+            "name": "Villager",
+            "dialog": "Please deliver this letter to the harbormaster in the port village north of here.",
+            "gives_quest": "LETTER_QUEST",
+        })
+    if (x, y) == (14, 9):
+        npcs.append({
+            "id": "harbormaster",
+            "name": "Harbormaster",
+            "accepts_quest": "LETTER_QUEST",
+        })
+    return npcs
+
+def _roll_enemies(biome: str, tags: List[str], rng: random.Random, *, density: float = ENEMY_DENSITY) -> List[Dict]:
+    out: List[Dict] = []
+    if "settlement" in tags or biome in ("ocean", "void"):
         return out
-    if biome in ("plains","forest","hills","marsh-lite","coast"):
-        if rng.random() < 0.35:
-            out.append({"id": f"rat-{rng.randint(100,999)}", "type":"rat", "hp": 5, "level": 1, "hostile": True})
-        if rng.random() < 0.20 and biome in ("forest","hills"):
-            out.append({"id": f"wolf-{rng.randint(100,999)}", "type":"wolf", "hp": 12, "level": 2, "hostile": True})
+    if biome in ("plains", "forest", "hills", "marsh-lite", "coast"):
+        if rng.random() < density:
+            out.append({
+                "id": f"rat-{rng.randint(100,999)}",
+                "type": "rat",
+                "hp": 5,
+                "hp_now": 5,
+                "level": 1,
+                "hostile": True,
+                "respawn_s": ENEMY_RESPAWN_S,
+                "defeated_at": None,
+            })
+        if rng.random() < density / 2 and biome in ("forest", "hills"):
+            out.append({
+                "id": f"wolf-{rng.randint(100,999)}",
+                "type": "wolf",
+                "hp": 12,
+                "hp_now": 12,
+                "level": 2,
+                "hostile": True,
+                "respawn_s": ENEMY_RESPAWN_S,
+                "defeated_at": None,
+            })
     return out
 
 def _roll_quests(world: World, x: int, y: int, tags: List[str], rng: random.Random) -> List[Dict]:
@@ -240,7 +293,7 @@ def _roll_quests(world: World, x: int, y: int, tags: List[str], rng: random.Rand
 
 def _compute_tags(world: World, x: int, y: int, biome: str) -> List[str]:
     t: List[str] = []
-    if world.poi_at(x,y):
+    if world.poi_at(x, y) or (x, y) in EXTRA_SAFE_TILES:
         t.append("settlement")
     if (x,y) in world.road_tiles:
         t.append("road")
@@ -266,6 +319,18 @@ def _lazy_respawn(node: Dict) -> None:
         # simple restore to 1–2
         node["qty"] = 1
 
+
+def _lazy_enemy_respawn(e: Dict) -> None:
+    if e.get("hp_now", 0) > 0:
+        return
+    respawn_s = e.get("respawn_s")
+    defeated_at = e.get("defeated_at")
+    if not (respawn_s and defeated_at):
+        return
+    if (time.time() - defeated_at) >= respawn_s:
+        e["hp_now"] = e.get("hp", 1)
+        e["defeated_at"] = None
+
 def get_room(world: World, x: int, y: int) -> Room:
     """Fetch (or roll) room state for (x,y)."""
     key = (int(x), int(y))
@@ -274,6 +339,8 @@ def get_room(world: World, x: int, y: int) -> Room:
         # on access, allow lazy respawn updates
         for n in room.resources:
             _lazy_respawn(n)
+        for e in room.enemies:
+            _lazy_enemy_respawn(e)
         return room
 
     # try to load persisted room first
@@ -281,6 +348,8 @@ def get_room(world: World, x: int, y: int) -> Room:
     if room is not None:
         for n in room.resources:
             _lazy_respawn(n)
+        for e in room.enemies:
+            _lazy_enemy_respawn(e)
         world._rooms[key] = room
         return room
 
@@ -293,6 +362,7 @@ def get_room(world: World, x: int, y: int) -> Room:
     room.searchables = _roll_searchables(biome, tags, rng)
     room.enemies     = _roll_enemies(biome, tags, rng)
     room.quests      = _roll_quests(world, x, y, tags, rng)
+    room.npcs        = _roll_npcs(world, x, y, tags, rng)
 
     world._rooms[key] = room
     persistence.save_room(room)
