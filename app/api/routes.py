@@ -43,20 +43,13 @@ def api_world():
 
 @bp.post("/spawn")
 def api_spawn():
-    data = request.get_json(force=True) or {}
-    player = get_player()
+    """Spawn the player at the fixed starter location.
 
-    # Respect explicit coordinates if provided; otherwise fall back to a settlement.
-    explicit = "x" in data and "y" in data
-    x, y = int(data.get("x", 12)), int(data.get("y", 15))
-    if not explicit:
-        settle_types = {"city", "town", "village"}
-        poi = WORLD.poi_at(x, y)
-        if not (poi and poi.get("type") in settle_types):
-            for p in reversed(WORLD.pois):
-                if p.get("type") in settle_types:
-                    x, y = int(p.get("x")), int(p.get("y"))
-                    break
+    Any coordinates provided by the client are ignored so the player always
+    begins at (12,15).  Flags like ``noclip`` and ``devmode`` still work.
+    """
+    player = get_player()
+    x, y = 12, 15
 
     player.spawn(x, y)
     if request.args.get("noclip") == "1":

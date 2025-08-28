@@ -140,22 +140,24 @@
       initActionHUD(document.getElementById("action-root"));
       try {
         const st = await API.state();
+        const pos = st.player?.pos || [];
+        if (pos.length === 2) { CurrentPos = { x: pos[0], y: pos[1] }; }
         window.currentRoom = st.room;
         window.patchRoom?.(st.room);
         updateActionHUD({ interactions: st.interactions });
-        const pos = st.player?.pos || [];
         if (pos.length === 2) {
           window.dispatchEvent(new CustomEvent('game:log', { detail: [{ text: `Player at (${pos[0]}, ${pos[1]})`, ts: Date.now() }] }));
         }
       } catch {
         // If state isn't ready (e.g., first load), spawn then refresh
         const DEV = new URLSearchParams(location.search).has('devmode');
-        await API.spawn({ x: 6, y: 6, devmode: DEV });
+        await API.spawn({ devmode: DEV });
         const st2 = await API.state();
+        const pos2 = st2.player?.pos || [];
+        if (pos2.length === 2) { CurrentPos = { x: pos2[0], y: pos2[1] }; }
         window.currentRoom = st2.room;
         window.patchRoom?.(st2.room);
         updateActionHUD({ interactions: st2.interactions });
-        const pos2 = st2.player?.pos || [];
         if (pos2.length === 2) {
           window.dispatchEvent(new CustomEvent('game:log', { detail: [{ text: `Player at (${pos2[0]}, ${pos2[1]})`, ts: Date.now() }] }));
         }

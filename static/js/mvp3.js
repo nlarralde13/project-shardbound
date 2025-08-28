@@ -4,6 +4,8 @@
 import { initOverlayMap } from '/static/js/overlayMap.js';
 import { setShard as setRoomShard, assertCanonicalGrid, buildRoom } from '/static/js/roomLoader.js';
 import { applyRoomDelta } from '/static/js/roomPatcher.js';
+import { API } from '/static/js/api.js';
+import { updateActionHUD } from '/static/js/actionHud.js';
 
 const QS = new URLSearchParams(location.search);
 const DEV_MODE = QS.has('devmode');
@@ -35,6 +37,8 @@ const roomBiome    = document.getElementById('roomBiome');
 const roomArt      = document.getElementById('roomArt');
 
 const consoleEl    = document.getElementById('console');
+const cmdInput     = document.getElementById('cmd');
+const cmdSend      = document.getElementById('cmdSend');
 
 // ---- console log (light) ----
 const _log = [];
@@ -223,6 +227,62 @@ shardSelect?.addEventListener('change', ()=>btnLoadShard?.click());
 btnWorldMap?.addEventListener('click', ()=>toggleMap());
 btnCharacter?.addEventListener('click', ()=>toggle(overlayChar));
 btnInventory?.addEventListener('click', ()=>toggle(overlayInv));
+
+cmdSend?.addEventListener('click', ()=>{ runCommand(cmdInput.value); cmdInput.value=''; });
+cmdInput?.addEventListener('keydown', (e)=>{ if (e.key==='Enter'){ runCommand(cmdInput.value); cmdInput.value=''; }});
+
+async function runCommand(input){
+  const parts = (input||'').trim().split(/\s+/);
+  const t = parts[0]?.toLowerCase();
+  if(!t) return;
+
+  const DIRS = { n:[0,-1], e:[1,0], s:[0,1], w:[-1,0] };
+
+  if(t==='help'){
+    log('Commands: move n|s|e|w, search, gather, attack, talk, rest, enter', 'log-note');
+    return;
+  }
+
+  if(t==='move' && parts[1]){
+    const d = DIRS[parts[1][0].toLowerCase()];
+    if(!d){ log('Unknown direction. Type "help".', 'log-note'); return; }
+    try{
+      const res = await API.move(d[0], d[1]);
+      if(res?.log) window.dispatchEvent(new CustomEvent('game:log',{ detail: res.log.map(text=>({ text, ts: Date.now() })) }));
+      if(res?.room_delta) window.patchRoom?.(res.room_delta);
+      if(res?.room) window.patchRoom?.({ ...res.room });
+      const pos = res?.player?.pos || [];
+      if(pos.length===2) window.dispatchEvent(new CustomEvent('game:moved',{ detail:{ x:pos[0], y:pos[1] }}));
+      if(res?.interactions) updateActionHUD({ interactions: res.interactions });
+    }catch(e){ console.error(e); }
+    return;
+  }
+
+  if(['search','gather','attack','talk'].includes(t)){
+    try{
+      const out = await API.action(t);
+      if(out?.events) window.dispatchEvent(new CustomEvent('game:log',{ detail: out.events.map(e=>({ ...e, ts: e.ts||Date.now() })) }));
+      if(out?.room_delta) window.patchRoom?.(out.room_delta);
+      if(out?.interactions) updateActionHUD({ interactions: out.interactions });
+    }catch(e){ console.error(e); }
+    return;
+  }
+
+  if(t==='enter'){
+    try{
+      const out = await API.interact();
+      if(out?.log) window.dispatchEvent(new CustomEvent('game:log',{ detail: out.log.map(text=>({ text, ts: Date.now() })) }));
+    }catch(e){ console.error(e); }
+    return;
+  }
+
+  if(t==='rest'){
+    window.dispatchEvent(new CustomEvent('game:log',{ detail:[{ text:'You rest. (+2 HP, +2 STA)', ts: Date.now() }] }));
+    return;
+  }
+
+  log('Unknown command. Type "help".', 'log-note');
+}
 
 // ---- boot ----
 (async ()=>{
