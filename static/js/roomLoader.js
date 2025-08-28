@@ -75,12 +75,14 @@ function describe(b) {
   }[b] || 'You stand at a crossroads of the unknown.');
 }
 
-/** Build layered background (top→bottom: POI, biome art, tint). Memoized by key. */
-function buildArtStack({ biome, site }) {
+/** Build layered background (top→bottom: POI, biome art, tint). Memoized by key.
+ *  Optional `mode` switches art variants (e.g. combat).
+ */
+function buildArtStack({ biome, site, mode = 'idle' }) {
   const entry = BIOMES[biome] || BIOMES.Forest;
 
   const siteKey = site ? (site.type || 'site') : '-';
-  const key = `${biome}|${siteKey}`;
+  const key = `${biome}|${siteKey}|${mode}`;
   const cached = _artCache.get(key);
   if (cached) return cached;
 
@@ -99,7 +101,10 @@ function buildArtStack({ biome, site }) {
   let frame_ms = null;
   let animIndex = null; // which layer in `layers` is animated
 
-  if (Array.isArray(entry.frames) && entry.frames.length > 0) {
+  if (mode === 'combat' && entry.art_combat) {
+    layers.push(`url("${entry.art_combat}")`);
+    preload(entry.art_combat);
+  } else if (Array.isArray(entry.frames) && entry.frames.length > 0) {
     frames = entry.frames.slice();
     frames.forEach(preload);
     layers.push(`url("${frames[0]}")`);
@@ -125,7 +130,7 @@ function buildArtStack({ biome, site }) {
 }
 
 /** Public: build a stable "room" view model the UI can render. */
-export function buildRoom(x, y) {
+export function buildRoom(x, y, { mode = 'idle' } = {}) {
   const biome = getBiomeAt(x, y);
   const site  = getSiteAt(x, y);
   const label = site ? canonicalSettlement(site.type) : null;
@@ -133,7 +138,7 @@ export function buildRoom(x, y) {
   const title    = site ? (site.name || label) : randomTitleFor(biome);
   const subtitle = site ? `${label} • ${biome}` : biome;
 
-  const art = buildArtStack({ biome, site });
+  const art = buildArtStack({ biome, site, mode });
   const description = describe(biome);
 
   return Object.freeze({
