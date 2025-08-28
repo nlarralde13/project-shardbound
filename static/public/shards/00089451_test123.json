@@ -505,7 +505,11 @@
         "biome": "coast"
       },
       {
-        "biome": "coast"
+        "site": {
+          "type": "port",
+          "name": "Test Port",
+          "flavor": "Ships sway at the port. ENTER to visit the docks."
+        }
       },
       {
         "biome": "coast"
@@ -558,7 +562,11 @@
         "biome": "plains"
       },
       {
-        "biome": "plains"
+        "site": {
+          "type": "city",
+          "name": "Test City",
+          "flavor": "The city walls rise ahead. Perhaps you should ENTER."
+        }
       }
     ],
     [
@@ -596,7 +604,11 @@
         "biome": "coast"
       },
       {
-        "biome": "plains"
+        "site": {
+          "type": "town",
+          "name": "Test Town",
+          "flavor": "A modest town lies nearby. Maybe ENTER."
+        }
       },
       {
         "biome": "plains"
@@ -799,7 +811,11 @@
         "biome": "hills"
       },
       {
-        "biome": "plains"
+        "site": {
+          "type": "village",
+          "name": "Test Village",
+          "flavor": "A quiet village rests here. You could ENTER."
+        }
       },
       {
         "biome": "plains"
@@ -815,52 +831,31 @@
   "pois": [
     {
       "type": "city",
-      "name": "POI",
+      "name": "Test City",
       "x": 15,
       "y": 10,
-      "meta": {}
+      "flavor": "The city walls rise ahead. Perhaps you should ENTER."
     },
     {
       "type": "town",
-      "name": "POI",
-      "x": 15,
-      "y": 10,
-      "meta": {}
-    },
-    {
-      "type": "town",
-      "name": "POI",
+      "name": "Test Town",
       "x": 11,
       "y": 11,
-      "meta": {}
+      "flavor": "A modest town lies nearby. Maybe ENTER."
     },
     {
       "type": "village",
-      "name": "POI",
-      "x": 15,
-      "y": 10,
-      "meta": {}
-    },
-    {
-      "type": "village",
-      "name": "POI",
-      "x": 11,
-      "y": 11,
-      "meta": {}
-    },
-    {
-      "type": "village",
-      "name": "POI",
+      "name": "Test Village",
       "x": 12,
       "y": 15,
-      "meta": {}
+      "flavor": "A quiet village rests here. You could ENTER."
     },
     {
       "type": "port",
-      "name": "POI",
+      "name": "Test Port",
       "x": 14,
       "y": 9,
-      "meta": {}
+      "flavor": "Ships sway at the port. ENTER to visit the docks."
     }
   ],
   "grid": [
@@ -1041,7 +1036,7 @@
       "ocean",
       "ocean",
       "coast",
-      "coast",
+      "port",
       "coast"
     ],
     [
@@ -1060,7 +1055,7 @@
       "coast",
       "coast",
       "plains",
-      "plains"
+      "city"
     ],
     [
       "coast",
@@ -1074,7 +1069,7 @@
       "coast",
       "coast",
       "coast",
-      "plains",
+      "town",
       "plains",
       "marsh-lite",
       "forest",
@@ -1147,7 +1142,7 @@
       "mountains",
       "hills",
       "hills",
-      "plains",
+      "village",
       "plains",
       "plains",
       "plains"
@@ -1156,38 +1151,31 @@
   "sites": [
     {
       "type": "city",
+      "name": "Test City",
       "x": 15,
-      "y": 10
+      "y": 10,
+      "flavor": "The city walls rise ahead. Perhaps you should ENTER."
     },
     {
       "type": "town",
-      "x": 15,
-      "y": 10
-    },
-    {
-      "type": "town",
+      "name": "Test Town",
       "x": 11,
-      "y": 11
+      "y": 11,
+      "flavor": "A modest town lies nearby. Maybe ENTER."
     },
     {
       "type": "village",
-      "x": 15,
-      "y": 10
-    },
-    {
-      "type": "village",
-      "x": 11,
-      "y": 11
-    },
-    {
-      "type": "village",
+      "name": "Test Village",
       "x": 12,
-      "y": 15
+      "y": 15,
+      "flavor": "A quiet village rests here. You could ENTER."
     },
     {
       "type": "port",
+      "name": "Test Port",
       "x": 14,
       "y": 9,
+      "flavor": "Ships sway at the port. ENTER to visit the docks.",
       "tags": [
         "ocean_coast",
         "river_mouth"
@@ -1226,23 +1214,11 @@
       ],
       "towns": [
         {
-          "x": 15,
-          "y": 10
-        },
-        {
           "x": 11,
           "y": 11
         }
       ],
       "villages": [
-        {
-          "x": 15,
-          "y": 10
-        },
-        {
-          "x": 11,
-          "y": 11
-        },
         {
           "x": 12,
           "y": 15
@@ -1251,8 +1227,7 @@
       "ports": [
         {
           "x": 14,
-          "y": 9,
-          "at_river_mouth": true
+          "y": 9
         }
       ]
     },
