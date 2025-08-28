@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Select Character • Shardbound</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/mvp3.css') }}">
+  <style>
+    .deck { display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap:12px; }
+    .card { border:1px solid #2a3443; border-radius:12px; padding:12px; background:#0f141b; }
+    .card h3 { margin:0 0 6px; font-size:16px; }
+    .card .dim { font-size:12px; color:#9fb0c3; }
+    .top { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  </style>
+</head>
+<body class="app">
+  <header class="topbar">
+    <div class="title">Choose Your Character</div>
+    <nav class="actions">
+      <a class="btn" href="/characters/create">Create New</a>
+    </nav>
+  </header>
+
+  <main class="main">
+    <section class="panel" style="max-width:960px; margin:auto;">
+      <div class="top">
+        <div class="dim">Select an existing character or create a new one.</div>
+        <a class="btn ghost" href="/characters/create">+ New Character</a>
+      </div>
+      <div id="charDeck" class="deck"></div>
+      <div id="emptyState" class="dim" style="margin-top:12px; display:none;">
+        You have no characters yet. Click <em>New Character</em> to get started.
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="{{ url_for('static', filename='js/characters.js') }}"></script>
+</body>
+</html>

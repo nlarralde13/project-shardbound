@@ -134,23 +134,28 @@
   <!-- ES modules -->
   <script type="module" src="{{ url_for('static', filename='js/mvp3.js') }}"></script>
 
-  <!-- Boot HUD + auth + settings -->
+  <!-- Boot HUD + auth + settings + autosave + active-char guard -->
   <script type="module">
     import { initActionHUD, updateActionHUD } from "/static/js/actionHud.js";
     import { API } from "/static/js/api.js";
 
     window.API = API;
 
-    // Greeting + auth guard
-    async function bootAuth() {
-      try {
-        const u = await API.me();
-        document.getElementById('userHandle').textContent = u.handle || u.email;
-        document.getElementById('userBadge').classList.remove('hidden');
-        window.__currentUser = u;
-      } catch {
-        location.href = "/";
-      }
+    // ---- Auth + active character guard
+    async function guardAuthAndCharacter() {
+      // must be logged in
+      const u = await API.me().catch(() => null);
+      if (!u) { location.href = "/"; return null; }
+      document.getElementById('userHandle').textContent = u.handle || u.email;
+      document.getElementById('userBadge').classList.remove('hidden');
+
+      // must have an active character
+      const c = await API.characterActive();
+      if (!c) { location.href = "/characters"; return null; }
+
+      window.__currentUser = u;
+      window.__activeCharacter = c;
+      return { u, c };
     }
 
     document.getElementById('btnLogout').addEventListener('click', async () => {
@@ -158,7 +163,7 @@
       location.href = "/";
     });
 
-    // Settings overlay
+    // ---- Settings overlay (uses included partial)
     const settingsRoot = document.getElementById('overlaySettings');
 
     function populateSettings(u) {
@@ -201,7 +206,6 @@
         }
       });
     }
-
     wireSettingsHandlers();
 
     async function openSettings() {
@@ -214,12 +218,24 @@
         location.href = "/";
       }
     }
-
     document.getElementById('btnSettings')?.addEventListener('click', openSettings);
 
-    // Boot game HUD (unchanged behavior)
+    // ---- Autosave (location + placeholder state) every 60s
+    function startAutosave() {
+      setInterval(async () => {
+        const pos = (window.CurrentPos || {});
+        const shard = (window.CurrentShardId || null);
+        const state = {}; // TODO: extend with inventory/quests when exposed by client
+        try { await API.autosaveCharacter({ shard_id: shard, x: pos.x ?? null, y: pos.y ?? null, state }); }
+        catch {}
+      }, 60000);
+    }
+
+    // ---- Boot game HUD (keeps your existing flow)
     (async () => {
-      await bootAuth();
+      const ok = await guardAuthAndCharacter();
+      if (!ok) return;
+
       try {
         const st = await API.state();
         const pos = st.player?.pos || [];
@@ -247,6 +263,8 @@
           window.dispatchEvent(new CustomEvent('game:log', { detail: [{ text: `Player at (${pos2[0]}, ${pos2[1]})`, ts: Date.now() }] }));
         }
       }
+
+      startAutosave();
     })();
   </script>
 </body>

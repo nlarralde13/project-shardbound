@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Create Character • Shardbound</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/mvp3.css') }}">
+  <style>
+    form .row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    label { display:block; font-size:12px; color:#9fb0c3; margin-bottom:6px; }
+    input, select, textarea { width:100%; padding:10px; border:1px solid #2a3443; border-radius:10px; background:#0e131a; color:#e8eef7; }
+  </style>
+</head>
+<body class="app">
+  <header class="topbar">
+    <div class="title">Create Character</div>
+    <nav class="actions">
+      <a class="btn ghost" href="/characters">Back to Select</a>
+    </nav>
+  </header>
+
+  <main class="main">
+    <section class="panel" style="max-width:720px; margin:auto;">
+      <form id="createForm" autocomplete="off">
+        <div class="row">
+          <div>
+            <label for="c_name">Name</label>
+            <input id="c_name" maxlength="40" placeholder="Aria" required />
+          </div>
+          <div>
+            <label for="c_class">Class</label>
+            <select id="c_class">
+              <option value="warrior">Warrior</option>
+              <option value="ranger">Ranger</option>
+              <option value="mage">Mage</option>
+            </select>
+          </div>
+          <div>
+            <label for="c_sex">Sex</label>
+            <select id="c_sex">
+              <option value="">—</option>
+              <option>Female</option>
+              <option>Male</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div>
+            <label for="c_age">Age</label>
+            <input id="c_age" type="number" min="13" max="120" />
+          </div>
+        </div>
+        <div style="margin-top:12px;">
+          <label for="c_bio">Biography</label>
+          <textarea id="c_bio" rows="4" placeholder="A few lines about your character…"></textarea>
+        </div>
+
+        <div id="msg" class="dim" style="margin-top:10px; min-height:1em;"></div>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:12px;">
+          <a class="btn ghost" href="/characters">Cancel</a>
+          <button class="btn" type="submit">Create</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script type="module" src="{{ url_for('static', filename='js/characters.js') }}"></script>
+</body>
+</html>

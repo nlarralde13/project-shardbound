@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Character Runtime State",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "class_id": { "type": "string" },
+    "race_id": { "type": "string" },
+    "level": { "type": "integer", "minimum": 1 },
+    "xp": { "type": "integer", "minimum": 0 },
+    "attributes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "str": { "type": "integer" },
+        "dex": { "type": "integer" },
+        "int": { "type": "integer" },
+        "wis": { "type": "integer" },
+        "con": { "type": "integer" },
+        "cha": { "type": "integer" }
+      }
+    },
+    "skills": {
+      "type": "object",
+      "additionalProperties": { "type": "number" }
+    },
+    "abilities": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "rank": { "type": "integer", "minimum": 1 },
+          "cooldown": { "type": "number", "minimum": 0 }
+        },
+        "additionalProperties": true
+      }
+    },
+    "equipment": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "inventory": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "item_id": { "type": "string" },
+          "qty": { "type": "integer", "minimum": 1 }
+        },
+        "required": ["item_id","qty"]
+      }
+    },
+    "quests": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "active": { "type": "array", "items": { "type": "string" } },
+        "completed": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "flags": { "type": "object" },
+    "last_room_id": { "type": "string" },
+    "hunger": { "type": "integer", "minimum": 0 },
+    "thirst": { "type": "integer", "minimum": 0 },
+    "buffs": { "type": "array", "items": { "type": "string" } }
+  }
+}

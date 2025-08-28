@@ -1,5 +1,6 @@
 // static/js/api.js
 export const API = {
+  // ----- existing game endpoints -----
   async world() {
     const r = await fetch('/api/world', { credentials: 'include' });
     return r.json();
@@ -58,7 +59,7 @@ export const API = {
     return r.json();
   },
 
-  // --- Auth helpers for UI ---
+  // ----- auth helpers -----
   async me() {
     const r = await fetch('/api/auth/me', { credentials: 'include' });
     if (!r.ok) throw new Error('Unauthenticated');
@@ -79,6 +80,53 @@ export const API = {
     const data = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(data.error || 'Update failed');
     return data;
+  },
+
+  // ----- character API -----
+  async charactersList() {
+    const r = await fetch('/api/characters', { credentials: 'include' });
+    if (!r.ok) throw new Error('Failed to list characters');
+    return r.json();
+  },
+
+  async characterCreate(payload) {
+    const r = await fetch('/api/characters', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload)
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error || 'Create failed');
+    return data;
+  },
+
+  async characterSelect(character_id) {
+    const r = await fetch('/api/characters/select', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ character_id })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error || 'Select failed');
+    return data;
+  },
+
+  async characterActive() {
+    const r = await fetch('/api/characters/active', { credentials: 'include' });
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error('Failed to get active character');
+    return r.json();
+  },
+
+  async autosaveCharacter(payload) {
+    await fetch('/api/characters/autosave', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload)
+    });
   },
 };
 
