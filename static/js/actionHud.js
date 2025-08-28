@@ -38,6 +38,7 @@ export function initActionHUD({ mount = ".room-stage" } = {}) {
           <button id="act-search"  class="btn">Search</button>
           <button id="act-gather"  class="btn">Gather</button>
           <button id="act-attack"  class="btn">Attack</button>
+          <button id="act-talk"    class="btn">Talk</button>
           <button id="act-rest"    class="btn">Rest</button>
           <button id="act-enter"   class="btn">Enter</button>
           <span id="act-status" class="muted"></span>
@@ -53,6 +54,7 @@ export function initActionHUD({ mount = ".room-stage" } = {}) {
     search: overlay.querySelector("#act-search"),
     gather: overlay.querySelector("#act-gather"),
     attack: overlay.querySelector("#act-attack"),
+    talk:   overlay.querySelector("#act-talk"),
     rest:   overlay.querySelector("#act-rest"),
     enter:  overlay.querySelector("#act-enter"),
   };
@@ -76,6 +78,11 @@ export function initActionHUD({ mount = ".room-stage" } = {}) {
     const first = currentInteractions?.enemies?.[0];
     if (!first) return toast("No enemies in this room.");
     await doAction("attack", { target_id: first });
+  });
+  els.talk.addEventListener("click", async () => {
+    const first = currentInteractions?.npcs?.[0];
+    if (!first) return toast("No one to talk to.");
+    await doAction("talk", { target_id: first });
   });
 
   // Local verbs
@@ -119,11 +126,12 @@ export function updateActionHUD({ interactions }) {
   toggle(els.search,  interactions.can_search);
   toggle(els.gather,  interactions.can_gather);
   toggle(els.attack,  interactions.can_attack);
+  toggle(els.talk,    interactions.can_talk);
 }
 
 export function setBusy(v) {
   busy = !!v;
-  for (const b of [els.search, els.gather, els.attack]) {
+  for (const b of [els.search, els.gather, els.attack, els.talk]) {
     if (b) b.disabled = busy || b.dataset.disabled === "1";
   }
   if (els.status) els.status.textContent = busy ? "…" : "";

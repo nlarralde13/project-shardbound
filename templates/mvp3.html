@@ -131,17 +131,9 @@
   <script type="module">
     import { initActionHUD, updateActionHUD } from "/static/js/actionHud.js";
     import { API } from "/static/js/api.js";
-    import { applyRoomDelta } from "/static/js/roomPatcher.js";
 
     // Dev convenience (console): API.*
     window.API = API;
-
-    // Optional global: patch current room then let your renderer refresh if needed
-    window.patchRoom = (delta) => {
-      window.currentRoom = applyRoomDelta(window.currentRoom || {}, delta);
-      // TODO: call your renderer update hooks here if you have them
-      // e.g., window.renderer?.updateResources(window.currentRoom.resources);
-    };
 
     // Initialize Action HUD and sync with current state
     (async () => {
@@ -149,6 +141,7 @@
       try {
         const st = await API.state();
         window.currentRoom = st.room;
+        window.patchRoom?.(st.room);
         updateActionHUD({ interactions: st.interactions });
       } catch {
         // If state isn't ready (e.g., first load), spawn then refresh
@@ -156,22 +149,10 @@
         await API.spawn({ x: 6, y: 6, devmode: DEV });
         const st2 = await API.state();
         window.currentRoom = st2.room;
+        window.patchRoom?.(st2.room);
         updateActionHUD({ interactions: st2.interactions });
       }
     })();
-
-    // Route server log events into the visible console panel
-    const consoleEl = document.getElementById("console");
-    window.addEventListener("game:log", (ev) => {
-      const events = ev.detail || [];
-      for (const e of events) {
-        const div = document.createElement("div");
-        div.className = "line";
-        div.textContent = e.text || JSON.stringify(e);
-        consoleEl?.appendChild(div);
-        consoleEl?.scrollTo({ top: consoleEl.scrollHeight, behavior: "smooth" });
-      }
-    });
   </script>
 </body>
 </html>
