@@ -2,7 +2,7 @@
 // Purpose: orchestration only. No map styling here.
 
 import { initOverlayMap } from '/static/js/overlayMap.js';
-import { setShard as setRoomShard, assertCanonicalGrid, buildRoom } from '/static/js/roomLoader.js';
+import { setShard as setRoomShard, assertCanonicalTiles, buildRoom } from '/static/js/roomLoader.js';
 import { applyRoomDelta } from '/static/js/roomPatcher.js';
 import { API } from '/static/js/api.js';
 import { updateActionHUD } from '/static/js/actionHud.js';
@@ -194,14 +194,14 @@ async function loadShard(url){
 
   // dev fallback so POIs exist
   if (DEV_MODE && (!Array.isArray(shard.sites) || shard.sites.length===0)){
-    const gw = shard.grid?.[0]?.length || 40, gh = shard.grid?.length || 40;
+    const gw = shard.tiles?.[0]?.length || 40, gh = shard.tiles?.length || 40;
     shard.sites = [{x:Math.floor(gw/2),y:Math.floor(gh/2)-1,type:'town',name:'Larkstead'},{x:3,y:3,type:'port',name:'Drift Haven'}];
   }
 
-  assertCanonicalGrid(shard.grid);
+  assertCanonicalTiles(shard.tiles);
   setRoomShard(shard);
 
-  const gw=shard.grid?.[0]?.length||0, gh=shard.grid?.length||0;
+  const gw=shard.tiles?.[0]?.length||0, gh=shard.tiles?.length||0;
   const spawn = shard.spawn || [Math.floor(gw/2), Math.floor(gh/2)];
   CurrentPos = { x:spawn[0], y:spawn[1] };
 
@@ -248,11 +248,30 @@ async function runCommand(input){
     if(!d){ log('Unknown direction. Type "help".', 'log-note'); return; }
     try{
       const res = await API.move(d[0], d[1]);
-      if(res?.log) window.dispatchEvent(new CustomEvent('game:log',{ detail: res.log.map(text=>({ text, ts: Date.now() })) }));
-      if(res?.room_delta) window.patchRoom?.(res.room_delta);
-      if(res?.room) window.patchRoom?.({ ...res.room });
+
+      // Update local position immediately if server returned one
       const pos = res?.player?.pos || [];
-      if(pos.length===2) window.dispatchEvent(new CustomEvent('game:moved',{ detail:{ x:pos[0], y:pos[1] }}));
+      if (pos.length === 2) {
+        CurrentPos = { x: pos[0], y: pos[1] };
+      }
+
+      // Apply room delta or full room state before rendering
+      if(res?.room_delta) window.patchRoom?.(res.room_delta);
+      if(res?.room)      window.patchRoom?.({ ...res.room });
+
+      // Build local room model for logging + visuals (includes settlement flavor)
+      const hostiles = (window.currentRoom?.enemies || []).some(e => (e.hp_now ?? e.hp) > 0);
+      const room = buildRoom(CurrentPos.x, CurrentPos.y, { mode: hostiles ? 'combat' : 'idle' });
+      renderRoomInfo(room);                   // logs flavor if entering settlement
+
+      // Mirror move in console and overlay
+      log(`You move ${parts[1][0].toLowerCase()}. (${CurrentPos.x},${CurrentPos.y}) • ${room.title}` + (room.label ? '' : ` • ${room.subtitle}`), 'log-note');
+      overlay?.setPos?.(CurrentPos.x, CurrentPos.y);
+      overlay?.render?.();
+
+      // Bubble up events for any listeners
+      if (pos.length === 2) window.dispatchEvent(new CustomEvent('game:moved',{ detail:{ x:pos[0], y:pos[1] }}));
+      if(res?.log) window.dispatchEvent(new CustomEvent('game:log',{ detail: res.log.map(text=>({ text, ts: Date.now() })) }));
       if(res?.interactions) updateActionHUD({ interactions: res.interactions });
     }catch(e){ console.error(e); }
     return;

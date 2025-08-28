@@ -92,7 +92,7 @@ function normalize(json){
     tiles = json.grid.map(row => row.map(b => ({ biome: canonBiome(b) })));
   } else if (Array.isArray(json.tiles)) {
     tiles = json.tiles.map(row => row.map(cell => {
-      const b = typeof cell === 'string' ? cell : (cell?.biome || cell?.type || cell?.tag);
+      const b = typeof cell === 'string' ? cell : (cell?.tile || cell?.biome || cell?.type || cell?.tag);
       return { ...cell, biome: canonBiome(b) };
     }));
   } else {

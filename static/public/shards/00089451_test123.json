@@ -13,818 +13,822 @@
   "tiles": [
     [
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       }
     ],
     [
       {
-        "biome": "forest"
+        "tile": "forest"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       }
     ],
     [
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       }
     ],
     [
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       }
     ],
     [
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       }
     ],
     [
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       }
     ],
     [
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       }
     ],
     [
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       }
     ],
     [
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       }
     ],
     [
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "forest"
+        "tile": "forest"
       },
       {
-        "biome": "forest"
+        "tile": "forest"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
         "site": {
           "type": "port",
           "name": "Test Port",
           "flavor": "Ships sway at the port. ENTER to visit the docks."
-        }
+        },
+        "tile": "port"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       }
     ],
     [
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "marsh-lite"
+        "tile": "marsh-lite"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
         "site": {
           "type": "city",
           "name": "Test City",
           "flavor": "The city walls rise ahead. Perhaps you should ENTER."
-        }
+        },
+        "tile": "city"
       }
     ],
     [
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "forest"
+        "tile": "forest"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
         "site": {
           "type": "town",
           "name": "Test Town",
           "flavor": "A modest town lies nearby. Maybe ENTER."
-        }
+        },
+        "tile": "town"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "marsh-lite"
+        "tile": "marsh-lite"
       },
       {
-        "biome": "forest"
+        "tile": "forest"
       },
       {
-        "biome": "forest"
+        "tile": "forest"
       }
     ],
     [
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "hills"
+        "tile": "hills"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "forest"
+        "tile": "forest"
       },
       {
-        "biome": "forest"
+        "tile": "forest"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "forest"
+        "tile": "forest"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       }
     ],
     [
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "hills"
+        "tile": "hills"
       },
       {
-        "biome": "hills"
+        "tile": "hills"
       },
       {
-        "biome": "hills"
+        "tile": "hills"
       },
       {
-        "biome": "hills"
+        "tile": "hills"
       },
       {
-        "biome": "hills"
+        "tile": "hills"
       },
       {
-        "biome": "hills"
+        "tile": "hills"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "forest"
+        "tile": "forest"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       }
     ],
     [
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "hills"
+        "tile": "hills"
       },
       {
-        "biome": "hills"
+        "tile": "hills"
       },
       {
-        "biome": "hills"
+        "tile": "hills"
       },
       {
-        "biome": "mountains"
+        "tile": "mountains"
       },
       {
-        "biome": "hills"
+        "tile": "hills"
       },
       {
-        "biome": "hills"
+        "tile": "hills"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "forest"
+        "tile": "forest"
       }
     ],
     [
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "ocean"
+        "tile": "ocean"
       },
       {
-        "biome": "coast"
+        "tile": "coast"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "hills"
+        "tile": "hills"
       },
       {
-        "biome": "hills"
+        "tile": "hills"
       },
       {
-        "biome": "mountains"
+        "tile": "mountains"
       },
       {
-        "biome": "mountains"
+        "tile": "mountains"
       },
       {
-        "biome": "hills"
+        "tile": "hills"
       },
       {
-        "biome": "hills"
+        "tile": "hills"
       },
       {
         "site": {
           "type": "village",
           "name": "Test Village",
           "flavor": "A quiet village rests here. You could ENTER."
-        }
+        },
+        "tile": "village"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       },
       {
-        "biome": "plains"
+        "tile": "plains"
       }
     ]
   ],
@@ -857,296 +861,6 @@
       "y": 9,
       "flavor": "Ships sway at the port. ENTER to visit the docks."
     }
-  ],
-  "grid": [
-    [
-      "plains",
-      "plains",
-      "plains",
-      "coast",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean"
-    ],
-    [
-      "forest",
-      "plains",
-      "coast",
-      "coast",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean"
-    ],
-    [
-      "plains",
-      "coast",
-      "coast",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean"
-    ],
-    [
-      "coast",
-      "coast",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean"
-    ],
-    [
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean"
-    ],
-    [
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean"
-    ],
-    [
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean"
-    ],
-    [
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean"
-    ],
-    [
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "coast",
-      "coast",
-      "coast",
-      "coast",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean",
-      "ocean"
-    ],
-    [
-      "ocean",
-      "ocean",
-      "ocean",
-      "coast",
-      "coast",
-      "coast",
-      "forest",
-      "forest",
-      "coast",
-      "coast",
-      "ocean",
-      "ocean",
-      "ocean",
-      "coast",
-      "port",
-      "coast"
-    ],
-    [
-      "coast",
-      "ocean",
-      "ocean",
-      "coast",
-      "plains",
-      "marsh-lite",
-      "plains",
-      "plains",
-      "coast",
-      "ocean",
-      "coast",
-      "coast",
-      "coast",
-      "coast",
-      "plains",
-      "city"
-    ],
-    [
-      "coast",
-      "coast",
-      "coast",
-      "coast",
-      "plains",
-      "plains",
-      "plains",
-      "forest",
-      "coast",
-      "coast",
-      "coast",
-      "town",
-      "plains",
-      "marsh-lite",
-      "forest",
-      "forest"
-    ],
-    [
-      "coast",
-      "coast",
-      "coast",
-      "coast",
-      "plains",
-      "plains",
-      "hills",
-      "plains",
-      "plains",
-      "forest",
-      "forest",
-      "plains",
-      "plains",
-      "plains",
-      "forest",
-      "plains"
-    ],
-    [
-      "coast",
-      "ocean",
-      "ocean",
-      "coast",
-      "plains",
-      "plains",
-      "hills",
-      "hills",
-      "hills",
-      "hills",
-      "hills",
-      "hills",
-      "plains",
-      "forest",
-      "plains",
-      "plains"
-    ],
-    [
-      "ocean",
-      "ocean",
-      "ocean",
-      "coast",
-      "plains",
-      "plains",
-      "hills",
-      "hills",
-      "hills",
-      "mountains",
-      "hills",
-      "hills",
-      "plains",
-      "plains",
-      "plains",
-      "forest"
-    ],
-    [
-      "ocean",
-      "ocean",
-      "ocean",
-      "coast",
-      "plains",
-      "plains",
-      "hills",
-      "hills",
-      "mountains",
-      "mountains",
-      "hills",
-      "hills",
-      "village",
-      "plains",
-      "plains",
-      "plains"
-    ]
   ],
   "sites": [
     {
