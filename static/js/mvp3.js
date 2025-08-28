@@ -38,7 +38,11 @@ const consoleEl    = document.getElementById('console');
 
 // ---- console log (light) ----
 const _log = [];
-function log(text, cls=''){ _log.push({text,cls}); if (_log.length>300) _log.shift(); if (!consoleEl) return;
+function log(text, cls='', ts=null){
+  const stamp = new Date(ts || Date.now()).toLocaleTimeString();
+  _log.push({text:`[${stamp}] ${text}`,cls});
+  if (_log.length>300) _log.shift();
+  if (!consoleEl) return;
   const frag = document.createDocumentFragment();
   for (const {text:t,cls:c} of _log.slice(-140)) { const d=document.createElement('div'); d.className='line'+(c?' '+c:''); d.textContent=t; frag.appendChild(d); }
   consoleEl.replaceChildren(frag);
@@ -132,7 +136,7 @@ window.addEventListener('game:log', (ev) => {
   const events = ev.detail || [];
   for (const e of events) {
     const cls = e.type && e.type !== 'log' ? `log-${e.type}` : '';
-    log(e.text || String(e), cls);
+    log(e.text || String(e), cls, e.ts);
   }
 });
 
@@ -204,6 +208,10 @@ async function loadShard(url){
   overlay?.setPos?.(CurrentPos.x, CurrentPos.y);
   overlay?.setShard?.(shard);
   overlay?.render?.();
+
+  window.dispatchEvent(new CustomEvent('game:log', {
+    detail: [{ text: `Shard loaded. Local spawn at (${CurrentPos.x},${CurrentPos.y})`, ts: Date.now() }]
+  }));
 
   window.__lastShard = shard;
   shardStatus && (shardStatus.textContent = 'Loaded');
