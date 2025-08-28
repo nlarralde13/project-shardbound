@@ -45,14 +45,19 @@ def api_world():
 def api_spawn():
     data = request.get_json(force=True) or {}
     player = get_player()
+
+    # Respect explicit coordinates if provided; otherwise fall back to a settlement.
+    explicit = "x" in data and "y" in data
     x, y = int(data.get("x", 12)), int(data.get("y", 15))
-    settle_types = {"city", "town", "village"}
-    poi = WORLD.poi_at(x, y)
-    if not (poi and poi.get("type") in settle_types):
-        for p in reversed(WORLD.pois):
-            if p.get("type") in settle_types:
-                x, y = int(p.get("x")), int(p.get("y"))
-                break
+    if not explicit:
+        settle_types = {"city", "town", "village"}
+        poi = WORLD.poi_at(x, y)
+        if not (poi and poi.get("type") in settle_types):
+            for p in reversed(WORLD.pois):
+                if p.get("type") in settle_types:
+                    x, y = int(p.get("x")), int(p.get("y"))
+                    break
+
     player.spawn(x, y)
     if request.args.get("noclip") == "1":
         player.flags["noclip"] = True
@@ -62,7 +67,8 @@ def api_spawn():
     save_player(player)
     # include room snapshot on spawn for immediate UI
     room = get_room(WORLD, *player.pos).export()
-    return jsonify({"ok": True, "player": player.as_public(), "room": room, "interactions": _interactions(room)})
+    log = [f"Spawned at ({x},{y})"]
+    return jsonify({"ok": True, "player": player.as_public(), "room": room, "interactions": _interactions(room), "log": log})
 
 @bp.post("/move")
 def api_move():
