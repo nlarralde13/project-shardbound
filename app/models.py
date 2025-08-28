@@ -1,8 +1,7 @@
 import uuid, datetime as dt
-from flask_sqlalchemy import SQLAlchemy
+from .db import db as db
 from flask_login import UserMixin
 
-db = SQLAlchemy()
 
 def gen_uuid(): return str(uuid.uuid4())
 

@@ -5,17 +5,26 @@
   <title>Shardbound — MVP3 Prototype</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Your base theme -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/mvp3.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/mapOverlay.css') }}">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600..900&family=IM+Fell+English:ital@0;1&family=Crimson+Text:wght@400;600&display=swap" rel="stylesheet">
 
-  <script>
-    /* Prefer grid as canonical biome source; viewers can fallback to tiles if needed */
-    window.SHARDBIOME_SOURCE = 'grid';
-  </script>
+  <script>window.SHARDBIOME_SOURCE = 'grid';</script>
+
+  <style>
+    /* small auth badge */
+    .user-badge { position: fixed; top: 8px; right: 12px; display: flex; gap: 8px; align-items: center; z-index: 1000; font-size: 12px; }
+    .user-badge .btn { padding: 6px 8px; font-size: 12px; }
+    .hidden { display: none; }
+  </style>
 </head>
 <body class="app">
+
+  <!-- Greeting + logout -->
+  <div id="userBadge" class="user-badge hidden">
+    <span id="userHello">Hello, <strong id="userHandle">—</strong></span>
+    <button id="btnLogout" class="btn ghost">Log out</button>
+  </div>
 
   <!-- Top bar -->
   <header class="topbar">
@@ -24,7 +33,7 @@
       <div class="bar hp"><span>HP</span><i style="width:80%"></i></div>
       <div class="bar mp"><span>MP</span><i style="width:60%"></i></div>
       <div class="bar sta"><span>STA</span><i style="width:90%"></i></div>
-    </div> 
+    </div>
 
     <nav class="actions">
       <button id="btnInventory" class="btn ghost">Inventory (I)</button>
@@ -33,11 +42,9 @@
       <button id="btnSettings" class="btn ghost">Settings</button>
     </nav>
 
-    <!-- Shard picker -->
     <div class="shard-picker" style="display:flex;gap:8px;align-items:center;margin-left:auto;">
       <label for="shardSelect" class="dim" style="font-size:12px;">Shard</label>
       <select id="shardSelect" class="btn ghost" style="min-width:260px;">
-        <!-- Fallback default -->
         <option id="starterShardOption"
                 value="{{ url_for('static', filename='public/shards/00089451_test123.json') }}">
           00089451_test123
@@ -48,7 +55,6 @@
     </div>
   </header>
 
-  <!-- Main content -->
   <main class="main">
     <section class="room">
       <div class="room-header">
@@ -62,23 +68,20 @@
         </div>
       </div>
 
-      <!-- Console -->
       <div class="console-wrap">
         <div id="console" class="console" aria-live="polite">
           <div class="line dim">Console ready. Use exits or actions.</div>
         </div>
 
         <div class="console-input">
-          <input id="cmd" type="text"
-                 placeholder="Type a command (e.g., 'move n', 'search') and press Enter…" />
+          <input id="cmd" type="text" placeholder="Type a command (e.g., 'move n', 'search') and press Enter…" />
           <button id="cmdSend" class="btn">Send</button>
         </div>
-
-        </div>
+      </div>
     </section>
   </main>
 
-  <!-- World Map Overlay (structure populated by overlayMap.js) -->
+  <!-- World Map Overlay (overlayMap.js populates) -->
   <div id="overlayMap" class="overlay hidden" role="dialog" aria-modal="true" aria-label="World Map"></div>
 
   <!-- Character Panel -->
@@ -121,42 +124,124 @@
     </div>
   </div>
 
-  <!-- Action Bar mount (new) -->
+  <!-- Action Bar mount -->
   <div id="action-root" class="action-root"></div>
 
   <!-- ES modules -->
   <script type="module" src="{{ url_for('static', filename='js/mvp3.js') }}"></script>
 
-  <!-- Boot the Action HUD & log wiring (new) -->
+  <!-- Boot HUD + auth + settings -->
   <script type="module">
     import { initActionHUD, updateActionHUD } from "/static/js/actionHud.js";
     import { API } from "/static/js/api.js";
 
-    // Dev convenience (console): API.*
     window.API = API;
 
-    // Initialize Action HUD and sync with current state
+    // Greeting + auth guard
+    async function bootAuth() {
+      try {
+        const u = await API.me();
+        document.getElementById('userHandle').textContent = u.handle || u.email;
+        document.getElementById('userBadge').classList.remove('hidden');
+        window.__currentUser = u;
+      } catch {
+        location.href = "/";
+      }
+    }
+
+    document.getElementById('btnLogout').addEventListener('click', async () => {
+      await API.logout();
+      location.href = "/";
+    });
+
+    // Lazy-load settings overlay
+    let settingsRoot = null;
+
+    function populateSettings(u) {
+      document.getElementById('set_email').value = u.email || '';
+      document.getElementById('set_handle').value = u.handle || '';
+      document.getElementById('set_display_name').value = u.display_name || '';
+      document.getElementById('set_age').value = u.age ?? '';
+      document.getElementById('set_status').textContent = u.is_active ? 'Active' : 'Disabled';
+      document.getElementById('set_user_id').textContent = u.user_id;
+      document.getElementById('set_created_at').textContent = u.created_at || '—';
+      document.getElementById('set_last_login_at').textContent = u.last_login_at || '—';
+      document.getElementById('settings_msg').textContent = '';
+    }
+
+    function wireSettingsHandlers() {
+      settingsRoot.querySelector('[data-close="settings"]').addEventListener('click', () => {
+        settingsRoot.classList.add('hidden');
+      });
+      document.getElementById('btnCancelSettings').addEventListener('click', () => {
+        settingsRoot.classList.add('hidden');
+      });
+      document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+          email: document.getElementById('set_email').value.trim(),
+          handle: document.getElementById('set_handle').value.trim(),
+          display_name: document.getElementById('set_display_name').value.trim(),
+          age: parseInt(document.getElementById('set_age').value, 10)
+        };
+        Object.keys(payload).forEach(k => (payload[k] === '' || Number.isNaN(payload[k])) && delete payload[k]);
+        const msg = document.getElementById('settings_msg');
+        try {
+          const updated = await API.updateUser(payload);
+          window.__currentUser = updated;
+          document.getElementById('userHandle').textContent = updated.handle || updated.email;
+          populateSettings(updated);
+          msg.textContent = 'Saved!';
+        } catch (err) {
+          msg.textContent = err.message || 'Update failed';
+        }
+      });
+    }
+
+    async function openSettings() {
+      if (!settingsRoot) {
+        const html = await fetch('/user_settings', { credentials: 'include' }).then(r => r.text());
+        const tmp = document.createElement('div');
+        tmp.innerHTML = html.trim();
+        settingsRoot = tmp.firstElementChild;
+        document.body.appendChild(settingsRoot);
+        wireSettingsHandlers();
+      }
+      try {
+        const u = await API.me();
+        window.__currentUser = u;
+        populateSettings(u);
+        settingsRoot.classList.remove('hidden');
+      } catch {
+        location.href = "/";
+      }
+    }
+
+    document.getElementById('btnSettings')?.addEventListener('click', openSettings);
+
+    // Boot game HUD (unchanged behavior)
     (async () => {
-      initActionHUD(document.getElementById("action-root"));
+      await bootAuth();
       try {
         const st = await API.state();
         const pos = st.player?.pos || [];
-        if (pos.length === 2) { CurrentPos = { x: pos[0], y: pos[1] }; }
+        if (pos.length === 2) { window.CurrentPos = { x: pos[0], y: pos[1] }; }
         window.currentRoom = st.room;
         window.patchRoom?.(st.room);
+        initActionHUD(document.getElementById("action-root"));
         updateActionHUD({ interactions: st.interactions });
         if (pos.length === 2) {
           window.dispatchEvent(new CustomEvent('game:log', { detail: [{ text: `Player at (${pos[0]}, ${pos[1]})`, ts: Date.now() }] }));
         }
       } catch {
-        // If state isn't ready (e.g., first load), spawn then refresh
         const DEV = new URLSearchParams(location.search).has('devmode');
         await API.spawn({ devmode: DEV });
         const st2 = await API.state();
         const pos2 = st2.player?.pos || [];
-        if (pos2.length === 2) { CurrentPos = { x: pos2[0], y: pos2[1] }; }
+        if (pos2.length === 2) { window.CurrentPos = { x: pos2[0], y: pos2[1] }; }
         window.currentRoom = st2.room;
         window.patchRoom?.(st2.room);
+        initActionHUD(document.getElementById("action-root"));
         updateActionHUD({ interactions: st2.interactions });
         if (pos2.length === 2) {
           window.dispatchEvent(new CustomEvent('game:log', { detail: [{ text: `Player at (${pos2[0]}, ${pos2[1]})`, ts: Date.now() }] }));

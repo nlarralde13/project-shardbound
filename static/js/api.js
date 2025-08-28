@@ -1,7 +1,7 @@
 // static/js/api.js
 export const API = {
   async world() {
-    const r = await fetch('/api/world');
+    const r = await fetch('/api/world', { credentials: 'include' });
     return r.json();
   },
 
@@ -13,6 +13,7 @@ export const API = {
     const r = await fetch('/api/spawn' + (qs ? `?${qs}` : ''), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ x, y }),
     });
     const out = await r.json();
@@ -28,39 +29,56 @@ export const API = {
     const r = await fetch('/api/move', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ dx, dy }),
     });
     return r.json();
   },
 
   async interact() {
-    const r = await fetch('/api/interact', { method: 'POST' });
+    const r = await fetch('/api/interact', { method: 'POST', credentials: 'include' });
     return r.json();
   },
 
   async state() {
-    const r = await fetch('/api/state');
+    const r = await fetch('/api/state', { credentials: 'include' });
     return r.json();
   },
 
-  /**
-   * Server-authoritative actions (search, gather, attack, etc.)
-   * Usage:
-   *   await API.action('search')
-   *   await API.action('gather', { node_id: 'oak-12' })
-   *   await API.action('attack', { target_id: 'rat-1' })
-   */
   async action(verb, payload = {}) {
     const action_id = (globalThis.crypto && typeof crypto.randomUUID === 'function')
       ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(16).slice(2)}`; // fallback
-
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const r = await fetch('/api/action', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ verb, payload, action_id }),
     });
     return r.json();
+  },
+
+  // --- Auth helpers for UI ---
+  async me() {
+    const r = await fetch('/api/auth/me', { credentials: 'include' });
+    if (!r.ok) throw new Error('Unauthenticated');
+    return r.json();
+  },
+
+  async logout() {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+  },
+
+  async updateUser(payload) {
+    const r = await fetch('/api/auth/update', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload)
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error || 'Update failed');
+    return data;
   },
 };
 

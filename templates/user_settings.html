@@ -1,0 +1,44 @@
+<!-- templates/user_settings.html -->
+<div id="overlaySettings" class="overlay hidden" role="dialog" aria-modal="true" aria-label="Account Settings">
+  <div class="panel" style="max-width:640px;">
+    <div class="panel-header">
+      <div>Account Settings</div>
+      <button class="btn ghost" data-close="settings">Close</button>
+    </div>
+
+    <form id="settingsForm" class="panel-body" autocomplete="off">
+      <div class="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label class="dim" for="set_email">Email</label>
+          <input id="set_email" type="email" placeholder="you@example.com" />
+        </div>
+        <div>
+          <label class="dim" for="set_handle">Handle</label>
+          <input id="set_handle" type="text" placeholder="pogslammer" maxlength="32" />
+        </div>
+        <div>
+          <label class="dim" for="set_display_name">Display name</label>
+          <input id="set_display_name" type="text" placeholder="Nick" maxlength="40" />
+        </div>
+        <div>
+          <label class="dim" for="set_age">Age</label>
+          <input id="set_age" type="number" min="13" max="120" />
+        </div>
+      </div>
+
+      <div class="dim" style="margin-top:10px;font-size:12px;">
+        <div>Account status: <strong id="set_status">—</strong></div>
+        <div>User ID: <code id="set_user_id">—</code></div>
+        <div>Created: <span id="set_created_at">—</span></div>
+        <div>Last login: <span id="set_last_login_at">—</span></div>
+      </div>
+
+      <div id="settings_msg" class="dim" style="min-height:1em;margin-top:8px;"></div>
+
+      <div class="row" style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;">
+        <button type="button" class="btn ghost" id="btnCancelSettings">Cancel</button>
+        <button type="submit" class="btn" id="btnSaveSettings">Save</button>
+      </div>
+    </form>
+  </div>
+</div>

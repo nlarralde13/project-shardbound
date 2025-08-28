@@ -104,7 +104,7 @@
       const res = await postJSON('/api/auth/login', { email });
       if (res.ok) {
         showOk('Welcome back!');
-        window.location.href = '/mvp3.html';
+        window.location.href = '/mvp';
       } else {
         if (res.status === 404) {
           showError('No account found for that email. Click "Create Account" to register.');
@@ -133,7 +133,7 @@
       const res = await postJSON('/api/auth/register', { email, display_name, handle, age });
       if (res.ok) {
         showOk('Account created. Redirecting...');
-        window.location.href = '/mvp3.html';
+        window.location.href = '/mvp';
       } else {
         showError(res.data?.error || 'Registration failed.');
       }
