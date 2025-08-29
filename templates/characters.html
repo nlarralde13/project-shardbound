@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Select Character • Shardbound</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/mvp3.css') }}">
+  <style>
+    body { background:#0b1117; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap:14px; max-width:1200px; margin:20px auto; padding:0 14px; }
+    .card { background:#0f141b; border:1px solid #233043; border-radius:14px; padding:12px; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; }
+    .topbar { display:flex; justify-content:space-between; align-items:center; padding:14px; max-width:1200px; margin:0 auto; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="title">Choose Your Character</div>
+    <div class="row">
+      <a class="btn ghost" href="/class-builder">Class Builder</a>
+      <a class="btn ghost" href="/mvp">Play (current)</a>
+      <a class="btn" href="/character-create">+ Create New</a>
+    </div>
+  </header>
+
+  <main class="grid" id="grid"></main>
+
+  <script type="module">
+    async function api(path, opts={}) {
+      const r = await fetch(path, { credentials:'include', ...opts });
+      const data = await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(data.error || 'request failed');
+      return data;
+    }
+    function card(c){
+      return `
+        <div class="card">
+          <div class="title" style="font-size:18px;">${c.name}</div>
+          <div class="dim" style="margin:6px 0;">Class: ${c.class_id} • Lv ${c.level}</div>
+          <div class="row" style="margin-top:8px;">
+            <button class="btn" data-act="play" data-id="${c.character_id}">Play</button>
+            <button class="btn ghost" data-act="delete" data-id="${c.character_id}">Delete</button>
+          </div>
+        </div>`;
+    }
+    async function load(){
+      const list = await api('/api/characters');
+      const el = document.getElementById('grid');
+      el.innerHTML = list.map(card).join('') || '<div class="dim">No characters yet. Create one!</div>';
+      el.querySelectorAll('button').forEach(b=>{
+        b.addEventListener('click', async ()=>{
+          const id = parseInt(b.getAttribute('data-id'));
+          const act = b.getAttribute('data-act');
+          try{
+            if(act==='play'){
+              await api('/api/characters/select',{method:'POST',headers:{'Content-Type':'application/json'}, body: JSON.stringify({character_id:id})});
+              window.location.href = '/mvp';
+            }else if(act==='delete'){
+              if(confirm('Delete this character?')){
+                await api(`/api/characters/${id}`,{method:'DELETE'});
+                await load();
+              }
+            }
+          }catch(e){ alert(e.message); }
+        });
+      });
+    }
+    load();
+  </script>
+</body>
+</html>

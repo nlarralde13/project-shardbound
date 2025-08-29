@@ -4,7 +4,7 @@
 import { initOverlayMap } from '/static/js/overlayMap.js';
 import { setShard as setRoomShard, assertCanonicalTiles, buildRoom } from '/static/js/roomLoader.js';
 import { applyRoomDelta } from '/static/js/roomPatcher.js';
-import { API } from '/static/js/api.js';
+import { API, autosaveCharacterState } from '/static/js/api.js';
 import { updateActionHUD } from '/static/js/actionHud.js';
 
 const QS = new URLSearchParams(location.search);
@@ -357,7 +357,18 @@ async function runCommand(input){
   }
 
   log('Unknown command. Type "help".', 'log-note');
-}
+
+
+  setInterval(() => {
+  const state = {
+    last_room_id: window.currentRoomId || null,
+    inventory: window.playerInventory || [],
+    quests: window.currentQuests || { active: [], completed: [] },
+    // optionally level, attributes deltas, etc.
+    };
+    autosaveCharacterState(state).catch(()=>{ /* swallow in UI */ });
+    }, 60_000);
+  }
 
 // ---- boot ----
 (async ()=>{

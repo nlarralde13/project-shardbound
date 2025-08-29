@@ -6,64 +6,144 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/mvp3.css') }}">
   <style>
-    form .row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-    label { display:block; font-size:12px; color:#9fb0c3; margin-bottom:6px; }
+    body { background:#0b1117; }
+    .wrap { max-width:1000px; margin:20px auto; padding:0 14px; display:grid; grid-template-columns: 1fr 1fr; gap:14px; }
+    .panel { background:#0f141b; border:1px solid #233043; border-radius:14px; padding:12px; }
+    label { display:block; font-size:12px; color:#9fb0c3; margin-bottom:4px; }
     input, select, textarea { width:100%; padding:10px; border:1px solid #2a3443; border-radius:10px; background:#0e131a; color:#e8eef7; }
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
   </style>
 </head>
-<body class="app">
-  <header class="topbar">
+<body>
+  <header class="topbar" style="display:flex;justify-content:space-between;align-items:center;padding:14px;max-width:1000px;margin:0 auto;">
     <div class="title">Create Character</div>
-    <nav class="actions">
-      <a class="btn ghost" href="/characters">Back to Select</a>
-    </nav>
+    <div>
+      <a class="btn ghost" href="/characters">Back</a>
+    </div>
   </header>
 
-  <main class="main">
-    <section class="panel" style="max-width:720px; margin:auto;">
-      <form id="createForm" autocomplete="off">
-        <div class="row">
-          <div>
-            <label for="c_name">Name</label>
-            <input id="c_name" maxlength="40" placeholder="Aria" required />
-          </div>
-          <div>
-            <label for="c_class">Class</label>
-            <select id="c_class">
-              <option value="warrior">Warrior</option>
-              <option value="ranger">Ranger</option>
-              <option value="mage">Mage</option>
-            </select>
-          </div>
-          <div>
-            <label for="c_sex">Sex</label>
-            <select id="c_sex">
-              <option value="">—</option>
-              <option>Female</option>
-              <option>Male</option>
-              <option>Other</option>
-            </select>
-          </div>
-          <div>
-            <label for="c_age">Age</label>
-            <input id="c_age" type="number" min="13" max="120" />
-          </div>
+  <main class="wrap">
+    <section class="panel">
+      <div>
+        <label for="name">Name</label>
+        <input id="name" placeholder="E.g. Aveline" />
+      </div>
+      <div style="margin-top:10px;">
+        <label for="class_id">Class</label>
+        <select id="class_id"></select>
+      </div>
+      <div class="grid2" style="margin-top:10px;">
+        <div>
+          <label for="sex">Sex</label>
+          <select id="sex">
+            <option value="">—</option>
+            <option>Female</option>
+            <option>Male</option>
+            <option>Non-binary</option>
+            <option>Other</option>
+          </select>
         </div>
-        <div style="margin-top:12px;">
-          <label for="c_bio">Biography</label>
-          <textarea id="c_bio" rows="4" placeholder="A few lines about your character…"></textarea>
+        <div>
+          <label for="age">Age</label>
+          <input id="age" type="number" min="0" />
         </div>
+      </div>
+      <div style="margin-top:10px;">
+        <label for="bio">Biography</label>
+        <textarea id="bio" rows="4" placeholder="Short background…"></textarea>
+      </div>
 
-        <div id="msg" class="dim" style="margin-top:10px; min-height:1em;"></div>
+      <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;">
+        <button id="btnCreate" class="btn">Create</button>
+      </div>
+    </section>
 
-        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:12px;">
-          <a class="btn ghost" href="/characters">Cancel</a>
-          <button class="btn" type="submit">Create</button>
-        </div>
-      </form>
+    <section class="panel" id="preview">
+      <div class="title" style="font-size:18px;">Preview</div>
+      <div id="pDesc" class="dim" style="margin:6px 0 10px;"></div>
+
+      <div class="grid3">
+        <div><strong>STR</strong> <span id="pSTR" class="dim"></span></div>
+        <div><strong>DEX</strong> <span id="pDEX" class="dim"></span></div>
+        <div><strong>INT</strong> <span id="pINT" class="dim"></span></div>
+        <div><strong>WIS</strong> <span id="pWIS" class="dim"></span></div>
+        <div><strong>CON</strong> <span id="pCON" class="dim"></span></div>
+        <div><strong>CHA</strong> <span id="pCHA" class="dim"></span></div>
+      </div>
+
+      <div style="margin-top:10px;"><strong>Per Level:</strong>
+        <div class="dim" id="pGains"></div>
+      </div>
+
+      <div style="margin-top:10px;"><strong>Starting Equipment:</strong>
+        <div class="dim" id="pEquip"></div>
+      </div>
+
+      <div style="margin-top:10px;"><strong>Early Abilities (unlocked ≤ 1):</strong>
+        <ul id="pAbilities"></ul>
+      </div>
     </section>
   </main>
 
-  <script type="module" src="{{ url_for('static', filename='js/characters.js') }}"></script>
+  <script type="module">
+    const $ = (id) => document.getElementById(id);
+    let classes = [];
+
+    async function api(path, opts={}){
+      const r = await fetch(path, {credentials:'include', ...opts});
+      const data = await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(data.error || 'request failed');
+      return data;
+    }
+
+    function fillPreview(c){
+      if(!c){ $('pDesc').textContent=''; $('pGains').textContent=''; $('pEquip').textContent=''; $('pAbilities').innerHTML=''; return; }
+      $('pDesc').textContent = c.description || '';
+      const a = c.base_attributes || {};
+      $('pSTR').textContent = a.str ?? '-';
+      $('pDEX').textContent = a.dex ?? '-';
+      $('pINT').textContent = a.int ?? '-';
+      $('pWIS').textContent = a.wis ?? '-';
+      $('pCON').textContent = a.con ?? '-';
+      $('pCHA').textContent = a.cha ?? '-';
+      const g = c.per_level_gains || {};
+      $('pGains').textContent = `HP +${g.hp ?? 0}, MP +${g.mp ?? 0}, STA +${g.stamina ?? 0}, Stat Points +${g.stat_points ?? 0}`;
+      $('pEquip').textContent = (c.starting_equipment || []).join(', ') || '—';
+      $('pAbilities').innerHTML = (c.abilities || [])
+        .filter(ab => (ab.unlock_level || 1) <= 1)
+        .map(ab => `<li>${ab.name} (${ab.ability_id})</li>`).join('') || '<li class="dim">—</li>';
+    }
+
+    function onClassChange(){
+      const cid = $('class_id').value;
+      const c = classes.find(x => x.class_id === cid);
+      fillPreview(c);
+    }
+
+    async function boot(){
+      classes = await api('/api/classes');
+      $('class_id').innerHTML = classes.map(c => `<option value="${c.class_id}">${c.name} (${c.class_id})</option>`).join('');
+      onClassChange();
+      $('class_id').addEventListener('change', onClassChange);
+
+      $('btnCreate').addEventListener('click', async ()=>{
+        try{
+          const payload = {
+            name: $('name').value.trim(),
+            class_id: $('class_id').value,
+            sex: $('sex').value,
+            age: parseInt($('age').value || '0', 10) || null,
+            bio: $('bio').value
+          };
+          if(!payload.name){ alert('Name required'); return; }
+          await api('/api/characters',{method:'POST',headers:{'Content-Type':'application/json'},body: JSON.stringify(payload)});
+          // send them to select page so they can pick and play
+          window.location.href = '/characters';
+        }catch(e){ alert(e.message || 'Create failed'); }
+      });
+    }
+    boot();
+  </script>
 </body>
 </html>

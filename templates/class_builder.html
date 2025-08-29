@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Class Builder • Shardbound</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/mvp3.css') }}">
+  <style>
+    body.app { background:#0b1117; }
+    .topbar { position:sticky; top:0; z-index:5; }
+    .layout { display:grid; grid-template-columns: 320px 1fr; gap:14px; padding:14px; max-width:1400px; margin:auto; }
+    .panel { background:#0f141b; border:1px solid #233043; border-radius:14px; padding:12px; }
+    .list { display:flex; flex-direction:column; gap:6px; max-height: calc(100vh - 170px); overflow:auto; }
+    .item { padding:8px; border:1px solid #223040; border-radius:8px; cursor:pointer; }
+    .item:hover { background:#121a23; }
+    .item.active { background:#172230; border-color:#2a3b52; }
+    .row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .row3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+    .row4 { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; }
+    .row6 { display:grid; grid-template-columns:repeat(6, 1fr); gap:10px; }
+    label { display:block; font-size:12px; color:#9fb0c3; margin-bottom:4px; }
+    input, textarea, select { width:100%; padding:10px; border:1px solid #2a3443; border-radius:10px; background:#0e131a; color:#e8eef7; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+    textarea.json { min-height: 220px; resize: vertical; }
+    textarea.long { min-height: 80px; resize: vertical; }
+    .actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .dim { color:#9fb0c3; }
+    .pill { font-size:11px; padding:2px 6px; border:1px solid #32455f; border-radius:999px; }
+    .status-ok { color:#7be389; }
+    .status-bad { color:#ff8484; }
+    .subsection { margin-top:12px; padding-top:10px; border-top:1px dashed #223246; }
+    .table { width:100%; border-collapse: collapse; }
+    .table th, .table td { border-bottom:1px solid #1b2431; padding:6px; font-size:13px; }
+    .table th { text-align:left; color:#a8b6c8; font-weight:600; }
+    .chipbox { display:flex; gap:6px; flex-wrap:wrap; }
+    .chip { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border:1px solid #2a3443; border-radius:999px; }
+    .chip button { border:none; background:transparent; color:#aebad0; cursor:pointer; }
+    .btn.small { padding:6px 10px; font-size:12px; }
+
+    /* Console */
+    .console-wrap { margin-top:12px; }
+    .console-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+    .console-box {
+      background:#0b1016; border:1px solid #213045; border-radius:10px;
+      padding:10px; max-height:220px; overflow:auto; white-space:pre-wrap; font-size:12px;
+    }
+    .muted { opacity:0.85 }
+  </style>
+</head>
+<body class="app">
+  <header class="topbar">
+    <div class="title">Class Builder</div>
+    <nav class="actions">
+      <a class="btn ghost" href="/characters">Characters</a>
+      <a class="btn" href="/mvp">Play</a>
+    </nav>
+  </header>
+
+  <main class="layout">
+    <!-- LEFT: list -->
+    <section class="panel">
+      <div style="display:flex; gap:6px; align-items:center; margin-bottom:8px;">
+        <button id="tabDrafts" class="btn">Drafts</button>
+        <button id="tabPublished" class="btn ghost">Published</button>
+        <button id="btnNew" class="btn" style="margin-left:auto;">+ New</button>
+      </div>
+      <div class="row" style="margin-bottom:8px;">
+        <div><input id="filter" placeholder="Filter by id or name…"></div>
+        <div class="dim" id="count" style="padding-top:8px;"></div>
+      </div>
+      <div id="list" class="list"></div>
+    </section>
+
+    <!-- RIGHT: editor -->
+    <section class="panel">
+      <div class="actions" style="justify-content:space-between; margin-bottom:8px;">
+        <div class="dim">Status: <span id="status" class="pill">—</span></div>
+        <div id="validation" class="dim">Validation: <span id="valBadge">—</span></div>
+      </div>
+
+      <!-- Top meta -->
+      <div class="row">
+        <div>
+          <label for="cid">class_id</label>
+          <input id="cid" placeholder="warrior" />
+        </div>
+        <div>
+          <label for="cver">version</label>
+          <input id="cver" placeholder="0.1.0" />
+        </div>
+        <div>
+          <label for="cname">name</label>
+          <input id="cname" placeholder="Warrior" />
+        </div>
+        <div>
+          <label for="clevel">level_cap</label>
+          <input id="clevel" type="number" min="1" max="200" value="60" />
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:10px;">
+        <div>
+          <label for="craces">allowed_races (comma list)</label>
+          <input id="craces" placeholder="human,elf" />
+        </div>
+        <div>
+          <label for="ctags">tags (comma list)</label>
+          <input id="ctags" placeholder="melee,tank" />
+        </div>
+      </div>
+
+      <div class="subsection">
+        <label for="cdesc">description</label>
+        <textarea id="cdesc" class="long" placeholder="Describe the class…"></textarea>
+      </div>
+
+      <!-- Base Attributes -->
+      <div class="subsection">
+        <div class="dim" style="margin-bottom:6px;">Base Attributes</div>
+        <div class="row6">
+          <div><label>str</label><input id="attr_str" type="number" min="1" max="30" value="10"></div>
+          <div><label>dex</label><input id="attr_dex" type="number" min="1" max="30" value="10"></div>
+          <div><label>int</label><input id="attr_int" type="number" min="1" max="30" value="10"></div>
+          <div><label>wis</label><input id="attr_wis" type="number" min="1" max="30" value="10"></div>
+          <div><label>con</label><input id="attr_con" type="number" min="1" max="30" value="10"></div>
+          <div><label>cha</label><input id="attr_cha" type="number" min="1" max="30" value="10"></div>
+        </div>
+      </div>
+
+      <!-- Per Level Gains -->
+      <div class="subsection">
+        <div class="dim" style="margin-bottom:6px;">Per-Level Gains</div>
+        <div class="row4">
+          <div><label>hp</label><input id="gain_hp" type="number" min="0" value="5"></div>
+          <div><label>mp</label><input id="gain_mp" type="number" min="0" value="2"></div>
+          <div><label>stamina</label><input id="gain_stamina" type="number" min="0" value="3"></div>
+          <div><label>stat_points</label><input id="gain_stat_points" type="number" min="0" value="1"></div>
+        </div>
+      </div>
+
+      <!-- Skills -->
+      <div class="subsection">
+        <div class="actions" style="justify-content:space-between;">
+          <div class="dim">Skills</div>
+          <button id="btnAddSkill" class="btn small">+ Add Skill</button>
+        </div>
+        <table class="table" id="skillsTable">
+          <thead><tr><th>key</th><th>start</th><th>per_level</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <!-- Abilities -->
+      <div class="subsection">
+        <div class="actions" style="justify-content:space-between;">
+          <div class="dim">Abilities</div>
+          <button id="btnAddAbility" class="btn small">+ Add Ability</button>
+        </div>
+        <table class="table" id="abilitiesTable">
+          <thead>
+            <tr>
+              <th>ability_id</th><th>name</th><th>unlock_level</th><th>rank_cap</th>
+              <th>scaling.stat</th><th>scaling.factor</th><th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <!-- Starting Equipment -->
+      <div class="subsection">
+        <div class="actions" style="justify-content:space-between;">
+          <div class="dim">Starting Equipment</div>
+          <div style="display:flex; gap:6px;">
+            <input id="equipInput" placeholder="item_id e.g. leather_jerkin_001" />
+            <button id="btnAddEquip" class="btn small">Add</button>
+          </div>
+        </div>
+        <div id="equipChips" class="chipbox"></div>
+      </div>
+
+      <!-- Notes -->
+      <div class="subsection">
+        <label for="cnotes">notes</label>
+        <textarea id="cnotes" class="long" placeholder=""></textarea>
+      </div>
+
+      <!-- JSON & Actions -->
+      <div class="subsection">
+        <label for="cjson">JSON (advanced) — kept in sync</label>
+        <textarea id="cjson" class="json" spellcheck="false"></textarea>
+        <div class="actions" style="justify-content:flex-end; margin-top:6px;">
+          <button id="btnFromJSON" class="btn ghost">Apply JSON → Form</button>
+          <button id="btnToJSON" class="btn ghost">Form → JSON</button>
+        </div>
+      </div>
+
+      <div class="actions" style="margin-top:10px; justify-content:flex-end;">
+        <button id="btnInit" class="btn ghost">Init Folders</button>
+        <button id="btnValidate" class="btn ghost">Validate</button>
+        <select id="bump" class="btn ghost">
+          <option value="patch">Bump: patch</option>
+          <option value="minor">Bump: minor</option>
+          <option value="major">Bump: major</option>
+        </select>
+        <button id="btnSave" class="btn">Save Draft</button>
+        <button id="btnPublish" class="btn">Publish</button>
+        <button id="btnYank" class="btn ghost">Yank</button>
+      </div>
+
+      <!-- Console -->
+      <div class="console-wrap subsection">
+        <div class="console-bar">
+          <div class="dim">Validation Console</div>
+          <div class="actions">
+            <button id="btnShowPayload" class="btn small ghost">Show Payload</button>
+            <button id="btnCopyConsole" class="btn small ghost">Copy</button>
+            <button id="btnClearConsole" class="btn small ghost">Clear</button>
+          </div>
+        </div>
+        <pre id="consoleBox" class="console-box"></pre>
+        <div class="dim muted" style="margin-top:4px;">Shows server validation details (message, JSON path, validator), raw responses, and recent actions.</div>
+      </div>
+
+      <div id="msg" class="dim" style="margin-top:8px; min-height:1.2em;">Ready.</div>
+    </section>
+  </main>
+
+  <script type="module" src="{{ url_for('static', filename='js/class_builder.js') }}"></script>
+</body>
+</html>

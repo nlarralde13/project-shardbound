@@ -4,6 +4,8 @@ from flask import Flask, render_template, send_from_directory
 from .db import db, migrate
 from .auth import auth_bp, login_manager
 from .characters import characters_bp
+from .classes_admin import classes_admin_bp
+
 
 def create_app():
     app = Flask(__name__, static_folder="../static", template_folder="../templates")
@@ -31,6 +33,7 @@ def create_app():
     # Blueprints
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(characters_bp)  # /api/characters
+    app.register_blueprint(classes_admin_bp) #class builder admin
 
     # Your other API blueprints (unchanged)
     from .api.routes import bp as core_api_bp
@@ -81,4 +84,9 @@ def create_app():
     def static_passthrough(filename):
         return send_from_directory(app.static_folder, filename)
 
+
+    @app.route("/class-builder")
+    def class_builder():
+        return render_template("class_builder.html")
+    
     return app

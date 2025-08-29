@@ -1,0 +1,48 @@
+{
+  "abilities": [
+    {
+      "ability_id": "slash",
+      "name": "Slash",
+      "unlock_level": 1,
+      "rank_cap": 3,
+      "scaling": {
+        "stat": "str",
+        "factor": 1.1
+      }
+    }
+  ],
+  "allowed_races": [],
+  "base_attributes": {
+    "str": 10,
+    "dex": 10,
+    "int": 10,
+    "wis": 10,
+    "con": 10,
+    "cha": 10
+  },
+  "class_id": "warrior",
+  "created_at": "2025-08-29T02:00:36.739957Z",
+  "description": "Describe the Paladin class…",
+  "level_cap": 60,
+  "name": "Paladin",
+  "notes": "",
+  "per_level_gains": {
+    "hp": 5,
+    "mp": 2,
+    "stamina": 3,
+    "stat_points": 1
+  },
+  "skills": {
+    "athletics": {
+      "start": 2,
+      "per_level": 1
+    }
+  },
+  "starting_equipment": [
+    "leather_jerkin_001",
+    "rusty_blade_001"
+  ],
+  "tags": [],
+  "updated_at": "2025-08-29T02:13:34.707053Z",
+  "version": "0.1.2"
+}
