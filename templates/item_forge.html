@@ -1,6 +1,109 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
+  <meta charset="UTF-8" />
+  <title>Item Forge</title>
+</head>
+<body>
+  <h1>Item Forge</h1>
+
+  <section>
+    <h2>Create or Update Item</h2>
+    <form id="item-form">
+      <label>ID <input name="item_id" required></label><br>
+      <label>Version <input name="item_version" required></label><br>
+      <label>Name <input name="name" required></label><br>
+      <label>Type <input name="type" required></label><br>
+      <label>Rarity <input name="rarity" required></label><br>
+      <label>Stack Size <input name="stack_size" type="number" value="1" required></label><br>
+      <label>Base Stats (JSON) <textarea name="base_stats">{}</textarea></label><br>
+      <button type="submit">Save Item</button>
+    </form>
+    <pre id="item-result"></pre>
+  </section>
+
+  <section>
+    <h2>Mint Item Instance</h2>
+    <form id="instance-form">
+      <label>Item ID <input name="item_id" required></label><br>
+      <label>Item Version <input name="item_version" required></label><br>
+      <label>Quantity <input name="quantity" type="number" value="1" required></label><br>
+      <button type="submit">Create Instance</button>
+    </form>
+    <pre id="instance-result"></pre>
+  </section>
+
+  <section>
+    <h2>Grant to Character Inventory</h2>
+    <form id="grant-form">
+      <label>Character ID <input id="grant-character-id" required></label><br>
+      <label>Slot Index <input name="slot_index" type="number" value="0" required></label><br>
+      <label>Item ID <input name="item_id" required></label><br>
+      <label>Instance ID <input name="instance_id" required></label><br>
+      <label>Quantity <input name="qty" type="number" value="1" required></label><br>
+      <label>Equipped <input name="equipped" type="checkbox"></label><br>
+      <button type="submit">Grant</button>
+    </form>
+    <pre id="grant-result"></pre>
+  </section>
+
+<script>
+  document.getElementById('item-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const data = {
+      item_id: form.item_id.value,
+      item_version: form.item_version.value,
+      name: form.name.value,
+      type: form.type.value,
+      rarity: form.rarity.value,
+      stack_size: parseInt(form.stack_size.value, 10) || 1,
+      base_stats: JSON.parse(form.base_stats.value || '{}')
+    };
+    const res = await fetch('/api/items', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    document.getElementById('item-result').textContent = JSON.stringify(await res.json(), null, 2);
+  });
+
+  document.getElementById('instance-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const data = {
+      item_id: form.item_id.value,
+      item_version: form.item_version.value,
+      quantity: parseInt(form.quantity.value, 10) || 1
+    };
+    const res = await fetch('/api/item_instances', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    document.getElementById('instance-result').textContent = JSON.stringify(await res.json(), null, 2);
+  });
+
+  document.getElementById('grant-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const characterId = document.getElementById('grant-character-id').value;
+    const data = {
+      slot_index: parseInt(form.slot_index.value, 10) || 0,
+      item_id: form.item_id.value,
+      instance_id: form.instance_id.value,
+      qty: parseInt(form.qty.value, 10) || 1,
+      equipped: form.equipped.checked
+    };
+    const res = await fetch(`/api/characters/${characterId}/inventory`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    document.getElementById('grant-result').textContent = JSON.stringify(await res.json(), null, 2);
+  });
+
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Shardbound — Forge</title>
@@ -388,6 +491,7 @@ els.create_and_grant.addEventListener('click', async ()=>{
     showStatus('❌ Create+Mint+Grant failed: ' + e.message, 'bad');
   }
 });
+
 </script>
 </body>
 </html>
