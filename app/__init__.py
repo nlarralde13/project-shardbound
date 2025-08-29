@@ -35,6 +35,9 @@ def create_app():
             inspector = sa.inspect(db.engine)
             cols = {c["name"] for c in inspector.get_columns("character")}
             with db.engine.begin() as conn:
+                # Ensure legacy column exists with safe defaults to avoid NOT NULL failures
+                if "is_deleted" not in cols:
+                    conn.execute(sa.text("ALTER TABLE character ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT 0"))
                 if "biography" not in cols:
                     conn.execute(sa.text("ALTER TABLE character ADD COLUMN biography TEXT"))
                     if "bio" in cols:

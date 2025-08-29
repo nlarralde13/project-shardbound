@@ -49,7 +49,7 @@
       el.innerHTML = list.map(card).join('') || '<div class="dim">No characters yet. Create one!</div>';
       el.querySelectorAll('button').forEach(b=>{
         b.addEventListener('click', async ()=>{
-          const id = parseInt(b.getAttribute('data-id'));
+          const id = b.getAttribute('data-id');
           const act = b.getAttribute('data-act');
           try{
             if(act==='play'){
