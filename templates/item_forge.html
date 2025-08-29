@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
   <meta charset="UTF-8" />
   <title>Item Forge</title>
 </head>
@@ -102,6 +103,395 @@
     });
     document.getElementById('grant-result').textContent = JSON.stringify(await res.json(), null, 2);
   });
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Shardbound — Forge</title>
+<style>
+  :root { --bg:#0f1220; --panel:#171b2f; --ink:#e7ecff; --muted:#9aa4cc; --accent:#6ea8fe; --ok:#37c776; --warn:#ffcc66; --bad:#ff6b6b; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+         color:var(--ink); background: radial-gradient(1200px 600px at 20% -10%, #1e2442, #0f1220);}
+  header { padding: 16px 20px; border-bottom: 1px solid #222743; display:flex; gap:16px; align-items:center; }
+  header h1 { margin:0; font-size: 20px; letter-spacing: 0.5px; }
+  main { display:grid; grid-template-columns: 420px 1fr; gap:18px; padding:18px; }
+  .card { background: linear-gradient(180deg, #1a1f38, #12162a); border:1px solid #23284a; border-radius:16px; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+  .card h2 { margin:0 0 12px; font-size:16px; color:#c8d1ff; letter-spacing: .3px; }
+  .pane { padding:16px; }
+  .grid { display:grid; gap:10px; }
+  .cols-2 { grid-template-columns: 1fr 1fr; }
+  label { font-size: 12px; color: var(--muted); }
+  input[type="text"], input[type="number"], select, textarea {
+    width:100%; background:#0e1226; color:var(--ink); border:1px solid #2a315a; border-radius:10px; padding:10px 12px;
+  }
+  textarea { min-height: 110px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+  .row { display:flex; gap:10px; align-items:center; }
+  .row > * { flex:1; }
+  .hint { font-size:12px; color:var(--muted); }
+  .pill { display:inline-flex; gap:8px; align-items:center; padding:4px 8px; background:#0e1226; border:1px solid #2a315a; border-radius:999px; font-size:12px; color:#cdd6ff;}
+  .actions { display:flex; gap:10px; flex-wrap:wrap; }
+  button { cursor:pointer; border:1px solid #2a315a; background:#0f1530; color:#e7ecff; padding:10px 12px; border-radius:10px; font-weight:600; }
+  button.primary { background: linear-gradient(180deg, #497bff, #2a57f4); border-color:#3a5cf8; }
+  button.ok { background: linear-gradient(180deg, #30b26a, #249e5a); border-color:#2aa061; }
+  button.warn { background: linear-gradient(180deg, #f0b64b, #e19a2a); border-color:#e0a43a; color:#271a00; }
+  button.ghost { background:#0e1226; }
+  .status { padding:12px; border-top:1px solid #23284a; display:flex; gap:10px; align-items:flex-start; }
+  .status.ok { background: rgba(55, 199, 118, .08); border-color:#2a5b45; }
+  .status.bad { background: rgba(255, 107, 107, .08); border-color:#5b2a2a; }
+  .status pre { margin:0; white-space:pre-wrap; word-break:break-word; font-size:12px; color:#dbe3ff; }
+  .preview { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+  .thumb { background:#0e1226; border:1px solid #2a315a; border-radius:12px; min-height:160px; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  .thumb img { max-width:100%; max-height:160px; image-rendering: pixelated; }
+  .kbd { font-size: 11px; padding:2px 6px; border:1px solid #2a315a; border-radius:6px; background:#0e1226; color:#cbd5ff; }
+  .help { font-size:12px; color:#b9c3ff; line-height:1.45; }
+  .muted { color:var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>⚒️ Shardbound Forge</h1>
+  <span class="pill">Creates Items ➝ Mints Instances ➝ Adds to Inventory</span>
+</header>
+
+<main>
+  <!-- Left: Item form -->
+  <section class="card">
+    <div class="pane grid">
+      <h2>Item Blueprint</h2>
+
+      <div class="grid cols-2">
+        <div>
+          <label>Item ID</label>
+          <input id="item_id" type="text" placeholder="itm_longsword" />
+        </div>
+        <div>
+          <label>Version</label>
+          <input id="item_version" type="text" value="1.0" />
+        </div>
+      </div>
+
+      <div class="grid cols-2">
+        <div>
+          <label>Name</label>
+          <input id="name" type="text" placeholder="Iron Longsword" />
+        </div>
+        <div>
+          <label>Type</label>
+          <select id="type">
+            <option value="weapon">weapon</option>
+            <option value="armor">armor</option>
+            <option value="consumable">consumable</option>
+            <option value="resource">resource</option>
+            <option value="tool">tool</option>
+            <option value="quest">quest</option>
+            <option value="key">key</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid cols-2">
+        <div>
+          <label>Rarity</label>
+          <select id="rarity">
+            <option>common</option><option>uncommon</option><option>rare</option>
+            <option>epic</option><option>legendary</option><option>mythic</option>
+          </select>
+        </div>
+        <div>
+          <label>Stack Size</label>
+          <input id="stack_size" type="number" min="1" value="1" />
+        </div>
+      </div>
+
+      <div>
+        <label>Icon URL / Path (stored at <span class="kbd">base_stats.icon</span>)</label>
+        <input id="icon_url" type="text" placeholder="/static/assets/items/iron_longsword.png" />
+        <div class="hint">Use a path that your game can resolve. This is saved inside <code>base_stats</code> so no schema change needed. :contentReference[oaicite:4]{index=4}</div>
+      </div>
+
+      <div class="grid cols-2">
+        <div>
+          <label>JSON Helper (auto-fills <code>base_stats</code>)</label>
+          <div class="row">
+            <select id="helper">
+              <option value="">(none)</option>
+              <option value="weapon:melee">Weapon — Melee</option>
+              <option value="weapon:ranged">Weapon — Ranged</option>
+              <option value="armor:shield">Armor — Shield</option>
+              <option value="consumable:heal">Consumable — Heal</option>
+              <option value="resource:ore">Resource — Ore</option>
+            </select>
+            <button class="ghost" id="apply_helper">Apply</button>
+          </div>
+          <div class="hint">Pick a template, then tweak the JSON on the right.</div>
+        </div>
+        <div>
+          <label>base_stats (JSON)</label>
+          <textarea id="base_stats">{}</textarea>
+          <div class="hint">Must be valid JSON. We’ll store your icon here as <code>{"icon":"..."}</code>. Uses JSON/JSONB depending on DB. :contentReference[oaicite:5]{index=5}</div>
+        </div>
+      </div>
+
+      <div class="preview">
+        <div>
+          <label>Icon Preview</label>
+          <div class="thumb"><img id="icon_preview" alt="icon preview"></div>
+        </div>
+        <div>
+          <label>Payload Preview</label>
+          <div class="thumb" style="padding:10px; align-items:stretch;">
+            <pre id="payload_preview" style="margin:0; font-size:12px;"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pane actions">
+      <button class="primary" id="create_item">Create Item</button>
+      <button id="mint_instance">Mint Instance</button>
+      <button class="ok" id="create_and_grant">Create + Mint + Grant to Character</button>
+      <button class="warn" id="reset_form" type="button">Reset</button>
+    </div>
+
+    <div id="status" class="status" style="display:none;"><pre></pre></div>
+  </section>
+
+  <!-- Right: Inventory grant -->
+  <section class="card">
+    <div class="pane grid">
+      <h2>Grant to Character Inventory</h2>
+
+      <div class="grid cols-2">
+        <div>
+          <label>Character ID</label>
+          <input id="character_id" type="text" placeholder="UUID of character" />
+          <div class="hint">You can find this in your DB or a dev endpoint. (Grant uses your inventory schema.) :contentReference[oaicite:6]{index=6}</div>
+        </div>
+        <div>
+          <label>Slot Index</label>
+          <input id="slot_index" type="number" min="0" value="0" />
+        </div>
+      </div>
+
+      <div class="grid cols-2">
+        <div>
+          <label>Instance Quantity (stackable)</label>
+          <input id="instance_qty" type="number" min="1" value="1" />
+        </div>
+        <div>
+          <label>Equip Now</label>
+          <select id="equip_now">
+            <option value="false">false</option>
+            <option value="true">true</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="help">
+        <p class="muted">Granting creates an <em>ItemInstance</em> first, then inserts a row into <em>CharacterInventory</em> with <code>(character_id, slot_index)</code> uniqueness enforced by your model. :contentReference[oaicite:7]{index=7}</p>
+        <p>If you already have an instance you want to grant, set “Mint Instance” off in code (see the JS below) and provide that instance ID instead.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ---------- CONFIG: adjust to your API routes ---------- */
+const API = {
+  createItem: (payload) => fetch('/api/items', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)}),
+  mintInstance: (payload) => fetch('/api/item_instances', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)}),
+  grantInventory: (character_id, payload) => fetch(`/api/characters/${encodeURIComponent(character_id)}/inventory`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)}),
+};
+
+/* ---------- DOM refs ---------- */
+const $ = (id) => document.getElementById(id);
+const els = {
+  item_id: $('item_id'),
+  item_version: $('item_version'),
+  name: $('name'),
+  type: $('type'),
+  rarity: $('rarity'),
+  stack_size: $('stack_size'),
+  icon_url: $('icon_url'),
+  helper: $('helper'),
+  apply_helper: $('apply_helper'),
+  base_stats: $('base_stats'),
+  icon_preview: $('icon_preview'),
+  payload_preview: $('payload_preview'),
+  create_item: $('create_item'),
+  mint_instance: $('mint_instance'),
+  create_and_grant: $('create_and_grant'),
+  reset_form: $('reset_form'),
+  status: $('status'),
+  status_pre: $('status').querySelector('pre'),
+  character_id: $('character_id'),
+  slot_index: $('slot_index'),
+  instance_qty: $('instance_qty'),
+  equip_now: $('equip_now'),
+};
+
+/* ---------- helpers ---------- */
+function showStatus(msg, kind='ok') {
+  els.status.style.display = 'flex';
+  els.status.className = 'status ' + (kind === 'ok' ? 'ok' : 'bad');
+  els.status_pre.textContent = msg;
+}
+function clearStatus() { els.status.style.display='none'; }
+
+function parseJSONSafe(s) {
+  try { return [JSON.parse(s || '{}'), null]; }
+  catch (e) { return [null, e]; }
+}
+
+function buildItemPayload() {
+  const [stats, err] = parseJSONSafe(els.base_stats.value);
+  if (err) throw new Error('base_stats is not valid JSON: ' + err.message);
+  // Ensure icon is included if provided
+  const icon = (els.icon_url.value || '').trim();
+  if (icon) stats.icon = icon;
+
+  const payload = {
+    item_id: (els.item_id.value || '').trim(),
+    item_version: (els.item_version.value || '1.0').trim(),
+    name: (els.name.value || '').trim(),
+    type: els.type.value,
+    rarity: els.rarity.value,
+    stack_size: Math.max(1, Number(els.stack_size.value || 1)),
+    base_stats: stats,
+  };
+  // simple validations
+  ['item_id','item_version','name'].forEach(k=>{
+    if(!payload[k]) throw new Error(k + ' is required');
+  });
+  return payload;
+}
+
+function updatePreview() {
+  try {
+    const payload = buildItemPayload();
+    els.payload_preview.textContent = JSON.stringify(payload, null, 2);
+  } catch (e) {
+    els.payload_preview.textContent = '⚠ ' + e.message;
+  }
+  const url = (els.icon_url.value || '').trim();
+  els.icon_preview.src = url || '';
+}
+
+/* ---------- JSON helpers (quick templates) ---------- */
+const TEMPLATES = {
+  'weapon:melee': () => ({ atk: 7, durability: 50, speed: 1.0 }),
+  'weapon:ranged': () => ({ atk: 5, durability: 40, speed: 1.2, range: 6 }),
+  'armor:shield': () => ({ def: 3, durability: 40, block: 0.1 }),
+  'consumable:heal': () => ({ heal: 20, cooldown_s: 5 }),
+  'resource:ore': () => ({ grade: 'poor', mass_g: 500 }),
+};
+els.apply_helper.addEventListener('click', (e)=>{
+  e.preventDefault();
+  const key = els.helper.value;
+  if (!key) return;
+  const base = TEMPLATES[key] ? TEMPLATES[key]() : {};
+  // merge with existing JSON (if valid), but helper wins for its keys
+  const [current, err] = parseJSONSafe(els.base_stats.value);
+  const merged = Object.assign({}, current || {}, base);
+  els.base_stats.value = JSON.stringify(merged, null, 2);
+  updatePreview();
+});
+
+/* ---------- events ---------- */
+['input','change'].forEach(ev=>{
+  [els.item_id, els.item_version, els.name, els.type, els.rarity, els.stack_size, els.icon_url, els.base_stats]
+    .forEach(el=> el.addEventListener(ev, updatePreview));
+});
+updatePreview();
+
+els.reset_form.addEventListener('click', ()=>{
+  document.querySelectorAll('input[type="text"]').forEach(i=>i.value='');
+  els.stack_size.value = 1;
+  els.base_stats.value = '{}';
+  updatePreview();
+  clearStatus();
+});
+
+/* ---------- actions ---------- */
+els.create_item.addEventListener('click', async ()=>{
+  try {
+    const payload = buildItemPayload();
+    const res = await API.createItem(payload);
+    const text = await res.text();
+    if (!res.ok) throw new Error(text || res.statusText);
+    showStatus('✅ Item created.\n\n' + text, 'ok');
+  } catch (e) {
+    showStatus('❌ Create item failed: ' + e.message, 'bad');
+  }
+});
+
+els.mint_instance.addEventListener('click', async ()=>{
+  try {
+    const payload = buildItemPayload();
+    // Optionally create item first (idempotent server-side recommended).
+    await API.createItem(payload);
+
+    // Mint instance
+    const qty = Math.max(1, Number(els.instance_qty.value || 1));
+    const instBody = {
+      item_id: payload.item_id,
+      item_version: payload.item_version,
+      quantity: qty, // your model enforces qty>=1 on instance. :contentReference[oaicite:8]{index=8}
+    };
+    const res = await API.mintInstance(instBody);
+    const json = await res.json().catch(()=>null);
+    if (!res.ok) throw new Error(JSON.stringify(json || await res.text()));
+    const instance_id = json.instance_id || '(see server response)';
+    showStatus('✅ Instance minted: ' + instance_id + '\n' + JSON.stringify(json, null, 2), 'ok');
+  } catch (e) {
+    showStatus('❌ Mint failed: ' + e.message, 'bad');
+  }
+});
+
+els.create_and_grant.addEventListener('click', async ()=>{
+  try {
+    const payload = buildItemPayload();
+    const character_id = (els.character_id.value || '').trim();
+    const slot_index = Math.max(0, Number(els.slot_index.value || 0));
+    const qty = Math.max(1, Number(els.instance_qty.value || 1));
+    const equipped = (els.equip_now.value === 'true');
+
+    if (!character_id) throw new Error('character_id is required to grant');
+
+    // 1) create (idempotent)
+    await API.createItem(payload);
+
+    // 2) mint instance
+    const instBody = { item_id: payload.item_id, item_version: payload.item_version, quantity: qty };
+    const instRes = await API.mintInstance(instBody);
+    const instJson = await instRes.json().catch(()=>null);
+    if (!instRes.ok) throw new Error('mint failed: ' + JSON.stringify(instJson || await instRes.text()));
+    const instance_id = instJson.instance_id;
+
+    // 3) grant to inventory
+    const grantBody = {
+      slot_index,
+      item_id: payload.item_id,
+      instance_id,
+      qty,
+      equipped,
+    };
+    // server should fill acquired_at; unique (character_id, slot_index) is enforced in DB. :contentReference[oaicite:9]{index=9}
+    const grRes = await API.grantInventory(character_id, grantBody);
+    const grJson = await grRes.json().catch(()=>null);
+    if (!grRes.ok) throw new Error('grant failed: ' + JSON.stringify(grJson || await grRes.text()));
+
+    showStatus(
+      '✅ Created, minted, and granted.\n\n' +
+      'instance_id: ' + instance_id + '\n' +
+      JSON.stringify({ grant: grJson }, null, 2),
+      'ok'
+    );
+  } catch (e) {
+    showStatus('❌ Create+Mint+Grant failed: ' + e.message, 'bad');
+  }
+});
+
 </script>
 </body>
 </html>
