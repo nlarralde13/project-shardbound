@@ -115,4 +115,8 @@ def create_app():
     def class_builder():
         return render_template("class_builder.html")
     
+    @app.route("/itemForge")
+    def item_forge():
+        return render_template("item_forge.html")
+    
     return app
