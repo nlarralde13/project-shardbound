@@ -49,6 +49,12 @@ def create_app():
                         conn.execute(sa.text("UPDATE character SET is_active = 0 WHERE is_deleted = 1"))
                 if "last_seen_at" not in cols:
                     conn.execute(sa.text("ALTER TABLE character ADD COLUMN last_seen_at DATETIME"))
+                if "cur_loc" not in cols:
+                    conn.execute(sa.text("ALTER TABLE character ADD COLUMN cur_loc VARCHAR(64)"))
+                    if "x" in cols and "y" in cols:
+                        conn.execute(sa.text(
+                            "UPDATE character SET cur_loc = x || ',' || y WHERE x IS NOT NULL AND y IS NOT NULL"
+                        ))
 
     # Blueprints
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
