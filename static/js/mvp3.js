@@ -359,15 +359,6 @@ async function runCommand(input){
   log('Unknown command. Type "help".', 'log-note');
 
 
-  setInterval(() => {
-  const state = {
-    last_room_id: window.currentRoomId || null,
-    inventory: window.playerInventory || [],
-    quests: window.currentQuests || { active: [], completed: [] },
-    // optionally level, attributes deltas, etc.
-    };
-    autosaveCharacterState(state).catch(()=>{ /* swallow in UI */ });
-    }, 60_000);
   }
 
 // ---- boot ----
@@ -383,3 +374,18 @@ async function runCommand(input){
     shardStatus && (shardStatus.textContent='Please select a shard to load.');
   }
 })();
+
+// periodic autosave of position + lightweight state
+setInterval(() => {
+  const payload = {
+    x: CurrentPos.x,
+    y: CurrentPos.y,
+    state: {
+      last_room_id: window.currentRoomId || null,
+      inventory: window.playerInventory || [],
+      quests: window.currentQuests || { active: [], completed: [] },
+    },
+  };
+  if (window.__lastShard?.meta?.name) payload.shard_id = window.__lastShard.meta.name;
+  autosaveCharacterState(payload).catch(() => { /* swallow in UI */ });
+}, 60_000);
