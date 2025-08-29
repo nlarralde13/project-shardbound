@@ -119,17 +119,22 @@ export const API = {
     if (!r.ok) throw new Error('Failed to get active character');
     return r.json();
   },
+
+  async autosaveCharacter(payload) {
+    const r = await fetch('/api/characters/autosave', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload || {})
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error || 'Autosave failed');
+    return data;
+  },
 };
 
 export async function autosaveCharacterState(partialState) {
-  const r = await fetch('/api/characters/autosave', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify(partialState || {})
-  });
-  if (!r.ok) throw new Error('autosave failed');
-  return r.json();
+  return API.autosaveCharacter(partialState);
 }
 
 export function urlHasNoclip() {
