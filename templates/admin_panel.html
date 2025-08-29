@@ -1,0 +1,72 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>ShardBound — Admin Panel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <style>
+    :root{--bg:#0b0f18;--ink:#e7ebff;--muted:#96a0c4;--panel:#121933;--line:#25305b;--accent:#77c9ff}
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    header{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid #1d2547;background:linear-gradient(180deg,#111735,#0b1026)}
+    h1{margin:0;font-size:18px}
+    main{padding:18px; display:grid; gap:16px; grid-template-columns: 1fr}
+    .grid{display:grid; gap:14px; grid-template-columns: repeat(auto-fit,minmax(240px,1fr))}
+    .card{padding:16px;border:1px solid var(--line); border-radius:16px; background:linear-gradient(180deg,#151b3a,#0c122b); box-shadow:0 14px 40px rgba(0,0,0,.45)}
+    .card h3{margin:0 0 8px 0}
+    a.btn,button.btn{display:inline-block;margin-top:10px;padding:10px 12px;border-radius:12px;border:1px solid #34407a;background:#0d1330;color:#e8ecff;font-weight:700;text-decoration:none}
+    .primary{background:linear-gradient(180deg,#4b78ff,#2a57f4); border-color:#3a5cf8}
+    code{display:block; background:#0a1130; border:1px solid #1f2750; border-radius:12px; padding:10px; white-space:pre-wrap; font-size:12px}
+    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+    .muted{color:var(--muted)}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>ShardBound — Admin Panel</h1>
+    <form method="post" action="/admin/logout"><button class="btn">Logout</button></form>
+  </header>
+  <main>
+    <div class="grid">
+      <div class="card">
+        <h3>Item Forge</h3>
+        <div class="muted">Create and edit items, mint instances, and attach images.</div>
+        <a class="btn primary" href="/itemForge">Open Forge</a>
+      </div>
+      <div class="card">
+        <h3>Mímir’s Vault</h3>
+        <div class="muted">Browse Users, Characters, Items, Instances, Inventory, Recipes, Resources.</div>
+        <a class="btn primary" href="/vault">Open Vault</a>
+      </div>
+      <div class="card">
+        <h3>Quest Planner (coming soon)</h3>
+        <div class="muted">Design quest chains, steps, triggers, and rewards.</div>
+        <a class="btn" href="#" onclick="alert('Coming soon!')">Preview</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>API Token</h3>
+      <div class="muted">Generate a short-lived token to call admin APIs from scripts (cURL, db_cli, Postman).</div>
+      <div class="row">
+        <button class="btn primary" id="btn_token">Generate Token</button>
+        <span id="tok_status" class="muted"></span>
+      </div>
+      <code id="tok_value">(none)</code>
+      <div class="muted">Example:</div>
+      <code>curl -H "Authorization: Bearer &lt;TOKEN&gt;" http://localhost:5000/api/admin/users?page=1&amp;limit=50</code>
+    </div>
+  </main>
+
+  <script>
+    async function genToken(){
+      const res = await fetch("/admin/api/token", {method:"POST", headers:{"Accept":"application/json"}});
+      const text = await res.text();
+      if(!res.ok){ document.getElementById("tok_status").textContent = "Error: " + text; return; }
+      const data = JSON.parse(text);
+      document.getElementById("tok_value").textContent = data.token;
+      document.getElementById("tok_status").textContent = "TTL: "+data.ttl_seconds+"s";
+    }
+    document.getElementById("btn_token").onclick = (e)=>{ e.preventDefault(); genToken(); };
+  </script>
+</body>
+</html>

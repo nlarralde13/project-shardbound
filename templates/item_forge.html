@@ -1,497 +1,599 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta charset="utf-8" />
+  <title>Shardbound — Nidavellir Item Forge</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0a0b12;
+      --ink:#e9ecff;
+      --muted:#a2a8c9;
+      --steel-1:#1b2138;
+      --steel-2:#0f1426;
+      --line:#2a315a;
+      --accent:#7fa6ff;
+      --ok:#37c776;
+      --warn:#ffcc66;
+      --bad:#ff6b6b;
+      --lava-1:#ed6a5a;
+      --lava-2:#f4a261;
+      --lava-3:#fbd271;
+      --rune:#6ee7ff;
+    }
 
-  <meta charset="UTF-8" />
-  <title>Item Forge</title>
+    *{ box-sizing:border-box }
+    html,body{ height:100% }
+    body{
+      margin:0; color:var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background:
+        radial-gradient(1200px 800px at 20% -10%, #1a2144 15%, #0a0b12 60%),
+        #0a0b12;
+      overflow:hidden;
+    }
+
+    /* Molten underglow */
+    .lava{
+      position:fixed; inset:0; pointer-events:none; z-index:-1;
+      background:
+        radial-gradient(900px 600px at 80% 110%, rgba(237,106,90,.22), transparent 60%),
+        radial-gradient(700px 500px at 10% 100%, rgba(244,162,97,.20), transparent 65%),
+        radial-gradient(600px 500px at 50% 120%, rgba(251,210,113,.14), transparent 70%);
+      filter: blur(18px) saturate(1.2);
+      animation: pulse 6s ease-in-out infinite;
+    }
+    @keyframes pulse{
+      0%,100%{ opacity:.8; transform:translateY(0) }
+      50%{ opacity:1; transform:translateY(-6px) }
+    }
+
+    header{
+      display:flex; align-items:center; gap:16px;
+      padding:14px 18px; border-bottom:1px solid #23284a;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.06)),
+        linear-gradient(180deg, #161b31, #11162a);
+      position:relative; z-index:3;
+      box-shadow: 0 8px 30px rgba(0,0,0,.35);
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px;
+      letter-spacing:.6px; font-weight:700;
+    }
+    .brand .hammer{
+      width:30px; height:30px; border-radius:6px;
+      background:
+        radial-gradient(circle at 30% 25%, #cbd7ff 6%, #95b4ff 10%, transparent 11%),
+        linear-gradient(135deg, #2b335a, #12162a);
+      box-shadow: inset 0 0 0 1px #3a467d, 0 0 30px rgba(111,231,255,.15);
+      position:relative;
+    }
+    .brand .hammer:before{
+      content:""; position:absolute; inset:6px 6px 12px 6px;
+      border-radius:3px; background:linear-gradient(180deg, #8aa3ff, #3c58c7);
+      filter: drop-shadow(0 8px 8px rgba(0,0,0,.6));
+    }
+    .tag{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:6px 10px; font-size:12px; color:#cfe2ff;
+      border:1px solid #2a315a; border-radius:999px;
+      background:linear-gradient(180deg, #0e1326, #0a0e1f);
+    }
+
+    main{
+      position:relative; z-index:2; height:calc(100% - 58px);
+      display:grid; grid-template-columns: 520px 1fr; gap:16px; padding:16px;
+    }
+
+    .panel{
+      display:flex; flex-direction:column; gap:12px; min-height:0;
+      border:1px solid #272f56; border-radius:18px;
+      background:
+        radial-gradient(600px 400px at 20% -20%, rgba(111,231,255,.06), transparent 60%),
+        linear-gradient(180deg, #151a30, #0f1426);
+      box-shadow:
+        inset 0 0 0 1px rgba(107,129,215,.08),
+        0 20px 50px rgba(0,0,0,.45);
+    }
+    .panel .hd{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:12px 14px 0 14px;
+    }
+    .hd h2{ margin:0; font-size:14px; letter-spacing:.4px; color:#cbd5ff }
+    .hd .runes{ opacity:.8; font-size:12px; color:var(--rune); letter-spacing:2px }
+
+    .pane{ padding:12px 14px; display:grid; gap:10px; overflow:auto; }
+    .grid{ display:grid; gap:10px }
+    .cols-2{ grid-template-columns: 1fr 1fr }
+    .cols-3{ grid-template-columns: repeat(3, 1fr) }
+    label{ font-size:12px; color:var(--muted) }
+    input[type="text"],input[type="number"],select,textarea{
+      width:100%; background:#0b0f22; color:var(--ink);
+      border:1px solid var(--line); border-radius:12px; padding:10px 12px;
+      outline:none; box-shadow: inset 0 -2px 0 rgba(255,255,255,.02);
+    }
+    input:focus, select:focus, textarea:focus{
+      border-color:#3d5cff; box-shadow:0 0 0 3px rgba(61,92,255,.18), inset 0 -2px 0 rgba(255,255,255,.02);
+    }
+    textarea{ min-height:120px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace }
+
+    .actions{ display:flex; gap:10px; flex-wrap:wrap; }
+    button{
+      cursor:pointer; padding:10px 12px; border-radius:12px; font-weight:700; letter-spacing:.2px;
+      border:1px solid #33407a; color:#e8ecff; background:#0d1330;
+      box-shadow: inset 0 -2px 0 rgba(255,255,255,.06);
+    }
+    .primary{ background: linear-gradient(180deg, #4b78ff, #2a57f4); border-color:#3a5cf8 }
+    .ok{ background: linear-gradient(180deg, #30b26a, #249e5a); border-color:#2aa061 }
+    .warn{ background: linear-gradient(180deg, #f0b64b, #e19a2a); border-color:#e0a43a; color:#271a00 }
+    .ghost{ background:#0b0f22 }
+
+    .status{ padding:12px; border-top:1px solid #23284a; display:none }
+    .status.show{ display:block }
+    .status.ok{ background: rgba(55,199,118,.08) }
+    .status.bad{ background: rgba(255,107,107,.10) }
+
+    .preview-wrap{ display:grid; grid-template-columns: 1fr 1fr; gap:12px }
+    .thumb{
+      background:#0b0f22; border:1px solid var(--line); border-radius:12px;
+      min-height:160px; display:flex; align-items:center; justify-content:center; overflow:hidden;
+    }
+    .thumb img{ max-width:100%; max-height:160px; image-rendering: pixelated }
+
+    /* Item Preview Card (hammered steel frame) */
+    .item-card{
+      position:relative; border-radius:14px; overflow:hidden;
+      border:1px solid #3b456f;
+      background:
+        radial-gradient(160% 80% at 20% -10%, rgba(111,231,255,.08), transparent 30%),
+        linear-gradient(180deg, #1a203c, #0c1126);
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.04),
+        0 16px 40px rgba(0,0,0,.45);
+      display:grid; grid-template-columns: 96px 1fr; gap:10px; padding:10px;
+    }
+    .item-card:before{
+      content:""; position:absolute; inset:0;
+      background:
+        repeating-linear-gradient(135deg, rgba(255,255,255,.04) 0 2px, transparent 2px 6px);
+      mix-blend-mode: overlay; opacity:.2; pointer-events:none;
+    }
+    .rarity-ring{
+      position:absolute; top:-1px; left:-1px; right:-1px; height:4px;
+      background: linear-gradient(90deg, #b3b9ff, #4dd6ff, #ffd166, #ff6b6b, #b3b9ff);
+      background-size: 300% 100%; animation: flow 8s linear infinite;
+      filter: drop-shadow(0 2px 6px rgba(0,0,0,.4));
+    }
+    @keyframes flow{ 0%{background-position:0% 0} 100%{background-position:300% 0} }
+
+    .slot{
+      display:grid; place-items:center; border:1px dashed #394374; border-radius:10px;
+      background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.08));
+    }
+    .slot img{ max-width:80px; max-height:80px; image-rendering: pixelated }
+
+    .meta{ display:grid; gap:6px }
+    .title{ font-weight:800; letter-spacing:.3px }
+    .subtitle{ font-size:12px; color:var(--muted) }
+    .chip{ display:inline-flex; align-items:center; gap:6px; padding:4px 8px; font-size:11px; border-radius:999px;
+      border:1px solid #3b456f; background:linear-gradient(180deg, #0e142a, #0b1022); color:#d7dfff }
+    .json-valid{ color:var(--ok); }
+    .json-bad{ color:var(--bad); }
+
+    /* Forge footer (anvil silhouette) */
+    .footer{
+      position:fixed; left:0; right:0; bottom:0; height:90px; pointer-events:none; z-index:1;
+      background:
+        radial-gradient(600px 140px at 50% 120%, rgba(244,162,97,.22), transparent 70%),
+        linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,.6));
+      mask:
+        linear-gradient(black, black) center bottom / 50% 60% no-repeat,
+        linear-gradient(black, black);
+      opacity:.85;
+    }
+  </style>
 </head>
 <body>
-  <h1>Item Forge</h1>
+  <div class="lava" aria-hidden="true"></div>
 
-  <section>
-    <h2>Create or Update Item</h2>
-    <form id="item-form">
-      <label>ID <input name="item_id" required></label><br>
-      <label>Version <input name="item_version" required></label><br>
-      <label>Name <input name="name" required></label><br>
-      <label>Type <input name="type" required></label><br>
-      <label>Rarity <input name="rarity" required></label><br>
-      <label>Stack Size <input name="stack_size" type="number" value="1" required></label><br>
-      <label>Base Stats (JSON) <textarea name="base_stats">{}</textarea></label><br>
-      <button type="submit">Save Item</button>
-    </form>
-    <pre id="item-result"></pre>
-  </section>
-
-  <section>
-    <h2>Mint Item Instance</h2>
-    <form id="instance-form">
-      <label>Item ID <input name="item_id" required></label><br>
-      <label>Item Version <input name="item_version" required></label><br>
-      <label>Quantity <input name="quantity" type="number" value="1" required></label><br>
-      <button type="submit">Create Instance</button>
-    </form>
-    <pre id="instance-result"></pre>
-  </section>
-
-  <section>
-    <h2>Grant to Character Inventory</h2>
-    <form id="grant-form">
-      <label>Character ID <input id="grant-character-id" required></label><br>
-      <label>Slot Index <input name="slot_index" type="number" value="0" required></label><br>
-      <label>Item ID <input name="item_id" required></label><br>
-      <label>Instance ID <input name="instance_id" required></label><br>
-      <label>Quantity <input name="qty" type="number" value="1" required></label><br>
-      <label>Equipped <input name="equipped" type="checkbox"></label><br>
-      <button type="submit">Grant</button>
-    </form>
-    <pre id="grant-result"></pre>
-  </section>
-
-<script>
-  document.getElementById('item-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const form = e.target;
-    const data = {
-      item_id: form.item_id.value,
-      item_version: form.item_version.value,
-      name: form.name.value,
-      type: form.type.value,
-      rarity: form.rarity.value,
-      stack_size: parseInt(form.stack_size.value, 10) || 1,
-      base_stats: JSON.parse(form.base_stats.value || '{}')
-    };
-    const res = await fetch('/api/items', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    document.getElementById('item-result').textContent = JSON.stringify(await res.json(), null, 2);
-  });
-
-  document.getElementById('instance-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const form = e.target;
-    const data = {
-      item_id: form.item_id.value,
-      item_version: form.item_version.value,
-      quantity: parseInt(form.quantity.value, 10) || 1
-    };
-    const res = await fetch('/api/item_instances', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    document.getElementById('instance-result').textContent = JSON.stringify(await res.json(), null, 2);
-  });
-
-  document.getElementById('grant-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const form = e.target;
-    const characterId = document.getElementById('grant-character-id').value;
-    const data = {
-      slot_index: parseInt(form.slot_index.value, 10) || 0,
-      item_id: form.item_id.value,
-      instance_id: form.instance_id.value,
-      qty: parseInt(form.qty.value, 10) || 1,
-      equipped: form.equipped.checked
-    };
-    const res = await fetch(`/api/characters/${characterId}/inventory`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    document.getElementById('grant-result').textContent = JSON.stringify(await res.json(), null, 2);
-  });
-
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Shardbound — Forge</title>
-<style>
-  :root { --bg:#0f1220; --panel:#171b2f; --ink:#e7ecff; --muted:#9aa4cc; --accent:#6ea8fe; --ok:#37c776; --warn:#ffcc66; --bad:#ff6b6b; }
-  * { box-sizing: border-box; }
-  body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-         color:var(--ink); background: radial-gradient(1200px 600px at 20% -10%, #1e2442, #0f1220);}
-  header { padding: 16px 20px; border-bottom: 1px solid #222743; display:flex; gap:16px; align-items:center; }
-  header h1 { margin:0; font-size: 20px; letter-spacing: 0.5px; }
-  main { display:grid; grid-template-columns: 420px 1fr; gap:18px; padding:18px; }
-  .card { background: linear-gradient(180deg, #1a1f38, #12162a); border:1px solid #23284a; border-radius:16px; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
-  .card h2 { margin:0 0 12px; font-size:16px; color:#c8d1ff; letter-spacing: .3px; }
-  .pane { padding:16px; }
-  .grid { display:grid; gap:10px; }
-  .cols-2 { grid-template-columns: 1fr 1fr; }
-  label { font-size: 12px; color: var(--muted); }
-  input[type="text"], input[type="number"], select, textarea {
-    width:100%; background:#0e1226; color:var(--ink); border:1px solid #2a315a; border-radius:10px; padding:10px 12px;
-  }
-  textarea { min-height: 110px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
-  .row { display:flex; gap:10px; align-items:center; }
-  .row > * { flex:1; }
-  .hint { font-size:12px; color:var(--muted); }
-  .pill { display:inline-flex; gap:8px; align-items:center; padding:4px 8px; background:#0e1226; border:1px solid #2a315a; border-radius:999px; font-size:12px; color:#cdd6ff;}
-  .actions { display:flex; gap:10px; flex-wrap:wrap; }
-  button { cursor:pointer; border:1px solid #2a315a; background:#0f1530; color:#e7ecff; padding:10px 12px; border-radius:10px; font-weight:600; }
-  button.primary { background: linear-gradient(180deg, #497bff, #2a57f4); border-color:#3a5cf8; }
-  button.ok { background: linear-gradient(180deg, #30b26a, #249e5a); border-color:#2aa061; }
-  button.warn { background: linear-gradient(180deg, #f0b64b, #e19a2a); border-color:#e0a43a; color:#271a00; }
-  button.ghost { background:#0e1226; }
-  .status { padding:12px; border-top:1px solid #23284a; display:flex; gap:10px; align-items:flex-start; }
-  .status.ok { background: rgba(55, 199, 118, .08); border-color:#2a5b45; }
-  .status.bad { background: rgba(255, 107, 107, .08); border-color:#5b2a2a; }
-  .status pre { margin:0; white-space:pre-wrap; word-break:break-word; font-size:12px; color:#dbe3ff; }
-  .preview { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
-  .thumb { background:#0e1226; border:1px solid #2a315a; border-radius:12px; min-height:160px; display:flex; align-items:center; justify-content:center; overflow:hidden; }
-  .thumb img { max-width:100%; max-height:160px; image-rendering: pixelated; }
-  .kbd { font-size: 11px; padding:2px 6px; border:1px solid #2a315a; border-radius:6px; background:#0e1226; color:#cbd5ff; }
-  .help { font-size:12px; color:#b9c3ff; line-height:1.45; }
-  .muted { color:var(--muted); }
-</style>
-</head>
-<body>
-<header>
-  <h1>⚒️ Shardbound Forge</h1>
-  <span class="pill">Creates Items ➝ Mints Instances ➝ Adds to Inventory</span>
-</header>
-
-<main>
-  <!-- Left: Item form -->
-  <section class="card">
-    <div class="pane grid">
-      <h2>Item Blueprint</h2>
-
-      <div class="grid cols-2">
-        <div>
-          <label>Item ID</label>
-          <input id="item_id" type="text" placeholder="itm_longsword" />
-        </div>
-        <div>
-          <label>Version</label>
-          <input id="item_version" type="text" value="1.0" />
-        </div>
-      </div>
-
-      <div class="grid cols-2">
-        <div>
-          <label>Name</label>
-          <input id="name" type="text" placeholder="Iron Longsword" />
-        </div>
-        <div>
-          <label>Type</label>
-          <select id="type">
-            <option value="weapon">weapon</option>
-            <option value="armor">armor</option>
-            <option value="consumable">consumable</option>
-            <option value="resource">resource</option>
-            <option value="tool">tool</option>
-            <option value="quest">quest</option>
-            <option value="key">key</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="grid cols-2">
-        <div>
-          <label>Rarity</label>
-          <select id="rarity">
-            <option>common</option><option>uncommon</option><option>rare</option>
-            <option>epic</option><option>legendary</option><option>mythic</option>
-          </select>
-        </div>
-        <div>
-          <label>Stack Size</label>
-          <input id="stack_size" type="number" min="1" value="1" />
-        </div>
-      </div>
-
+  <header>
+    <div class="brand">
+      <div class="hammer"></div>
       <div>
-        <label>Icon URL / Path (stored at <span class="kbd">base_stats.icon</span>)</label>
-        <input id="icon_url" type="text" placeholder="/static/assets/items/iron_longsword.png" />
-        <div class="hint">Use a path that your game can resolve. This is saved inside <code>base_stats</code> so no schema change needed. :contentReference[oaicite:4]{index=4}</div>
+        <div style="font-size:15px">Nidavellir Forge</div>
+        <div style="font-size:11px; color:var(--muted)">Temper steel, bind runes, mint instances</div>
+      </div>
+    </div>
+    <span class="tag">/api/items • /api/item_instances • /api/characters/&lt;id&gt;/inventory</span>
+  </header>
+
+  <main>
+    <!-- LEFT: Blueprint + Actions -->
+    <section class="panel">
+      <div class="hd">
+        <h2>Item Blueprint</h2>
+        <div class="runes">ᚾᛁᛞᚨᚠ ᚠᛟᚱᚷᛖ</div>
       </div>
 
-      <div class="grid cols-2">
-        <div>
-          <label>JSON Helper (auto-fills <code>base_stats</code>)</label>
-          <div class="row">
-            <select id="helper">
-              <option value="">(none)</option>
-              <option value="weapon:melee">Weapon — Melee</option>
-              <option value="weapon:ranged">Weapon — Ranged</option>
-              <option value="armor:shield">Armor — Shield</option>
-              <option value="consumable:heal">Consumable — Heal</option>
-              <option value="resource:ore">Resource — Ore</option>
+      <div class="pane">
+        <div class="grid cols-2">
+          <div>
+            <label>Item ID</label>
+            <input id="item_id" type="text" placeholder="itm_longsword">
+          </div>
+          <div>
+            <label>Version</label>
+            <input id="item_version" type="text" value="1.0">
+          </div>
+        </div>
+
+        <div class="grid cols-2">
+          <div>
+            <label>Name</label>
+            <input id="name" type="text" placeholder="Iron Longsword">
+          </div>
+          <div>
+            <label>Type</label>
+            <select id="type">
+              <option value="weapon">weapon</option>
+              <option value="armor">armor</option>
+              <option value="consumable">consumable</option>
+              <option value="resource">resource</option>
+              <option value="tool">tool</option>
+              <option value="quest">quest</option>
+              <option value="key">key</option>
             </select>
-            <button class="ghost" id="apply_helper">Apply</button>
           </div>
-          <div class="hint">Pick a template, then tweak the JSON on the right.</div>
         </div>
-        <div>
-          <label>base_stats (JSON)</label>
-          <textarea id="base_stats">{}</textarea>
-          <div class="hint">Must be valid JSON. We’ll store your icon here as <code>{"icon":"..."}</code>. Uses JSON/JSONB depending on DB. :contentReference[oaicite:5]{index=5}</div>
-        </div>
-      </div>
 
-      <div class="preview">
-        <div>
-          <label>Icon Preview</label>
-          <div class="thumb"><img id="icon_preview" alt="icon preview"></div>
+        <div class="grid cols-3">
+          <div>
+            <label>Rarity</label>
+            <select id="rarity">
+              <option>common</option>
+              <option>uncommon</option>
+              <option>rare</option>
+              <option>epic</option>
+              <option>legendary</option>
+              <option>mythic</option>
+            </select>
+          </div>
+          <div>
+            <label>Stack Size</label>
+            <input id="stack_size" type="number" min="1" value="1">
+          </div>
+          <div>
+            <label>Icon URL / Path</label>
+            <input id="icon_url" type="text" placeholder="/static/assets/items/iron_longsword.png">
+          </div>
         </div>
-        <div>
-          <label>Payload Preview</label>
+
+        <div class="grid cols-2">
+          <div>
+            <label>JSON Helper</label>
+            <div class="grid cols-2">
+              <select id="helper">
+                <option value="">(none)</option>
+                <option value="weapon:melee">Weapon — Melee</option>
+                <option value="weapon:ranged">Weapon — Ranged</option>
+                <option value="armor:shield">Armor — Shield</option>
+                <option value="consumable:heal">Consumable — Heal</option>
+                <option value="resource:ore">Resource — Ore</option>
+              </select>
+              <button class="ghost" id="apply_helper" type="button">Apply</button>
+            </div>
+            <div style="font-size:12px; color:var(--muted)">Helper fills common fields in <code>base_stats</code>; you can edit below.</div>
+          </div>
+          <div>
+            <label>base_stats (JSON)</label>
+            <textarea id="base_stats">{}</textarea>
+          </div>
+        </div>
+
+        <div class="preview-wrap">
+          <div class="thumb item-card" id="item_card">
+            <div class="rarity-ring" id="rarity_ring"></div>
+            <div class="slot"><img id="icon_preview" alt="icon preview"></div>
+            <div class="meta">
+              <div class="title" id="card_title">—</div>
+              <div class="subtitle" id="card_sub">type: — • rarity: —</div>
+              <div class="chip" id="json_badge">JSON: unknown</div>
+            </div>
+          </div>
+
           <div class="thumb" style="padding:10px; align-items:stretch;">
-            <pre id="payload_preview" style="margin:0; font-size:12px;"></pre>
+            <pre id="payload_preview" style="margin:0; font-size:12px; white-space:pre-wrap;"></pre>
           </div>
         </div>
       </div>
-    </div>
 
-    <div class="pane actions">
-      <button class="primary" id="create_item">Create Item</button>
-      <button id="mint_instance">Mint Instance</button>
-      <button class="ok" id="create_and_grant">Create + Mint + Grant to Character</button>
-      <button class="warn" id="reset_form" type="button">Reset</button>
-    </div>
-
-    <div id="status" class="status" style="display:none;"><pre></pre></div>
-  </section>
-
-  <!-- Right: Inventory grant -->
-  <section class="card">
-    <div class="pane grid">
-      <h2>Grant to Character Inventory</h2>
-
-      <div class="grid cols-2">
-        <div>
-          <label>Character ID</label>
-          <input id="character_id" type="text" placeholder="UUID of character" />
-          <div class="hint">You can find this in your DB or a dev endpoint. (Grant uses your inventory schema.) :contentReference[oaicite:6]{index=6}</div>
-        </div>
-        <div>
-          <label>Slot Index</label>
-          <input id="slot_index" type="number" min="0" value="0" />
-        </div>
+      <div class="pane actions">
+        <button class="primary" id="create_item" type="button">Forge Item (Create/Update)</button>
+        <button id="mint_instance" type="button">Quench &amp; Mint Instance</button>
+        <button class="ok" id="create_and_grant" type="button">Forge → Mint → Grant</button>
+        <button class="warn" id="reset_form" type="button">Reset</button>
       </div>
 
-      <div class="grid cols-2">
-        <div>
-          <label>Instance Quantity (stackable)</label>
-          <input id="instance_qty" type="number" min="1" value="1" />
+      <div id="status" class="status"><pre style="margin:0; white-space:pre-wrap;"></pre></div>
+    </section>
+
+    <!-- RIGHT: Grant -->
+    <section class="panel">
+      <div class="hd">
+        <h2>Grant to Character Inventory</h2>
+        <div class="runes">ᚱᚢᚾᛖ ᛗᛁᚾᛏ</div>
+      </div>
+      <div class="pane">
+        <div class="grid cols-3">
+          <div>
+            <label>Character ID</label>
+            <input id="character_id" type="text" placeholder="UUID of character">
+          </div>
+          <div>
+            <label>Slot Index</label>
+            <input id="slot_index" type="number" min="0" value="0">
+          </div>
+          <div>
+            <label>Instance Quantity</label>
+            <input id="instance_qty" type="number" min="1" value="1">
+          </div>
         </div>
-        <div>
-          <label>Equip Now</label>
-          <select id="equip_now">
-            <option value="false">false</option>
-            <option value="true">true</option>
-          </select>
+
+        <div class="grid cols-2">
+          <div>
+            <label>Equip Now</label>
+            <select id="equip_now">
+              <option value="false">false</option>
+              <option value="true">true</option>
+            </select>
+          </div>
+          <div>
+            <label>Quick Presets</label>
+            <div class="actions">
+              <button class="ghost" type="button" data-preset="weapon:melee">Melee</button>
+              <button class="ghost" type="button" data-preset="armor:shield">Shield</button>
+              <button class="ghost" type="button" data-preset="consumable:heal">Potion</button>
+              <button class="ghost" type="button" data-preset="resource:ore">Ore</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="btn_copy_curl" type="button" class="ghost">Copy cURL for Forge → Mint → Grant</button>
+          <button id="btn_save_draft" type="button" class="ghost">Save Draft</button>
+          <button id="btn_load_draft" type="button" class="ghost">Load Draft</button>
+          <button id="btn_clear_draft" type="button" class="ghost">Clear Draft</button>
+        </div>
+
+        <div id="grant_hint" style="font-size:12px; color:var(--muted);">
+          Tip: image mapping is stored in <code>base_stats.icon</code> for the item; the game renderer should resolve that path.
         </div>
       </div>
+    </section>
+  </main>
 
-      <div class="help">
-        <p class="muted">Granting creates an <em>ItemInstance</em> first, then inserts a row into <em>CharacterInventory</em> with <code>(character_id, slot_index)</code> uniqueness enforced by your model. :contentReference[oaicite:7]{index=7}</p>
-        <p>If you already have an instance you want to grant, set “Mint Instance” off in code (see the JS below) and provide that instance ID instead.</p>
-      </div>
-    </div>
-  </section>
-</main>
+  <div class="footer" aria-hidden="true"></div>
 
-<script>
-/* ---------- CONFIG: adjust to your API routes ---------- */
-const API = {
-  createItem: (payload) => fetch('/api/items', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)}),
-  mintInstance: (payload) => fetch('/api/item_instances', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)}),
-  grantInventory: (character_id, payload) => fetch(`/api/characters/${encodeURIComponent(character_id)}/inventory`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)}),
-};
-
-/* ---------- DOM refs ---------- */
-const $ = (id) => document.getElementById(id);
-const els = {
-  item_id: $('item_id'),
-  item_version: $('item_version'),
-  name: $('name'),
-  type: $('type'),
-  rarity: $('rarity'),
-  stack_size: $('stack_size'),
-  icon_url: $('icon_url'),
-  helper: $('helper'),
-  apply_helper: $('apply_helper'),
-  base_stats: $('base_stats'),
-  icon_preview: $('icon_preview'),
-  payload_preview: $('payload_preview'),
-  create_item: $('create_item'),
-  mint_instance: $('mint_instance'),
-  create_and_grant: $('create_and_grant'),
-  reset_form: $('reset_form'),
-  status: $('status'),
-  status_pre: $('status').querySelector('pre'),
-  character_id: $('character_id'),
-  slot_index: $('slot_index'),
-  instance_qty: $('instance_qty'),
-  equip_now: $('equip_now'),
-};
-
-/* ---------- helpers ---------- */
-function showStatus(msg, kind='ok') {
-  els.status.style.display = 'flex';
-  els.status.className = 'status ' + (kind === 'ok' ? 'ok' : 'bad');
-  els.status_pre.textContent = msg;
-}
-function clearStatus() { els.status.style.display='none'; }
-
-function parseJSONSafe(s) {
-  try { return [JSON.parse(s || '{}'), null]; }
-  catch (e) { return [null, e]; }
-}
-
-function buildItemPayload() {
-  const [stats, err] = parseJSONSafe(els.base_stats.value);
-  if (err) throw new Error('base_stats is not valid JSON: ' + err.message);
-  // Ensure icon is included if provided
-  const icon = (els.icon_url.value || '').trim();
-  if (icon) stats.icon = icon;
-
-  const payload = {
-    item_id: (els.item_id.value || '').trim(),
-    item_version: (els.item_version.value || '1.0').trim(),
-    name: (els.name.value || '').trim(),
-    type: els.type.value,
-    rarity: els.rarity.value,
-    stack_size: Math.max(1, Number(els.stack_size.value || 1)),
-    base_stats: stats,
-  };
-  // simple validations
-  ['item_id','item_version','name'].forEach(k=>{
-    if(!payload[k]) throw new Error(k + ' is required');
-  });
-  return payload;
-}
-
-function updatePreview() {
-  try {
-    const payload = buildItemPayload();
-    els.payload_preview.textContent = JSON.stringify(payload, null, 2);
-  } catch (e) {
-    els.payload_preview.textContent = '⚠ ' + e.message;
-  }
-  const url = (els.icon_url.value || '').trim();
-  els.icon_preview.src = url || '';
-}
-
-/* ---------- JSON helpers (quick templates) ---------- */
-const TEMPLATES = {
-  'weapon:melee': () => ({ atk: 7, durability: 50, speed: 1.0 }),
-  'weapon:ranged': () => ({ atk: 5, durability: 40, speed: 1.2, range: 6 }),
-  'armor:shield': () => ({ def: 3, durability: 40, block: 0.1 }),
-  'consumable:heal': () => ({ heal: 20, cooldown_s: 5 }),
-  'resource:ore': () => ({ grade: 'poor', mass_g: 500 }),
-};
-els.apply_helper.addEventListener('click', (e)=>{
-  e.preventDefault();
-  const key = els.helper.value;
-  if (!key) return;
-  const base = TEMPLATES[key] ? TEMPLATES[key]() : {};
-  // merge with existing JSON (if valid), but helper wins for its keys
-  const [current, err] = parseJSONSafe(els.base_stats.value);
-  const merged = Object.assign({}, current || {}, base);
-  els.base_stats.value = JSON.stringify(merged, null, 2);
-  updatePreview();
-});
-
-/* ---------- events ---------- */
-['input','change'].forEach(ev=>{
-  [els.item_id, els.item_version, els.name, els.type, els.rarity, els.stack_size, els.icon_url, els.base_stats]
-    .forEach(el=> el.addEventListener(ev, updatePreview));
-});
-updatePreview();
-
-els.reset_form.addEventListener('click', ()=>{
-  document.querySelectorAll('input[type="text"]').forEach(i=>i.value='');
-  els.stack_size.value = 1;
-  els.base_stats.value = '{}';
-  updatePreview();
-  clearStatus();
-});
-
-/* ---------- actions ---------- */
-els.create_item.addEventListener('click', async ()=>{
-  try {
-    const payload = buildItemPayload();
-    const res = await API.createItem(payload);
-    const text = await res.text();
-    if (!res.ok) throw new Error(text || res.statusText);
-    showStatus('✅ Item created.\n\n' + text, 'ok');
-  } catch (e) {
-    showStatus('❌ Create item failed: ' + e.message, 'bad');
-  }
-});
-
-els.mint_instance.addEventListener('click', async ()=>{
-  try {
-    const payload = buildItemPayload();
-    // Optionally create item first (idempotent server-side recommended).
-    await API.createItem(payload);
-
-    // Mint instance
-    const qty = Math.max(1, Number(els.instance_qty.value || 1));
-    const instBody = {
-      item_id: payload.item_id,
-      item_version: payload.item_version,
-      quantity: qty, // your model enforces qty>=1 on instance. :contentReference[oaicite:8]{index=8}
+  <script>
+    /* ---------- API ---------- */
+    const API = {
+      createItem: (payload) =>
+        fetch('/api/items', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) }),
+      mintInstance: (payload) =>
+        fetch('/api/item_instances', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) }),
+      grantInventory: (character_id, payload) =>
+        fetch('/api/characters/'+encodeURIComponent(character_id)+'/inventory', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) }),
     };
-    const res = await API.mintInstance(instBody);
-    const json = await res.json().catch(()=>null);
-    if (!res.ok) throw new Error(JSON.stringify(json || await res.text()));
-    const instance_id = json.instance_id || '(see server response)';
-    showStatus('✅ Instance minted: ' + instance_id + '\n' + JSON.stringify(json, null, 2), 'ok');
-  } catch (e) {
-    showStatus('❌ Mint failed: ' + e.message, 'bad');
-  }
-});
 
-els.create_and_grant.addEventListener('click', async ()=>{
-  try {
-    const payload = buildItemPayload();
-    const character_id = (els.character_id.value || '').trim();
-    const slot_index = Math.max(0, Number(els.slot_index.value || 0));
-    const qty = Math.max(1, Number(els.instance_qty.value || 1));
-    const equipped = (els.equip_now.value === 'true');
-
-    if (!character_id) throw new Error('character_id is required to grant');
-
-    // 1) create (idempotent)
-    await API.createItem(payload);
-
-    // 2) mint instance
-    const instBody = { item_id: payload.item_id, item_version: payload.item_version, quantity: qty };
-    const instRes = await API.mintInstance(instBody);
-    const instJson = await instRes.json().catch(()=>null);
-    if (!instRes.ok) throw new Error('mint failed: ' + JSON.stringify(instJson || await instRes.text()));
-    const instance_id = instJson.instance_id;
-
-    // 3) grant to inventory
-    const grantBody = {
-      slot_index,
-      item_id: payload.item_id,
-      instance_id,
-      qty,
-      equipped,
+    /* ---------- DOM ---------- */
+    const $ = (id)=>document.getElementById(id);
+    const els = {
+      item_id:$('item_id'), item_version:$('item_version'), name:$('name'), type:$('type'),
+      rarity:$('rarity'), stack_size:$('stack_size'), icon_url:$('icon_url'),
+      helper:$('helper'), base_stats:$('base_stats'),
+      icon_preview:$('icon_preview'), payload_preview:$('payload_preview'),
+      status:$('status'),
+      character_id:$('character_id'), slot_index:$('slot_index'),
+      instance_qty:$('instance_qty'), equip_now:$('equip_now'),
+      rarity_ring:$('rarity_ring'), card_title:$('card_title'), card_sub:$('card_sub'),
+      json_badge:$('json_badge'),
+      btn_copy_curl:$('btn_copy_curl'), btn_save_draft:$('btn_save_draft'),
+      btn_load_draft:$('btn_load_draft'), btn_clear_draft:$('btn_clear_draft')
     };
-    // server should fill acquired_at; unique (character_id, slot_index) is enforced in DB. :contentReference[oaicite:9]{index=9}
-    const grRes = await API.grantInventory(character_id, grantBody);
-    const grJson = await grRes.json().catch(()=>null);
-    if (!grRes.ok) throw new Error('grant failed: ' + JSON.stringify(grJson || await grRes.text()));
 
-    showStatus(
-      '✅ Created, minted, and granted.\n\n' +
-      'instance_id: ' + instance_id + '\n' +
-      JSON.stringify({ grant: grJson }, null, 2),
-      'ok'
-    );
-  } catch (e) {
-    showStatus('❌ Create+Mint+Grant failed: ' + e.message, 'bad');
-  }
-});
+    /* ---------- Helpers ---------- */
+    const TEMPLATES = {
+      'weapon:melee': () => ({ atk:7, durability:50, speed:1.0 }),
+      'weapon:ranged': () => ({ atk:5, durability:40, speed:1.2, range:6 }),
+      'armor:shield': () => ({ def:3, durability:40, block:0.1 }),
+      'consumable:heal': () => ({ heal:20, cooldown_s:5 }),
+      'resource:ore': () => ({ grade:'poor', mass_g:500 }),
+    };
 
-</script>
+    function parseJSONSafe(s){
+      try{ return [JSON.parse(s || '{}'), null] }
+      catch(e){ return [null, e] }
+    }
+
+    function buildItemPayload(){
+      const [stats, err] = parseJSONSafe(els.base_stats.value);
+      if(err) throw new Error('base_stats is invalid JSON: '+err.message);
+      const icon = (els.icon_url.value||'').trim(); if(icon) stats.icon = icon;
+
+      const payload = {
+        item_id: (els.item_id.value||'').trim(),
+        item_version: (els.item_version.value||'1.0').trim(),
+        name: (els.name.value||'').trim(),
+        type: els.type.value,
+        rarity: els.rarity.value,
+        stack_size: Math.max(1, Number(els.stack_size.value||1)),
+        base_stats: stats
+      };
+      ['item_id','item_version','name'].forEach(k=>{ if(!payload[k]) throw new Error(k+' is required'); });
+      return payload;
+    }
+
+    function rarityGradient(r){
+      switch(r){
+        case 'uncommon': return 'linear-gradient(90deg,#88ffb0,#7bf7ff)';
+        case 'rare': return 'linear-gradient(90deg,#7bf7ff,#7b9bff)';
+        case 'epic': return 'linear-gradient(90deg,#a97bff,#ff7bf2)';
+        case 'legendary': return 'linear-gradient(90deg,#ffd166,#ff9a5c)';
+        case 'mythic': return 'linear-gradient(90deg,#ff9a5c,#ff6b6b)';
+        default: return 'linear-gradient(90deg,#b3b9ff,#4dd6ff)';
+      }
+    }
+
+    function updateCard(){
+      let valid = true;
+      let json = {};
+      try{
+        json = buildItemPayload();
+      }catch(e){
+        valid = false;
+      }
+      const [stats, err] = parseJSONSafe(els.base_stats.value);
+      const icon = (els.icon_url.value||'').trim();
+      $('icon_preview').src = icon || '';
+
+      els.card_title.textContent = (els.name.value || '—');
+      els.card_sub.textContent = `type: ${els.type.value || '—'} • rarity: ${els.rarity.value || '—'}`;
+      els.rarity_ring.style.background = rarityGradient(els.rarity.value);
+
+      els.json_badge.textContent = err ? 'JSON: invalid' : 'JSON: valid';
+      els.json_badge.className = 'chip '+(err?'json-bad':'json-valid');
+
+      try{
+        const payload = buildItemPayload();
+        els.payload_preview.textContent = JSON.stringify(payload, null, 2);
+      }catch(e){
+        els.payload_preview.textContent = '⚠ '+e.message;
+      }
+    }
+
+    /* quick helpers */
+    $('apply_helper').addEventListener('click', ()=>{
+      const key = els.helper.value; if(!key) return;
+      const base = TEMPLATES[key] ? TEMPLATES[key]() : {};
+      const [cur] = parseJSONSafe(els.base_stats.value);
+      const merged = Object.assign({}, cur||{}, base);
+      els.base_stats.value = JSON.stringify(merged, null, 2);
+      updateCard();
+    });
+
+    document.querySelectorAll('button[data-preset]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const key = btn.getAttribute('data-preset');
+        $('helper').value = key;
+        $('apply_helper').click();
+      });
+    });
+
+    ['input','change'].forEach(ev=>{
+      [els.item_id, els.item_version, els.name, els.type, els.rarity, els.stack_size, els.icon_url, els.base_stats]
+        .forEach(el=> el.addEventListener(ev, updateCard));
+    });
+    updateCard();
+
+    function showStatus(msg, kind='ok'){
+      els.status.className = 'status show '+(kind==='ok'?'ok':'bad');
+      els.status.querySelector('pre').textContent = msg;
+    }
+    function clearStatus(){ els.status.className='status'; els.status.querySelector('pre').textContent='' }
+
+    /* ---------- Actions ---------- */
+    $('reset_form').addEventListener('click', ()=>{
+      document.querySelectorAll('input[type="text"]').forEach(i=>i.value='');
+      els.stack_size.value=1; els.base_stats.value='{}'; updateCard(); clearStatus();
+    });
+
+    $('create_item').addEventListener('click', async ()=>{
+      try{
+        const payload = buildItemPayload();
+        const res = await API.createItem(payload);
+        const txt = await res.text();
+        if(!res.ok) throw new Error(txt || res.statusText);
+        showStatus('✅ Item forged.\n\n'+txt, 'ok');
+      }catch(e){ showStatus('❌ Forge failed: '+e.message, 'bad'); }
+    });
+
+    $('mint_instance').addEventListener('click', async ()=>{
+      try{
+        const payload = buildItemPayload();
+        await API.createItem(payload);
+        const qty = Math.max(1, Number(els.instance_qty.value||1));
+        const instRes = await API.mintInstance({ item_id:payload.item_id, item_version:payload.item_version, quantity:qty });
+        const j = await instRes.json().catch(()=>null);
+        if(!instRes.ok) throw new Error(JSON.stringify(j||await instRes.text()));
+        showStatus('✅ Instance quenched: '+(j.instance_id||'(see response)')+'\n'+JSON.stringify(j,null,2), 'ok');
+      }catch(e){ showStatus('❌ Mint failed: '+e.message, 'bad'); }
+    });
+
+    $('create_and_grant').addEventListener('click', async ()=>{
+      try{
+        const payload = buildItemPayload();
+        const character_id = (els.character_id.value||'').trim();
+        if(!character_id) throw new Error('character_id is required to grant');
+        const slot_index = Math.max(0, Number(els.slot_index.value||0));
+        const qty = Math.max(1, Number(els.instance_qty.value||1));
+        const equipped = (els.equip_now.value === 'true');
+
+        await API.createItem(payload);
+        const instRes = await API.mintInstance({ item_id:payload.item_id, item_version:payload.item_version, quantity:qty });
+        const instJson = await instRes.json().catch(()=>null);
+        if(!instRes.ok) throw new Error('mint failed: '+JSON.stringify(instJson||await instRes.text()));
+
+        const grRes = await API.grantInventory(character_id, { slot_index, item_id:payload.item_id, instance_id:instJson.instance_id, qty, equipped });
+        const grJson = await grRes.json().catch(()=>null);
+        if(!grRes.ok) throw new Error('grant failed: '+JSON.stringify(grJson||await grRes.text()));
+
+        showStatus('✅ Forged → Minted → Granted.\ninstance_id: '+instJson.instance_id+'\n'+JSON.stringify({grant:grJson}, null, 2), 'ok');
+      }catch(e){ showStatus('❌ Create+Mint+Grant failed: '+e.message, 'bad'); }
+    });
+
+    /* ---------- Quality of life ---------- */
+    function buildCurl(){
+      try{
+        const payload = buildItemPayload();
+        const qty = Math.max(1, Number(els.instance_qty.value||1));
+        const cid = (els.character_id.value||'').trim();
+        const slot = Math.max(0, Number(els.slot_index.value||0));
+        const eq = (els.equip_now.value==='true');
+
+        const c1 = `curl -s -X POST http://localhost:5000/api/items -H "Content-Type: application/json" -d '${JSON.stringify(payload)}'`;
+        const c2 = `curl -s -X POST http://localhost:5000/api/item_instances -H "Content-Type: application/json" -d '${JSON.stringify({item_id:payload.item_id,item_version:payload.item_version,quantity:qty})}'`;
+        const c3 = `curl -s -X POST http://localhost:5000/api/characters/${cid}/inventory -H "Content-Type: application/json" -d '${JSON.stringify({slot_index:slot,item_id:payload.item_id,instance_id:"$INSTANCE_ID",qty:qty,equipped:eq})}'`;
+        return [c1, c2, c3].join('\n# INSTANCE_ID is value from previous response\n');
+      }catch(e){ return '# invalid JSON/payload – cannot build cURL' }
+    }
+
+    els.btn_copy_curl.addEventListener('click', async ()=>{
+      const text = buildCurl();
+      try{ await navigator.clipboard.writeText(text); showStatus('📋 Copied cURL sequence to clipboard.', 'ok'); }
+      catch(_){ showStatus('❌ Could not copy to clipboard.', 'bad'); }
+    });
+
+    const DRAFT_KEY = 'forge_draft_v1';
+    function readForm(){
+      return {
+        item_id:els.item_id.value, item_version:els.item_version.value, name:els.name.value,
+        type:els.type.value, rarity:els.rarity.value, stack_size:els.stack_size.value,
+        icon_url:els.icon_url.value, base_stats:els.base_stats.value,
+        character_id:els.character_id.value, slot_index:els.slot_index.value,
+        instance_qty:els.instance_qty.value, equip_now:els.equip_now.value
+      };
+    }
+    function writeForm(d){
+      for(const [k,v] of Object.entries(d||{})){ if($(k)) $(k).value = v }
+      updateCard();
+    }
+    els.btn_save_draft.addEventListener('click', ()=>{ localStorage.setItem(DRAFT_KEY, JSON.stringify(readForm())); showStatus('💾 Draft saved locally.', 'ok') });
+    els.btn_load_draft.addEventListener('click', ()=>{ const d=localStorage.getItem(DRAFT_KEY); if(d){ writeForm(JSON.parse(d)) } });
+    els.btn_clear_draft.addEventListener('click', ()=>{ localStorage.removeItem(DRAFT_KEY); showStatus('🧹 Draft cleared.', 'ok') });
+
+    /* Init load a previous draft if any */
+    (function(){ const d=localStorage.getItem(DRAFT_KEY); if(d){ writeForm(JSON.parse(d)) } })();
+  </script>
 </body>
 </html>

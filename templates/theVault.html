@@ -1,0 +1,413 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Mímir’s Vault — Data Archive</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { --bg:#0b0f18; --ink:#e7ebff; --muted:#96a0c4; --panel:#121933; --line:#25305b; --accent:#77c9ff; --glow:#6ee7ff; }
+    *{box-sizing:border-box} body{margin:0;background:radial-gradient(1200px 700px at 70% 110%,rgba(109,196,255,.15),transparent 60%), var(--bg); color:var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;}
+    header{padding:14px 18px; border-bottom:1px solid #1d2547; display:flex; align-items:center; gap:14px; background:linear-gradient(180deg,#111735,#0b1026);}
+    .sigil{width:34px;height:34px;border-radius:8px;background:radial-gradient(circle at 30% 30%,#bfe6ff 6%,#7dc9ff 10%,transparent 11%),linear-gradient(135deg,#2b335a,#12162a);box-shadow:inset 0 0 0 1px #3a467d, 0 0 30px rgba(111,231,255,.15);}
+    h1{font-size:16px;margin:0} .sub{color:var(--muted);font-size:12px}
+    main{padding:16px; display:grid; grid-template-columns: 360px 1fr; gap:16px}
+    .panel{border:1px solid var(--line); border-radius:16px; background:linear-gradient(180deg,#151b3a,#0c122b); box-shadow:0 14px 40px rgba(0,0,0,.45); overflow:hidden}
+    .hd{padding:12px 14px; border-bottom:1px solid #1d2547; display:flex; align-items:center; justify-content:space-between}
+    .hd .runes{letter-spacing:2px; color:#6ee7ff; font-size:12px; opacity:.8}
+    .body{padding:12px 14px; display:grid; gap:12px}
+    label{font-size:12px; color:var(--muted)}
+    input,select{width:100%; padding:10px 12px; border-radius:12px; border:1px solid #2a3564; background:#0b0f22; color:#var(--ink); outline:none}
+    input:focus,select:focus{border-color:#3b66ff; box-shadow:0 0 0 3px rgba(59,102,255,.18)}
+    .grid{display:grid; gap:10px}
+    .cols-2{grid-template-columns:1fr 1fr}
+    .cols-3{grid-template-columns:repeat(3,1fr)}
+    button{cursor:pointer; padding:10px 12px; border-radius:12px; border:1px solid #34407a; background:#0d1330; color:#e8ecff; font-weight:700}
+    .primary{background:linear-gradient(180deg,#4b78ff,#2a57f4); border-color:#3a5cf8}
+    table{width:100%; border-collapse:collapse; font-size:13px}
+    th,td{border-bottom:1px solid #1f2750; padding:8px 6px; text-align:left; vertical-align:top}
+    th{color:#b9c2ff; font-weight:700}
+    .muted{color:var(--muted)}
+    .status{white-space:pre-wrap; font-size:12px; color:#cfe2ff; background:#0a1130; border:1px solid #1f2750; border-radius:12px; padding:10px}
+    .tabbar{display:flex; gap:8px; flex-wrap:wrap}
+    .tabbar button{background:#0a0f24}
+    .active{box-shadow:0 0 0 1px #3a5cf8, 0 0 16px rgba(118,178,255,.25)}
+    code{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size:12px}
+    .pager{display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:8px}
+    .pager .info{font-size:12px; color:#b9c2ff}
+    .pager .controls{display:flex; gap:8px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="sigil"></div>
+    <div>
+      <h1>Mímir’s Vault</h1>
+      <div class="sub">Dwarven archives for data lookup — users, characters, items, instances, inventory, recipes, resources.</div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Filters -->
+    <section class="panel">
+      <div class="hd"><div>Runesearch</div><div class="runes">ᛗᛁᛗᛁᚱ · ᚢᚨᛚᛏ</div></div>
+      <div class="body grid">
+        <div class="tabbar">
+          <button id="tab_users" class="active">Users</button>
+          <button id="tab_chars">Characters</button>
+          <button id="tab_items">Items</button>
+          <button id="tab_insts">Instances</button>
+          <button id="tab_inv">Inventory</button>
+          <button id="tab_recipes">Recipes</button>
+          <button id="tab_resources">Resources</button>
+        </div>
+
+        <!-- USERS -->
+        <div id="pane_users">
+          <div class="grid cols-2">
+            <div><label>Email contains</label><input id="u_email" placeholder="nick@..."></div>
+            <div><label>Handle contains</label><input id="u_handle" placeholder="nick"></div>
+          </div>
+          <div><button class="primary" id="btn_users">Search Users</button></div>
+        </div>
+
+        <!-- CHARACTERS -->
+        <div id="pane_chars" style="display:none">
+          <div class="grid cols-2">
+            <div><label>User email</label><input id="c_email" placeholder="owner email (optional)"></div>
+            <div><label>Name contains</label><input id="c_name" placeholder="Aria"></div>
+          </div>
+          <div class="grid cols-3">
+            <div><label>Active?</label>
+              <select id="c_active"><option value="">(any)</option><option value="true">true</option><option value="false">false</option></select>
+            </div>
+            <div><label>User ID</label><input id="c_user_id" placeholder="uuid (optional)"></div>
+            <div></div>
+          </div>
+          <div><button class="primary" id="btn_chars">Search Characters</button></div>
+        </div>
+
+        <!-- ITEMS -->
+        <div id="pane_items" style="display:none">
+          <div class="grid cols-2">
+            <div><label>Item ID</label><input id="i_id" placeholder="itm_"></div>
+            <div><label>Name</label><input id="i_name" placeholder="Sword"></div>
+          </div>
+          <div class="grid cols-2">
+            <div><label>Type</label><input id="i_type" placeholder="weapon/consumable/..."></div>
+            <div><label>Rarity</label><input id="i_rarity" placeholder="common/rare/..."></div>
+          </div>
+          <div><button class="primary" id="btn_items">Search Items</button></div>
+        </div>
+
+        <!-- INSTANCES -->
+        <div id="pane_insts" style="display:none">
+          <div><label>Filter by Item ID</label><input id="inst_item_id" placeholder="itm_..."></div>
+          <div><button class="primary" id="btn_insts">Search Instances</button></div>
+        </div>
+
+        <!-- INVENTORY -->
+        <div id="pane_inv" style="display:none">
+          <div class="grid cols-2">
+            <div><label>Character ID</label><input id="inv_char_id" placeholder="uuid of character"></div>
+            <div><label>Slot ≥</label><input id="inv_slot_min" type="number" value="0"></div>
+          </div>
+          <div><button class="primary" id="btn_inv">Load Inventory</button></div>
+        </div>
+
+        <!-- RECIPES -->
+        <div id="pane_recipes" style="display:none">
+          <div class="grid cols-2">
+            <div><label>Recipe ID</label><input id="r_id" placeholder="rcp_..."></div>
+            <div><label>Name contains</label><input id="r_name" placeholder="Iron Ingot"></div>
+          </div>
+          <div class="grid cols-2">
+            <div><label>Produces Item ID</label><input id="r_out" placeholder="itm_ingot_iron"></div>
+            <div></div>
+          </div>
+          <div><button class="primary" id="btn_recipes">Search Recipes</button></div>
+        </div>
+
+        <!-- RESOURCES -->
+        <div id="pane_resources" style="display:none">
+          <div class="grid cols-2">
+            <div><label>Resource ID</label><input id="rs_id" placeholder="res_..."></div>
+            <div><label>Name contains</label><input id="rs_name" placeholder="Iron Ore"></div>
+          </div>
+          <div class="grid cols-2">
+            <div><label>Type</label><input id="rs_type" placeholder="ore/herb/wood"></div>
+            <div><label>Rarity</label><input id="rs_rarity" placeholder="common/rare"></div>
+          </div>
+          <div><button class="primary" id="btn_resources">Search Resources</button></div>
+        </div>
+
+        <div class="status" id="status"></div>
+      </div>
+    </section>
+
+    <!-- Results -->
+    <section class="panel">
+      <div class="hd"><div>Results</div><div class="runes">ᚱᚨᛗᛁᚾᚷ</div></div>
+      <div class="body">
+        <div id="results"></div>
+        <div id="pager" class="pager"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // ---------- helpers ----------
+    async function fetchJSON(url){
+      const res = await fetch(url, {headers:{'Accept':'application/json'}});
+      const text = await res.text();
+      if(!res.ok){
+        try { const j = JSON.parse(text); throw new Error(j.error || JSON.stringify(j)); }
+        catch { throw new Error(text.replace(/<[^>]+>/g,'').slice(0,300) || res.statusText); }
+      }
+      try { return JSON.parse(text); }
+      catch(e){ throw new Error("Invalid JSON from "+url+": "+(e.message||e)); }
+    }
+    const els = (ids)=>Object.fromEntries(ids.map(id=>[id, document.getElementById(id)]));
+    const Ids = [
+      "tab_users","tab_chars","tab_items","tab_insts","tab_inv","tab_recipes","tab_resources",
+      "pane_users","pane_chars","pane_items","pane_insts","pane_inv","pane_recipes","pane_resources",
+      "u_email","u_handle","btn_users",
+      "c_email","c_name","c_active","c_user_id","btn_chars",
+      "i_id","i_name","i_type","i_rarity","btn_items",
+      "inst_item_id","btn_insts",
+      "inv_char_id","inv_slot_min","btn_inv",
+      "r_id","r_name","r_out","btn_recipes",
+      "rs_id","rs_name","rs_type","rs_rarity","btn_resources",
+      "status","results","pager"
+    ];
+    const E = els(Ids);
+
+    const API = {
+      users: (p)=>fetchJSON(`/api/admin/users?${new URLSearchParams(p)}`),
+      user: (id)=>fetchJSON(`/api/admin/users/${encodeURIComponent(id)}`),
+      characters: (p)=>fetchJSON(`/api/admin/characters?${new URLSearchParams(p)}`),
+      character: (id)=>fetchJSON(`/api/admin/characters/${encodeURIComponent(id)}`),
+      items: (p)=>fetchJSON(`/api/admin/items?${new URLSearchParams(p)}`),
+      instances: (p)=>fetchJSON(`/api/admin/item_instances?${new URLSearchParams(p)}`),
+      inventory: (cid,p)=>fetchJSON(`/api/admin/characters/${encodeURIComponent(cid)}/inventory?${new URLSearchParams(p)}`),
+      recipes: (p)=>fetchJSON(`/api/admin/recipes?${new URLSearchParams(p)}`),
+      resources: (p)=>fetchJSON(`/api/admin/resources?${new URLSearchParams(p)}`),
+    };
+
+    function setTab(which){
+      const tabs = ["users","chars","items","insts","inv","recipes","resources"];
+      tabs.forEach(t=>{
+        E["tab_"+t].classList.toggle("active", which===t);
+        E["pane_"+t].style.display = (which===t)? "block" : "none";
+      });
+      E.results.innerHTML=""; E.status.textContent=""; E.pager.innerHTML="";
+      state.active = which;
+    }
+    function showStatus(msg){ E.status.textContent = msg || ""; }
+    function escapeHtml(s){ return s.replace(/[&<>"]/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c])) }
+    function renderTable(headers, rows){
+      const th = headers.map(h=>`<th>${h}</th>`).join("");
+      // FIXED: remove the extra ')' inside the template expression
+      const tr = rows.map(r=>`<tr>${r.map(c=>`<td>${
+        (c===undefined||c===null) ? "" : (typeof c==="object" ? ("<code>"+escapeHtml(JSON.stringify(c))+"</code>") : escapeHtml(String(c)))
+      }</td>`).join("")}</tr>`).join("");
+      return `<table><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>`;
+    }
+    function renderPager(meta, onJump){
+      if(!meta) { E.pager.innerHTML=""; return; }
+      const {page, pages, limit, total} = meta;
+      const from = Math.min(total, (page-1)*limit + 1);
+      const to = Math.min(total, page*limit);
+      E.pager.innerHTML = `
+        <div class="info">Showing ${from}-${to} of ${total} · Page ${page} / ${pages}</div>
+        <div class="controls">
+          <button ${page<=1?"disabled":""} id="pg_first">« First</button>
+          <button ${page<=1?"disabled":""} id="pg_prev">‹ Prev</button>
+          <button ${page>=pages?"disabled":""} id="pg_next">Next ›</button>
+          <button ${page>=pages?"disabled":""} id="pg_last">Last »</button>
+        </div>`;
+      const jump = (p)=>{ if(p>=1 && p<=pages) onJump(p) };
+      E.pager.querySelector("#pg_first")?.addEventListener("click", ()=>jump(1));
+      E.pager.querySelector("#pg_prev") ?.addEventListener("click", ()=>jump(page-1));
+      E.pager.querySelector("#pg_next") ?.addEventListener("click", ()=>jump(page+1));
+      E.pager.querySelector("#pg_last") ?.addEventListener("click", ()=>jump(pages));
+    }
+
+    // keep last query & meta per tab
+    const state = {
+      active: "users",
+      users: {q:{limit:50, page:1}, meta:null},
+      chars: {q:{limit:50, page:1}, meta:null},
+      items: {q:{limit:50, page:1}, meta:null},
+      insts: {q:{limit:50, page:1}, meta:null},
+      inv:   {q:{limit:50, page:1, char_id:null}, meta:null},
+      recipes:{q:{limit:50, page:1}, meta:null},
+      resources:{q:{limit:50, page:1}, meta:null},
+    };
+
+    // tab click
+    tab_users.onclick=()=>setTab("users");
+    tab_chars.onclick=()=>setTab("chars");
+    tab_items.onclick=()=>setTab("items");
+    tab_insts.onclick=()=>setTab("insts");
+    tab_inv.onclick=()=>setTab("inv");
+    tab_recipes.onclick=()=>setTab("recipes");
+    tab_resources.onclick=()=>setTab("resources");
+
+    // USERS
+    async function runUsers(page=1){
+      const q = state.users.q = {
+        email:u_email.value, handle:u_handle.value, page, limit:50
+      };
+      Object.keys(q).forEach(k=>{ if(q[k]===""||q[k]==null) delete q[k] });
+      showStatus("Searching users...");
+      const data = await API.users(q).catch(e=>({error:e.message}));
+      if (data.error){ showStatus("❌ "+data.error); return }
+      showStatus(`Found ${data.meta.total} user(s). Click a user_id to open details.`);
+      const rows = data.users.map(u=>[
+        `<a href="#" data-user="${u.user_id}">${u.user_id}</a>`,
+        u.email, u.handle, u.display_name, u.is_active ? "yes":"no", u.characters_count,
+        u.selected_character_id || "", u.created_at || "", u.last_login_at || ""
+      ]);
+      E.results.innerHTML = renderTable(["user_id","email","handle","display_name","active","chars","#selected_char","created_at","last_login"], rows);
+      state.users.meta = data.meta;
+      renderPager(data.meta, (p)=>runUsers(p));
+      E.results.querySelectorAll('[data-user]').forEach(a=>{
+        a.addEventListener('click', async (ev)=>{
+          ev.preventDefault();
+          const id = a.getAttribute('data-user');
+          showStatus("Loading user…");
+          const d = await API.user(id).catch(e=>({error:e.message}));
+          if (d.error){ showStatus("❌ "+d.error); return }
+          showStatus(`User loaded: ${d.email} (${d.handle})`);
+          E.pager.innerHTML = ""; // hide pager in detail view
+          E.results.innerHTML =
+            `<h3>User</h3>${renderTable(["field","value"], Object.entries(d).filter(([k])=>k!=="characters"))}
+             <h3>Characters</h3>${renderTable(["character_id","name","class","level","active","shard_id","x","y","created_at"], (d.characters||[]).map(c=>[c.character_id,c.name,c.class_id||"",c.level||1,c.is_active?"yes":"no",c.shard_id||"",c.x??"",c.y??"",c.created_at||""]))}`;
+        });
+      });
+    }
+    btn_users.onclick = ()=>runUsers(1);
+
+    // CHARACTERS
+    async function runChars(page=1){
+      const q = state.chars.q = {
+        user_id:c_user_id.value, email:c_email.value, name:c_name.value, active:c_active.value, page, limit:50
+      };
+      Object.keys(q).forEach(k=>{ if(q[k]===""||q[k]==null) delete q[k] });
+      showStatus("Searching characters...");
+      const data = await API.characters(q).catch(e=>({error:e.message}));
+      if (data.error){ showStatus("❌ "+data.error); return }
+      showStatus(`Found ${data.meta.total} character(s). Click character_id to open details.`);
+      const rows = data.characters.map(c=>[
+        `<a href="#" data-char="${c.character_id}">${c.character_id}</a>`,
+        c.name, c.class_id || "", c.level || 1, c.is_active ? "yes":"no",
+        c.user_id, c.shard_id || "", c.x ?? "", c.y ?? "", c.created_at || ""
+      ]);
+      E.results.innerHTML = renderTable(["character_id","name","class","level","active","user_id","shard_id","x","y","created_at"], rows);
+      state.chars.meta = data.meta;
+      renderPager(data.meta, (p)=>runChars(p));
+      E.results.querySelectorAll('[data-char]').forEach(a=>{
+        a.addEventListener('click', async (ev)=>{
+          ev.preventDefault();
+          const id=a.getAttribute('data-char');
+          showStatus("Loading character…");
+          const d = await API.character(id).catch(e=>({error:e.message}));
+          if (d.error){ showStatus("❌ "+d.error); return }
+          showStatus(`Character loaded: ${d.name}`);
+          E.pager.innerHTML = "";
+          E.results.innerHTML =
+            `<h3>Character</h3>${renderTable(["field","value"], Object.entries(d).filter(([k])=>k!=="inventory"))}
+             <h3>Inventory</h3>${renderTable(["slot","item_id","name","instance_id","qty","equipped","acquired_at"], (d.inventory||[]).map(r=>[r.slot_index,r.item_id,r.name,r.instance_id,r.qty,r.equipped?"yes":"no",r.acquired_at||""]))}`;
+        });
+      });
+    }
+    btn_chars.onclick = ()=>runChars(1);
+
+    // ITEMS
+    async function runItems(page=1){
+      const q = state.items.q = { id:i_id.value, name:i_name.value, type:i_type.value, rarity:i_rarity.value, page, limit:50 };
+      Object.keys(q).forEach(k=>{ if(q[k]===""||q[k]==null) delete q[k] });
+      showStatus("Searching items...");
+      const data = await API.items(q).catch(e=>({error:e.message}));
+      if (data.error){ showStatus("❌ "+data.error); return }
+      showStatus(`Found ${data.meta.total} item(s).`);
+      const rows = data.items.map(i=>[i.item_id, i.item_version, i.name, i.type, i.rarity, i.stack_size, i.base_stats]);
+      E.results.innerHTML = renderTable(["item_id","version","name","type","rarity","stack","base_stats"], rows);
+      state.items.meta = data.meta;
+      renderPager(data.meta, (p)=>runItems(p));
+    }
+    btn_items.onclick = ()=>runItems(1);
+
+    // INSTANCES
+    async function runInsts(page=1){
+      const q = state.insts.q = { item_id:inst_item_id.value, page, limit:50 };
+      Object.keys(q).forEach(k=>{ if(q[k]===""||q[k]==null) delete q[k] });
+      showStatus("Searching instances...");
+      const data = await API.instances(q).catch(e=>({error:e.message}));
+      if (data.error){ showStatus("❌ "+data.error); return }
+      showStatus(`Found ${data.meta.total} instance(s).`);
+      const rows = data.instances.map(i=>[i.instance_id, i.item_id, i.item_version, i.quantity]);
+      E.results.innerHTML = renderTable(["instance_id","item_id","version","qty"], rows);
+      state.insts.meta = data.meta;
+      renderPager(data.meta, (p)=>runInsts(p));
+    }
+    btn_insts.onclick = ()=>runInsts(1);
+
+    // INVENTORY
+    async function runInv(page=1){
+      const cid = inv_char_id.value.trim();
+      if(!cid){ showStatus("Enter a character_id."); return }
+      const q = state.inv.q = { page, limit:50 };
+      showStatus("Loading inventory...");
+      const data = await API.inventory(cid, q).catch(e=>({error:e.message}));
+      if (data.error){ showStatus("❌ "+data.error); return }
+      let rows = data.inventory || [];
+      const slotMin = Number(inv_slot_min.value||0);
+      rows = rows.filter(r=> (r.slot_index ?? 0) >= slotMin);
+      showStatus(`Loaded ${rows.length} slot(s).`);
+      E.results.innerHTML = renderTable(
+        ["slot","item_id","name","instance_id","qty","equipped","acquired_at"],
+        rows.map(r=>[r.slot_index, r.item_id, r.name, r.instance_id, r.qty, r.equipped ? "yes" : "no", r.acquired_at || ""])
+      );
+      state.inv.meta = data.meta;
+      renderPager(data.meta, (p)=>runInv(p));
+    }
+    btn_inv.onclick = ()=>runInv(1);
+
+    // RECIPES
+    async function runRecipes(page=1){
+      const q = state.recipes.q = { id:r_id.value, name:r_name.value, produces_item_id:r_out.value, page, limit:50 };
+      Object.keys(q).forEach(k=>{ if(q[k]===""||q[k]==null) delete q[k] });
+      showStatus("Searching recipes...");
+      const data = await API.recipes(q).catch(e=>({error:e.message}));
+      if (data.error){ showStatus("❌ "+data.error); return }
+      if (data.enabled === false){ showStatus("🛈 Recipes endpoint disabled: "+(data.reason||"model not found")); E.results.innerHTML=""; E.pager.innerHTML=""; return }
+      showStatus(`Found ${data.meta.total} recipe(s).`);
+      const rows = data.recipes.map(r=>[r.recipe_id, r.name, r.station || "", r.time_seconds || "", r.produces_item_id || "", r.inputs || {}, r.outputs || {}]);
+      E.results.innerHTML = renderTable(["recipe_id","name","station","time_s","produces_item_id","inputs","outputs"], rows);
+      state.recipes.meta = data.meta;
+      renderPager(data.meta, (p)=>runRecipes(p));
+    }
+    btn_recipes.onclick = ()=>runRecipes(1);
+
+    // RESOURCES
+    async function runResources(page=1){
+      const q = state.resources.q = { id:rs_id.value, name:rs_name.value, type:rs_type.value, rarity:rs_rarity.value, page, limit:50 };
+      Object.keys(q).forEach(k=>{ if(q[k]===""||q[k]==null) delete q[k] });
+      showStatus("Searching resources...");
+      const data = await API.resources(q).catch(e=>({error:e.message}));
+      if (data.error){ showStatus("❌ "+data.error); return }
+      if (data.enabled === false){ showStatus("🛈 Resources endpoint disabled: "+(data.reason||"model not found")); E.results.innerHTML=""; E.pager.innerHTML=""; return }
+      showStatus(`Found ${data.meta.total} resource(s).`);
+      const rows = data.resources.map(r=>[r.resource_id, r.name, r.type || "", r.rarity || "", r.biome || "", r.yield_min ?? "", r.yield_max ?? "", r.meta || {}]);
+      E.results.innerHTML = renderTable(["resource_id","name","type","rarity","biome","yield_min","yield_max","meta"], rows);
+      state.resources.meta = data.meta;
+      renderPager(data.meta, (p)=>runResources(p));
+    }
+    btn_resources.onclick = ()=>runResources(1);
+
+    // init
+    setTab("users");
+  </script>
+</body>
+</html>

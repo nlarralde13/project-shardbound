@@ -7,8 +7,10 @@ from .db import migrate
 from .auth import auth_bp, login_manager
 from .characters import characters_bp
 from .classes_admin import classes_admin_bp
-from .api_items import api_bp as api_items_bp
-
+from .api_items import api as api_items_bp
+from .api_admin import admin_api
+from .security import admin_guard
+from .admin_panel import admin_ui
 
 def create_app():
     app = Flask(__name__, static_folder="../static", template_folder="../templates")
@@ -23,6 +25,8 @@ def create_app():
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         SESSION_COOKIE_SAMESITE="Lax",
     )
+    app.config.setdefault("SECRET_KEY", "dev-change-me")
+    app.config.setdefault("ADMIN_PANEL_PASSWORD", "forge-master")
 
     db.init_app(app)
     migrate.init_app(app, db)
@@ -62,6 +66,8 @@ def create_app():
     app.register_blueprint(characters_bp)  # /api/characters
     app.register_blueprint(classes_admin_bp) #class builder admin
     app.register_blueprint(api_items_bp, url_prefix="/api")
+    app.register_blueprint(admin_api)
+    app.register_blueprint(admin_ui)
 
     # Your other API blueprints (unchanged)
     from .api.routes import bp as core_api_bp
@@ -116,13 +122,14 @@ def create_app():
     @app.route("/class-builder")
     def class_builder():
         return render_template("class_builder.html")
-
-    @app.route("/itemForge")
-    def item_forge():
-        return render_template("item_forge.html")
     
     @app.route("/itemForge")
     def item_forge():
+        admin_guard()
         return render_template("item_forge.html")
     
+    @app.route("/vault")
+    def data_vault():
+        admin_guard()
+        return render_template("theVault.html")    
     return app
