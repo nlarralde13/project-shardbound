@@ -1,8 +1,13 @@
 from .base import db, Model
 from sqlalchemy.dialects.postgresql import JSONB
 
+
 def _JSON():
-    return JSONB if db.engine.url.get_backend_name() == "postgresql" else db.JSON
+    try:
+        return JSONB if db.engine.url.get_backend_name() == "postgresql" else db.JSON
+    except Exception:
+        # Fallback when called outside application context
+        return db.JSON
 
 class Item(Model):
     __tablename__ = "items"
