@@ -1,13 +1,13 @@
 import uuid, datetime as dt
-from flask_login import UserMixin
 
-from ..db import db as db
+from .base import db, Model
 
 
 def gen_uuid() -> str:
     return str(uuid.uuid4())
 
-class Character(db.Model):
+
+class Character(Model):
     __tablename__ = "character"
 
     character_id = db.Column(db.String, primary_key=True, default=gen_uuid)

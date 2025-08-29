@@ -2,7 +2,8 @@
 import os
 import sqlalchemy as sa
 from flask import Flask, render_template, send_from_directory
-from .db import db, migrate
+from .models import db
+from .db import migrate
 from .auth import auth_bp, login_manager
 from .characters import characters_bp
 from .classes_admin import classes_admin_bp
