@@ -71,7 +71,7 @@ def get_user_by_selector(id=None, email=None) -> User | None:
     return None
 
 def get_char_for_user(user: User, char_id=None, char_name=None) -> Character | None:
-    q = Character.query.filter_by(user_id=user.user_id, is_deleted=False)
+    q = Character.query.filter_by(user_id=user.user_id, is_active=True)
     if char_id:
         return q.filter_by(character_id=char_id).first()
     if char_name:
@@ -124,14 +124,14 @@ def cmd_user(args):
         user_id=u.user_id, email=u.email, handle=u.handle, display_name=u.display_name,
         age=u.age, is_active=u.is_active, created_at=_fmt_dt(u.created_at),
         last_login_at=_fmt_dt(u.last_login_at), selected_character_id=u.selected_character_id,
-        characters=[dict(id=c.character_id, name=c.name, class_id=c.class_id, level=c.level, deleted=c.is_deleted)
+        characters=[dict(id=c.character_id, name=c.name, class_id=c.class_id, level=c.level, is_active=c.is_active)
                     for c in u.characters.order_by(Character.created_at.asc()).all()]
     )
     print(json.dumps(payload, indent=2, ensure_ascii=False))
 
 
 def cmd_characters(args):
-    q = Character.query.filter_by(is_deleted=False)
+    q = Character.query.filter_by(is_active=True)
     if args.user_id:
         q = q.filter(Character.user_id == args.user_id)
     if args.email:
@@ -267,7 +267,7 @@ def cmd_seed(args):
     elif args.set_active and not created_char and u.selected_character_id:
         print(f"Active character already set: {u.selected_character_id}")
     elif args.set_active and not created_char and not u.selected_character_id:
-        first = u.characters.filter_by(is_deleted=False).order_by(Character.created_at.asc()).first()
+        first = u.characters.filter_by(is_active=True).order_by(Character.created_at.asc()).first()
         if first:
             u.selected_character_id = first.character_id
             print(f"Set active character to {first.character_id}")
@@ -289,8 +289,8 @@ def cmd_set_active(args):
     c = get_char_for_user(u, char_id=args.char_id, char_name=args.char_name)
     if not c:
         print("Character not found for that user."); return
-    if c.is_deleted:
-        print("Cannot set a deleted character active."); return
+    if not c.is_active:
+        print("Cannot set an inactive character active."); return
     u.selected_character_id = c.character_id
     db.session.commit()
     print(f"Active character for {u.email} set to {c.name} ({c.character_id})")
@@ -305,7 +305,7 @@ def cmd_delete_character(args):
         print("Character not found for that user."); return
 
     if not args.hard:
-        c.is_deleted = True
+        c.is_active = False
         if u.selected_character_id == c.character_id:
             u.selected_character_id = None
         db.session.commit()
@@ -325,7 +325,7 @@ def cmd_delete_user(args):
     if not args.hard:
         u.is_active = False
         for c in u.characters.all():
-            c.is_deleted = True
+            c.is_active = False
         u.selected_character_id = None
         db.session.commit()
         print(f"Soft-deleted user {u.email} (disabled account and characters).")
@@ -431,7 +431,7 @@ def cmd_seed_world(args):
         else:
             first = created[0]
             n = 0
-            for c in u.characters.filter_by(is_deleted=False).all():
+            for c in u.characters.filter_by(is_active=True).all():
                 c.shard_id = first
                 n += 1
             db.session.commit()

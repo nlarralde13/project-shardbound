@@ -84,6 +84,7 @@ def list_characters():
             "name": c.name,
             "class_id": c.class_id,
             "level": c.level,
+            "bio": c.biography,
             "created_at": c.created_at.isoformat() + "Z",
             "updated_at": c.updated_at.isoformat() + "Z",
             "last_seen_at": (c.last_seen_at.isoformat() + "Z") if c.last_seen_at else None,
@@ -136,6 +137,9 @@ def create_character():
         sex=sex,
         age=age,
         biography=bio,
+        shard_id="00089451_test123",
+        x=12,
+        y=15,
         state=initial_state,
         is_active=True,
         created_at=_now(),
@@ -147,7 +151,7 @@ def create_character():
 
     return jsonify(character_id=ch.character_id), 201
 
-@characters_bp.route("/api/characters/<int:character_id>", methods=["DELETE"])
+@characters_bp.route("/api/characters/<string:character_id>", methods=["DELETE"])
 @login_required
 def delete_character(character_id):
     ch = Character.query.filter_by(character_id=character_id, user_id=current_user.user_id, is_active=True).first()
@@ -176,6 +180,30 @@ def select_character():
     db.session.commit()
     return jsonify(ok=True), 200
 
+
+@characters_bp.route("/api/characters/active", methods=["GET"])
+@login_required
+def active_character():
+    user = User.query.get(current_user.user_id)
+    if not user or not user.selected_character_id:
+        return jsonify(error="no active character"), 404
+    ch = (Character.query
+          .filter_by(character_id=user.selected_character_id, user_id=user.user_id, is_active=True)
+          .first())
+    if not ch:
+        return jsonify(error="character not found"), 404
+    return jsonify({
+        "character_id": ch.character_id,
+        "name": ch.name,
+        "class_id": ch.class_id,
+        "level": ch.level,
+        "bio": ch.biography,
+        "shard_id": ch.shard_id,
+        "x": ch.x,
+        "y": ch.y,
+        "last_seen_at": ch.last_seen_at.isoformat() + "Z" if ch.last_seen_at else None,
+    }), 200
+
 # ----- autosave (merge partial state) -----
 @characters_bp.route("/api/characters/autosave", methods=["POST"])
 @login_required
@@ -188,14 +216,29 @@ def autosave_state():
     if not ch:
         return jsonify(error="character not found"), 404
 
-    # Merge supplied fields into state
+    # update position if provided
+    shard_id = data.pop("shard_id", None)
+    if shard_id is not None:
+        ch.shard_id = shard_id
+    x = data.pop("x", None)
+    if x is not None:
+        ch.x = x
+    y = data.pop("y", None)
+    if y is not None:
+        ch.y = y
+
+    # Merge supplied state
+    state_patch = data.pop("state", {})
     current = dict(ch.state or {})
-    _deep_merge(current, data)
+    _deep_merge(current, state_patch)
     ch.state = current
+
     # optional: level in both column + state
     if "level" in data:
-        try: ch.level = int(data["level"])
-        except: pass
+        try:
+            ch.level = int(data["level"])
+        except Exception:
+            pass
     ch.updated_at = _now()
     ch.last_seen_at = _now()
     db.session.commit()
