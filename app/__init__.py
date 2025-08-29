@@ -7,6 +7,7 @@ from .db import migrate
 from .auth import auth_bp, login_manager
 from .characters import characters_bp
 from .classes_admin import classes_admin_bp
+from .api_items import api_bp as api_items_bp
 
 
 def create_app():
@@ -60,6 +61,7 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(characters_bp)  # /api/characters
     app.register_blueprint(classes_admin_bp) #class builder admin
+    app.register_blueprint(api_items_bp, url_prefix="/api")
 
     # Your other API blueprints (unchanged)
     from .api.routes import bp as core_api_bp
@@ -114,5 +116,9 @@ def create_app():
     @app.route("/class-builder")
     def class_builder():
         return render_template("class_builder.html")
+
+    @app.route("/itemForge")
+    def item_forge():
+        return render_template("item_forge.html")
     
     return app
