@@ -1,5 +1,6 @@
 # app/__init__.py
 import os
+import sqlalchemy as sa
 from flask import Flask, render_template, send_from_directory
 from .db import db, migrate
 from .auth import auth_bp, login_manager
@@ -29,6 +30,21 @@ def create_app():
         from . import models  # ensure models are imported
         if os.environ.get("AUTO_CREATE_TABLES", "1") == "1":
             db.create_all()
+
+            # -- temporary migrations for pre-beta databases --
+            inspector = sa.inspect(db.engine)
+            cols = {c["name"] for c in inspector.get_columns("character")}
+            with db.engine.begin() as conn:
+                if "biography" not in cols:
+                    conn.execute(sa.text("ALTER TABLE character ADD COLUMN biography TEXT"))
+                    if "bio" in cols:
+                        conn.execute(sa.text("UPDATE character SET biography = bio"))
+                if "is_active" not in cols:
+                    conn.execute(sa.text("ALTER TABLE character ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT 1"))
+                    if "is_deleted" in cols:
+                        conn.execute(sa.text("UPDATE character SET is_active = 0 WHERE is_deleted = 1"))
+                if "last_seen_at" not in cols:
+                    conn.execute(sa.text("ALTER TABLE character ADD COLUMN last_seen_at DATETIME"))
 
     # Blueprints
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
