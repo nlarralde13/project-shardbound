@@ -2487,5 +2487,9 @@
     "template": "normal-16@1.0.0",
     "biome_pack": "temperate-base@1.0.0",
     "seed": 89451
-  }
+  },
+  "spawn": [
+    12,
+    15
+  ]
 }

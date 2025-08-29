@@ -4,6 +4,7 @@ from pathlib import Path
 from flask import Blueprint, jsonify, request, render_template
 from flask_login import login_required, current_user
 from .models import db, User, Character
+from server.config import START_POS
 
 characters_bp = Blueprint("characters_bp", __name__)
 
@@ -137,8 +138,8 @@ def create_character():
         age=age,
         biography=bio,
         shard_id="00089451_test123",
-        x=12,
-        y=15,
+        x=START_POS[0],
+        y=START_POS[1],
         state=initial_state,
         is_active=True,
         created_at=_now(),

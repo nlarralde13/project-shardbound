@@ -9,16 +9,20 @@ from flask import Blueprint, jsonify, request, current_app
 from server.world_loader import load_world, get_room, add_safe_zone  # <-- import get_room
 from server.player_engine import move, ensure_first_quest, check_quests
 from server.combat import maybe_spawn, resolve_combat
+from server.config import START_POS
 
+from flask_login import current_user
+from app.models.users import User
+from app.models.characters import Character
 from app.player_service import get_player, save_player
 
 bp = Blueprint("core_api", __name__, url_prefix="/api")
 
 STARTER_SHARD_PATH = Path("static/public/shards/00089451_test123.json")
 WORLD = load_world(STARTER_SHARD_PATH)
-add_safe_zone(12, 15)
-add_safe_zone(13, 15)
-WORLD.pois.append({"x": 12, "y": 15, "type": "town"})
+add_safe_zone(*START_POS)
+add_safe_zone(START_POS[0] + 1, START_POS[1])  # NPC tile next to spawn
+WORLD.pois.append({"x": START_POS[0], "y": START_POS[1], "type": "town"})
 
 @bp.get("/shards")
 def api_shards():
@@ -43,13 +47,27 @@ def api_world():
 
 @bp.post("/spawn")
 def api_spawn():
-    """Spawn the player at the fixed starter location.
+    """Spawn the player, defaulting to the global start position.
 
-    Any coordinates provided by the client are ignored so the player always
-    begins at (12,15).  Flags like ``noclip`` and ``devmode`` still work.
+    If an authenticated user has a selected character with stored coordinates,
+    those take precedence.  Flags like ``noclip`` and ``devmode`` still work.
     """
     player = get_player()
-    x, y = 12, 15
+
+    # default spawn
+    x, y = START_POS
+
+    # pull last known position from DB if available
+    if current_user.is_authenticated:
+        user = User.query.get(current_user.user_id)
+        if user and user.selected_character_id:
+            ch = Character.query.filter_by(
+                character_id=user.selected_character_id,
+                user_id=user.user_id,
+                is_active=True,
+            ).first()
+            if ch and ch.x is not None and ch.y is not None:
+                x, y = int(ch.x), int(ch.y)
 
     player.spawn(x, y)
     if request.args.get("noclip") == "1":
@@ -61,7 +79,13 @@ def api_spawn():
     # include room snapshot on spawn for immediate UI
     room = get_room(WORLD, *player.pos).export()
     log = [f"Spawned at ({x},{y})"]
-    return jsonify({"ok": True, "player": player.as_public(), "room": room, "interactions": _interactions(room), "log": log})
+    return jsonify({
+        "ok": True,
+        "player": player.as_public(),
+        "room": room,
+        "interactions": _interactions(room),
+        "log": log,
+    })
 
 @bp.post("/move")
 def api_move():
