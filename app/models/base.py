@@ -1,8 +1,7 @@
-from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeMeta
 
-# Single SQLAlchemy instance shared by the app
-db = SQLAlchemy()
+# Re-export the application's SQLAlchemy instance
+from ..db import db
 
 # Convenience exports
 Model: DeclarativeMeta = db.Model

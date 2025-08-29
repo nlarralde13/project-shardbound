@@ -28,8 +28,7 @@ import sqlalchemy as sa  # type: ignore
 os.environ.setdefault("AUTO_CREATE_TABLES", "0")
 
 from app import create_app  # type: ignore
-from app.db import db       # type: ignore
-from app.models import User, Character  # type: ignore
+from app.models import db, User, Character  # type: ignore
 
 
 def _fmt_dt(dt):

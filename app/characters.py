@@ -3,8 +3,7 @@ import json, datetime as dt
 from pathlib import Path
 from flask import Blueprint, jsonify, request, render_template
 from flask_login import login_required, current_user
-from .db import db
-from .models import User, Character
+from .models import db, User, Character
 
 characters_bp = Blueprint("characters_bp", __name__)
 

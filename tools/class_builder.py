@@ -25,7 +25,7 @@ def _maybe_load_app():
     try:
         sys.path.insert(0, str(ROOT))
         from app import create_app  # type: ignore
-        from app.db import db       # type: ignore
+        from app.models import db   # type: ignore
         return create_app, db
     except Exception:
         return None, None
