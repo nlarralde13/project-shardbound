@@ -79,7 +79,7 @@ def users_list():
 
 @admin_api.get("/users/<user_id>")
 def user_detail(user_id):
-    u = User.query.get(user_id)
+    u = db.session.get(User, user_id)
     if not u:
         return jsonify(error="User not found"), 404
     chars = (Character.query
@@ -130,7 +130,7 @@ def characters_list():
 
 @admin_api.get("/characters/<character_id>")
 def character_detail(character_id):
-    c = Character.query.get(character_id)
+    c = db.session.get(Character, character_id)
     if not c:
         return jsonify(error="Character not found"), 404
 
@@ -188,7 +188,7 @@ def instances_list():
 @admin_api.get("/characters/<character_id>/inventory")
 def inventory_list(character_id):
     page, limit, offset = _pg()
-    c = Character.query.get(character_id)
+    c = db.session.get(Character, character_id)
     if not c: return jsonify(error="Character not found"), 404
     q = (db.session.query(
             CharacterInventory.slot_index, CharacterInventory.item_id, Item.name,

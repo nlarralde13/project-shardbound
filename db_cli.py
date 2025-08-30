@@ -66,7 +66,7 @@ def print_rows(rows, headers):
 # helpers / selectors
 # -----------------------
 def get_user_by_selector(id=None, email=None) -> User | None:
-    if id: return User.query.get(id)
+    if id: return db.session.get(User, id)
     if email: return User.query.filter(User.email.ilike(email)).first()
     return None
 
@@ -191,7 +191,7 @@ def cmd_items(args):
 
 def cmd_item(args):
     _require_models()
-    it = Item.query.get(args.id)
+    it = db.session.get(Item, args.id)
     if not it: print("Item not found."); return
     payload = dict(item_id=it.item_id, item_version=it.item_version, name=it.name,
                    type=it.type, rarity=it.rarity, stack_size=it.stack_size, base_stats=it.base_stats)
@@ -212,7 +212,7 @@ def cmd_item_upsert(args):
     missing = [k for k in required if k not in data]
     if missing: raise SystemExit("Missing required fields: " + ", ".join(missing))
 
-    it = Item.query.get(data["item_id"])
+    it = db.session.get(Item, data["item_id"])
     if not it:
         it = Item(item_id=data["item_id"], item_version=data["item_version"], name=data["name"],
                   type=data["type"], rarity=data["rarity"], stack_size=int(data.get("stack_size",1)),
@@ -237,7 +237,7 @@ def cmd_instances(args):
 
 def cmd_mint(args):
     _require_models()
-    it = Item.query.get(args.item_id)
+    it = db.session.get(Item, args.item_id)
     if not it: raise SystemExit("Item not found.")
     inst = ItemInstance(instance_id=_uid(), item_id=it.item_id,
                         item_version=args.item_version or it.item_version,
@@ -246,7 +246,7 @@ def cmd_mint(args):
     print(json.dumps({"message":"instance created","instance_id":inst.instance_id}, indent=2))
 
 def _resolve_character(char_id=None, email=None, char_name=None):
-    if char_id: return Character.query.get(char_id)
+    if char_id: return db.session.get(Character, char_id)
     if email:
         u = get_user_by_selector(email=email)
         if not u: return None
@@ -278,7 +278,7 @@ def cmd_grant(args):
     _require_models()
     c = _resolve_character(args.char_id, args.email, args.char_name)
     if not c: raise SystemExit("Character not found.")
-    it = Item.query.get(args.item_id)
+    it = db.session.get(Item, args.item_id)
     if not it: raise SystemExit("Item not found.")
 
     instance_id = args.instance_id
@@ -311,11 +311,11 @@ def cmd_validate_items(_args):
         if (it.stack_size or 0) < 1: problems.append(("item", it.item_id, "stack_size < 1"))
     for inst in ItemInstance.query.all():
         if (inst.quantity or 0) < 1: problems.append(("instance", inst.instance_id, "quantity < 1"))
-        if not Item.query.get(inst.item_id): problems.append(("instance", inst.instance_id, f"missing parent item {inst.item_id}"))
+        if not db.session.get(Item, inst.item_id): problems.append(("instance", inst.instance_id, f"missing parent item {inst.item_id}"))
     for inv in CharacterInventory.query.all():
         if (inv.qty or 0) < 1: problems.append(("inventory", inv.id, "qty < 1"))
-        if not ItemInstance.query.get(inv.instance_id): problems.append(("inventory", inv.id, f"missing instance {inv.instance_id}"))
-        if not Item.query.get(inv.item_id): problems.append(("inventory", inv.id, f"missing item {inv.item_id}"))
+        if not db.session.get(ItemInstance, inv.instance_id): problems.append(("inventory", inv.id, f"missing instance {inv.instance_id}"))
+        if not db.session.get(Item, inv.item_id): problems.append(("inventory", inv.id, f"missing item {inv.item_id}"))
     if not problems: print("All good ✅"); return
     print_rows([(k,i,m) for (k,i,m) in problems], ["kind","id","problem"])
 
@@ -335,7 +335,7 @@ def cmd_items_import(args):
     payload = json.loads(Path(args.file).read_text("utf-8"))
     n_created = n_updated = 0
     for rec in payload:
-        it = Item.query.get(rec["item_id"])
+        it = db.session.get(Item, rec["item_id"])
         if not it:
             it = Item(**rec); db.session.add(it); n_created += 1
         else:
@@ -369,7 +369,7 @@ def cmd_bulk_grant(args):
     if not targets: raise SystemExit("No characters matched the selection")
     single = None
     if args.item_id:
-        it = Item.query.get(args.item_id)
+        it = db.session.get(Item, args.item_id)
         if not it: raise SystemExit(f"Item not found: {args.item_id}")
         single = dict(item_id=it.item_id, qty=max(1, int(args.qty or 1)), equip=bool(args.equip))
     granted_total = 0
@@ -378,7 +378,7 @@ def cmd_bulk_grant(args):
         grants = kit if kit else [single]
         for idx, g in enumerate(grants):
             if not g: continue
-            it = Item.query.get(g["item_id"])
+            it = db.session.get(Item, g["item_id"])
             if not it: continue
             inst = ItemInstance(instance_id=_uid(), item_id=it.item_id, item_version=it.item_version, quantity=int(g.get("qty",1)))
             db.session.add(inst); db.session.flush()
