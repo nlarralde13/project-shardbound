@@ -47,7 +47,7 @@ def save_player(player: Player) -> None:
         return
 
     if current_user.is_authenticated:
-        user = User.query.get(current_user.user_id)
+        user = db.session.get(User, current_user.user_id)
         if user and user.selected_character_id:
             ch = (
                 Character.query

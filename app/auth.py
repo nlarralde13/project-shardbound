@@ -11,7 +11,7 @@ HANDLE_RE = re.compile(r"^[a-z0-9_]{3,32}$", re.I)
 
 @login_manager.user_loader
 def load_user(user_id):  # called by Flask-Login using session cookie
-    return User.query.get(user_id)
+    return db.session.get(User, user_id)
 
 @auth_bp.route("/register", methods=["POST"])
 def register():

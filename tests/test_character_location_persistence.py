@@ -6,7 +6,7 @@ import uuid
 def test_cur_loc_updates_and_persists():
     app = create_app()
     with app.test_client() as client, app.app_context():
-        from app.models import Character
+        from app.models import db, Character
         # register and login
         email = f"{uuid.uuid4().hex}@t.com"
         handle = uuid.uuid4().hex[:8]
@@ -22,7 +22,7 @@ def test_cur_loc_updates_and_persists():
         # spawn and move
         client.post('/api/spawn', json={})
         client.post('/api/move', json={'dx': 1, 'dy': 0})
-        ch = Character.query.get(cid)
+        ch = db.session.get(Character, cid)
         assert ch.x == START_POS[0] + 1
         assert ch.y == START_POS[1]
         assert ch.cur_loc == f"{ch.x},{ch.y}"

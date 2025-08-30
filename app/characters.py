@@ -174,7 +174,7 @@ def select_character():
     ch = Character.query.filter_by(character_id=character_id, user_id=current_user.user_id, is_active=True).first()
     if not ch:
         return jsonify(error="not found"), 404
-    user = User.query.get(current_user.user_id)
+    user = db.session.get(User, current_user.user_id)
     user.selected_character_id = ch.character_id
     ch.last_seen_at = _now()
     db.session.commit()
@@ -184,7 +184,7 @@ def select_character():
 @characters_bp.route("/api/characters/active", methods=["GET"])
 @login_required
 def active_character():
-    user = User.query.get(current_user.user_id)
+    user = db.session.get(User, current_user.user_id)
     if not user or not user.selected_character_id:
         return jsonify(error="no active character"), 404
     ch = (Character.query
@@ -209,7 +209,7 @@ def active_character():
 @login_required
 def autosave_state():
     data = request.get_json(force=True) or {}
-    user = User.query.get(current_user.user_id)
+    user = db.session.get(User, current_user.user_id)
     if not user or not user.selected_character_id:
         return jsonify(error="no character selected"), 400
     ch = Character.query.filter_by(character_id=user.selected_character_id, user_id=user.user_id, is_active=True).first()

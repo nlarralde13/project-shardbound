@@ -18,7 +18,7 @@ def create_item():
     if missing:
         return jsonify(error=f"Missing fields: {', '.join(missing)}"), 400
 
-    item = Item.query.get(data['item_id'])
+    item = db.session.get(Item, data['item_id'])
     if not item:
         item = Item(
             item_id=data['item_id'],
@@ -56,7 +56,7 @@ def create_item_instance():
     if missing:
         return jsonify(error=f"Missing fields: {', '.join(missing)}"), 400
 
-    item = Item.query.get(data['item_id'])
+    item = db.session.get(Item, data['item_id'])
     if not item:
         return jsonify(error="Item not found"), 404
 
@@ -79,7 +79,7 @@ def grant_inventory(character_id):
     if missing:
         return jsonify(error=f"Missing fields: {', '.join(missing)}"), 400
 
-    char = Character.query.get(character_id)
+    char = db.session.get(Character, character_id)
     if not char:
         return jsonify(error='Character not found'), 404
 
