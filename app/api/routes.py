@@ -12,8 +12,7 @@ from server.combat import maybe_spawn, resolve_combat
 from server.config import START_POS
 
 from flask_login import current_user
-from app.models.users import User
-from app.models.characters import Character
+from app.models import db, User, Character
 from app.player_service import get_player, save_player
 
 bp = Blueprint("core_api", __name__, url_prefix="/api")
@@ -59,7 +58,7 @@ def api_spawn():
 
     # pull last known position from DB if available
     if current_user.is_authenticated:
-        user = User.query.get(current_user.user_id)
+        user = db.session.get(User, current_user.user_id)
         if user and user.selected_character_id:
             ch = Character.query.filter_by(
                 character_id=user.selected_character_id,
