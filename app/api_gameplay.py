@@ -59,6 +59,24 @@ def _deep_merge(a, b):
     return a
 
 
+def _get_coords(ch: Character) -> tuple[int, int]:
+    if ch.last_coords:
+        x = ch.last_coords.get("x")
+        y = ch.last_coords.get("y")
+        if x is not None and y is not None:
+            return int(x), int(y)
+    if ch.first_time_spawn:
+        x = ch.first_time_spawn.get("x", START_TOWN_COORDS[0])
+        y = ch.first_time_spawn.get("y", START_TOWN_COORDS[1])
+        return int(x), int(y)
+    return START_TOWN_COORDS
+
+
+def _set_coords(ch: Character, x: int, y: int) -> None:
+    ch.last_coords = {"x": int(x), "y": int(y)}
+    ch.cur_loc = f"{int(x)},{int(y)}"
+
+
 @bp.get("/characters")
 @login_required
 def list_characters():
@@ -90,13 +108,14 @@ def create_character():
     class_id = (data.get("class_id") or "").strip().lower()
     if not name or class_id != "warrior":
         return jsonify(error="invalid name or class"), 400
+    spawn = {"x": START_TOWN_COORDS[0], "y": START_TOWN_COORDS[1]}
     ch = Character(
         user_id=current_user.user_id,
         name=name,
         class_id="warrior",
         level=1,
-        x=START_TOWN_COORDS[0],
-        y=START_TOWN_COORDS[1],
+        first_time_spawn=spawn,
+        last_coords=spawn.copy(),
         cur_loc=f"{START_TOWN_COORDS[0]},{START_TOWN_COORDS[1]}",
         state={},
     )
@@ -110,12 +129,13 @@ def create_character():
     _grant_item(ch.character_id, "itm_shield_wood", slot_start=1)
     _grant_item(ch.character_id, "itm_potion_small", qty=3, slot_start=2)
     db.session.commit()
+    sx, sy = _get_coords(ch)
     return jsonify(
         character_id=ch.character_id,
         name=ch.name,
         class_id=ch.class_id,
-        x=ch.x,
-        y=ch.y,
+        x=sx,
+        y=sy,
     ), 201
 
 
@@ -175,6 +195,7 @@ def active_character():
     )
     if not ch:
         return jsonify(error="character not found"), 404
+    x, y = _get_coords(ch)
     return jsonify(
         {
             "character_id": ch.character_id,
@@ -183,8 +204,8 @@ def active_character():
             "level": ch.level,
             "bio": ch.biography,
             "shard_id": ch.shard_id,
-            "x": ch.x,
-            "y": ch.y,
+            "x": x,
+            "y": y,
             "last_seen_at": ch.last_seen_at.isoformat() + "Z" if ch.last_seen_at else None,
         }
     )
@@ -209,13 +230,14 @@ def autosave_state():
     if shard_id is not None:
         ch.shard_id = shard_id
     x = data.pop("x", None)
-    if x is not None:
-        ch.x = x
     y = data.pop("y", None)
-    if y is not None:
-        ch.y = y
     if x is not None or y is not None:
-        ch.cur_loc = f"{ch.x},{ch.y}"
+        cx, cy = _get_coords(ch)
+        if x is None:
+            x = cx
+        if y is None:
+            y = cy
+        _set_coords(ch, x, y)
 
     state_patch = data.pop("state", {})
     current = dict(ch.state or {})
@@ -239,7 +261,8 @@ def enter_town(char_id: str):
     ch = Character.query.get_or_404(char_id)
     if ch.user_id != current_user.user_id:
         return jsonify(error="forbidden"), 403
-    town = Town.query.filter_by(world_x=ch.x, world_y=ch.y).first()
+    x, y = _get_coords(ch)
+    town = Town.query.filter_by(world_x=x, world_y=y).first()
     if not town:
         return jsonify(error="not at town"), 400
     st = CharacterState.query.get(char_id)
@@ -322,14 +345,15 @@ def move_overworld(char_id: str):
     ch = Character.query.get_or_404(char_id)
     data = request.get_json(force=True) or {}
     dx, dy = int(data.get("dx", 0)), int(data.get("dy", 0))
-    ch.x = (ch.x or 0) + dx
-    ch.y = (ch.y or 0) + dy
+    cx, cy = _get_coords(ch)
+    nx, ny = cx + dx, cy + dy
+    _set_coords(ch, nx, ny)
     db.session.commit()
-    resp = dict(x=ch.x, y=ch.y)
-    town = Town.query.filter_by(world_x=ch.x, world_y=ch.y).first()
+    resp = dict(x=nx, y=ny)
+    town = Town.query.filter_by(world_x=nx, world_y=ny).first()
     if town:
         resp["canEnterTown"] = True
-    trig = EncounterTrigger.query.filter_by(world_x=ch.x, world_y=ch.y).first()
+    trig = EncounterTrigger.query.filter_by(world_x=nx, world_y=ny).first()
     if trig:
         resp["encounter"] = dict(script_id=trig.script_id)
     return jsonify(resp)

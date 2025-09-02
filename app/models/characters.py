@@ -26,8 +26,8 @@ class Character(Model):
 
     # location basics
     shard_id = db.Column(db.String(64))
-    x = db.Column(db.Integer)
-    y = db.Column(db.Integer)
+    first_time_spawn = db.Column(db.JSON)
+    last_coords = db.Column(db.JSON)
     cur_loc = db.Column(db.String(64))
 
     # easy-mode state bucket (inventory, quests, flags) -> normalize later

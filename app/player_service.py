@@ -60,9 +60,11 @@ def save_player(player: Player) -> None:
             )
             if ch:
                 new_x, new_y = map(int, player.pos)
-                if (new_x, new_y) != (ch.x, ch.y):
-                    if (new_x, new_y) != (0, 0) or ch.x is None or ch.y is None:
-                        ch.x, ch.y = new_x, new_y
+                coords = ch.last_coords or {}
+                cur = (coords.get("x"), coords.get("y"))
+                if (new_x, new_y) != cur:
+                    if (new_x, new_y) != (0, 0) or not coords:
+                        ch.last_coords = {"x": new_x, "y": new_y}
                         ch.cur_loc = f"{new_x},{new_y}"
                 ch.last_seen_at = dt.datetime.utcnow()
                 db.session.commit()
