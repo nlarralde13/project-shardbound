@@ -67,6 +67,12 @@ def api_spawn():
             ).first()
             if ch and ch.x is not None and ch.y is not None:
                 x, y = int(ch.x), int(ch.y)
+                if x == y == 0:
+                    # Character has never spawned; default to START_POS
+                    # Optional enhancement: clear sentinel values
+                    x, y = START_POS
+                    ch.x = ch.y = None
+                    db.session.commit()
 
     player.spawn(x, y)
     if request.args.get("noclip") == "1":
