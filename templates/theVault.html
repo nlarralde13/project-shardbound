@@ -161,6 +161,18 @@
         <div id="pager" class="pager"></div>
       </div>
     </section>
+
+    <!-- Teleport -->
+    <section class="panel" id="teleport_panel">
+      <div class="hd"><div>Teleport / Move</div></div>
+      <div class="body grid cols-2">
+        <div><label>Character ID</label><input id="tp_char_id" placeholder="uuid"></div>
+        <div><label>Note</label><input id="tp_note" placeholder="reason"></div>
+        <div><label>X</label><input id="tp_x" type="number"></div>
+        <div><label>Y</label><input id="tp_y" type="number"></div>
+        <div style="grid-column:1/3"><button id="tp_btn" class="primary">Move</button></div>
+      </div>
+    </section>
   </main>
 
   <script>
@@ -187,7 +199,8 @@
       "inv_char_id","inv_slot_min","btn_inv",
       "r_id","r_name","r_out","btn_recipes",
       "rs_id","rs_name","rs_type","rs_rarity","btn_resources",
-      "status","results","pager"
+      "status","results","pager",
+      "tp_char_id","tp_note","tp_x","tp_y","tp_btn"
     ];
     const E = els(Ids);
 
@@ -566,6 +579,16 @@
       renderPager(data.meta, (p)=>runResources(p));
     }
     btn_resources.onclick = ()=>runResources(1);
+
+    // Teleport simple
+    tp_btn.onclick = async ()=>{
+      const cid = tp_char_id.value.trim();
+      const x = parseInt(tp_x.value,10); const y = parseInt(tp_y.value,10);
+      if(!cid){ showStatus('Enter character id'); return }
+      const payload = {x, y, note: tp_note.value};
+      const r = await fetch(`/api/admin/characters/${cid}/teleport`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)}).then(r=>r.json()).catch(e=>({error:e.message}));
+      if(r.error) showStatus('❌ '+r.error); else showStatus('✅ moved');
+    };
 
     // init
     setTab("users");

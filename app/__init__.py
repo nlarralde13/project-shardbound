@@ -116,12 +116,20 @@ def create_app():
                             "WHERE cur_loc IS NULL AND x IS NOT NULL AND y IS NOT NULL"
                         ))
 
+                    _add_column_if_missing(conn, inspector, "character", "x", "x INTEGER")
+                    _add_column_if_missing(conn, inspector, "character", "y", "y INTEGER")
+
                     _add_column_if_missing(conn, inspector, "character", "first_time_spawn", f"{json_type}")
                     _add_column_if_missing(conn, inspector, "character", "last_coords", f"{json_type}")
 
                     cols_after = _column_names(inspector, "character")
                     have_xy = "x" in cols_after and "y" in cols_after
                     _backfill_coords(conn, have_xy)
+
+                    # RBAC columns on users
+                    _add_column_if_missing(conn, inspector, "users", "role", "role VARCHAR(16) NOT NULL DEFAULT 'user'")
+                    json_type = _json_column_type_for(SA_DB.engine)
+                    _add_column_if_missing(conn, inspector, "users", "scopes", f"scopes {json_type}")
 
     # Blueprints (your existing ones)
     app.register_blueprint(auth_bp, url_prefix="/api/auth")

@@ -1,8 +1,16 @@
 # app/api_admin.py
 from flask import Blueprint, request, jsonify
 from sqlalchemy import func
-from .models import db, User, Character, Item, ItemInstance, CharacterInventory
+from .models import db, User, Character, Item, ItemInstance, CharacterInventory, Town
 from .security import admin_guard
+from .security_rbac import (
+    require_role,
+    require_scopes,
+    role_gte,
+    has_scope,
+    get_user_from_session,
+    audit,
+)
 
 # Optional domains (won't error if models aren't present)
 CraftingRecipe = None
@@ -384,3 +392,71 @@ def resources_list():
         meta=getattr(r, "meta", None)
     ) for r in rows]
     return jsonify(resources=data, enabled=True, meta=_meta(total, page, limit))
+
+
+# -------------- Teleport / Move --------------
+
+
+def _resolve_coords(ch: Character, body: dict):
+    if body.get("snap_to_spawn") and ch.first_time_spawn:
+        return ch.first_time_spawn
+    if body.get("town_id"):
+        town = db.session.get(Town, body["town_id"])
+        if town:
+            return {"x": town.x + town.width // 2, "y": town.y + town.height // 2}
+    x = body.get("x")
+    y = body.get("y")
+    if x is None or y is None:
+        raise ValueError("x,y required")
+    return {"x": int(x), "y": int(y)}
+
+
+@admin_api.post("/characters/<character_id>/teleport")
+@require_role("user")
+def admin_char_teleport(character_id):
+    u = get_user_from_session()
+    if not (role_gte(getattr(u, "role", "user"), "gm") or has_scope(u, "char.move")):
+        return jsonify(error="forbidden"), 403
+    body = request.get_json() or {}
+    ch = db.session.get(Character, character_id)
+    if not ch:
+        return jsonify(error="not_found"), 404
+    try:
+        coords = _resolve_coords(ch, body)
+    except Exception:
+        return jsonify(error="x,y required (ints)"), 400
+    ch.last_coords = coords
+    if hasattr(ch, "x"):
+        ch.x = coords["x"]
+    if hasattr(ch, "y"):
+        ch.y = coords["y"]
+    ch.cur_loc = f"{coords['x']},{coords['y']}"
+    db.session.commit()
+    audit("char.teleport", "character", character_id, payload={"coords": coords, "note": body.get("note")})
+    payload = {
+        "character_id": ch.character_id,
+        "first_time_spawn": ch.first_time_spawn,
+        "last_coords": ch.last_coords,
+        "x": getattr(ch, "x", None),
+        "y": getattr(ch, "y", None),
+        "cur_loc": ch.cur_loc,
+    }
+    return jsonify(payload)
+
+
+# -------------- Console Exec --------------
+
+
+@admin_api.post("/console/exec")
+@require_role("moderator")
+def admin_console_exec():
+    from .admin_console import dispatch
+
+    body = request.get_json() or {}
+    cmd = (body.get("command") or "").strip()
+    dry = bool(body.get("dry_run"))
+    out, data, status = dispatch(cmd, dry_run=dry)
+    if status == 200:
+        audit("console.exec", payload={"cmd": cmd, "dry": dry})
+        return jsonify(ok=True, output=out, data=data)
+    return jsonify(error=out), status

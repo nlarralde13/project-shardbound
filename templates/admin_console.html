@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Admin Console</title>
+  <style>
+    body{background:#111;color:#eee;font-family:monospace;padding:10px}
+    #out{border:1px solid #444;height:300px;overflow:auto;padding:4px;white-space:pre-wrap;margin-bottom:8px}
+  </style>
+</head>
+<body>
+  <div id="out"></div>
+  <input id="cmd" style="width:80%" placeholder="command">
+  <button id="run">Run</button>
+  <button id="dry">Dry-Run</button>
+  <button id="clear">Clear</button>
+  <script>
+    const out=document.getElementById('out'),cmd=document.getElementById('cmd');
+    document.getElementById('run').onclick=()=>exec(false);
+    document.getElementById('dry').onclick=()=>exec(true);
+    document.getElementById('clear').onclick=()=>{out.textContent='';};
+    async function exec(dry){
+      const r=await fetch('/api/admin/console/exec',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({command:cmd.value,dry_run:dry})}).then(r=>r.json()).catch(e=>({error:e.message}));
+      out.textContent += '\n$ '+cmd.value+'\n'+JSON.stringify(r)+'\n';
+    }
+  </script>
+</body>
+</html>
+
