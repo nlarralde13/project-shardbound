@@ -412,7 +412,9 @@
       if (data.error){ showStatus("❌ "+data.error); return }
       showStatus(`Found ${data.meta.total} item(s). Click item_id to edit.`);
       const rows = data.items.map(i=>[
+
         {html:`<a href="#" data-item="${i.item_id}">${i.item_id}</a>`},
+
         i.item_version, i.name, i.type, i.rarity, i.stack_size, i.base_stats
       ]);
       E.results.innerHTML = renderTable(["item_id","version","name","type","rarity","stack","base_stats"], rows);
