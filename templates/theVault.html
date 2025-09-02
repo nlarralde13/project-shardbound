@@ -207,10 +207,15 @@
     function escapeHtml(s){ return s.replace(/[&<>"]/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c])) }
     function renderTable(headers, rows){
       const th = headers.map(h=>`<th>${h}</th>`).join("");
-      // FIXED: remove the extra ')' inside the template expression
-      const tr = rows.map(r=>`<tr>${r.map(c=>`<td>${
-        (c===undefined||c===null) ? "" : (typeof c==="object" ? ("<code>"+escapeHtml(JSON.stringify(c))+"</code>") : escapeHtml(String(c)))
-      }</td>`).join("")}</tr>`).join("");
+      const tr = rows.map(r=>`<tr>${r.map(c=>{
+          if (c && typeof c === 'object' && 'html' in c) {
+            return `<td>${c.html}</td>`;
+          }
+          if (c && typeof c === 'object') {
+            return `<td><code>${escapeHtml(JSON.stringify(c))}</code></td>`;
+          }
+          return `<td>${(c===undefined||c===null) ? '' : escapeHtml(String(c))}</td>`;
+        }).join("")}</tr>`).join("");
       return `<table><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>`;
     }
     function renderPager(meta, onJump){
@@ -265,7 +270,7 @@
       if (data.error){ showStatus("❌ "+data.error); return }
       showStatus(`Found ${data.meta.total} user(s). Click a user_id to open details.`);
       const rows = data.users.map(u=>[
-        `<a href="#" data-user="${u.user_id}">${u.user_id}</a>`,
+        {html:`<a href="#" data-user="${u.user_id}">${u.user_id}</a>`},
         u.email, u.handle, u.display_name, u.is_active ? "yes":"no", u.characters_count,
         u.selected_character_id || "", u.created_at || "", u.last_login_at || ""
       ]);
@@ -334,7 +339,7 @@
       if (data.error){ showStatus("❌ "+data.error); return }
       showStatus(`Found ${data.meta.total} character(s). Click character_id to open details.`);
       const rows = data.characters.map(c=>[
-        `<a href="#" data-char="${c.character_id}">${c.character_id}</a>`,
+        {html:`<a href="#" data-char="${c.character_id}">${c.character_id}</a>`},
         c.name, c.class_id || "", c.level || 1, c.is_active ? "yes":"no",
         c.user_id, c.shard_id || "", c.x ?? "", c.y ?? "", c.created_at || ""
       ]);
@@ -407,7 +412,9 @@
       if (data.error){ showStatus("❌ "+data.error); return }
       showStatus(`Found ${data.meta.total} item(s). Click item_id to edit.`);
       const rows = data.items.map(i=>[
-        `<a href="#" data-item="${i.item_id}">${i.item_id}</a>`,
+
+        {html:`<a href="#" data-item="${i.item_id}">${i.item_id}</a>`},
+
         i.item_version, i.name, i.type, i.rarity, i.stack_size, i.base_stats
       ]);
       E.results.innerHTML = renderTable(["item_id","version","name","type","rarity","stack","base_stats"], rows);
