@@ -1,10 +1,16 @@
 # app/__init__.py
 import os
 import json
+import logging
 import sqlalchemy as sa
 from flask import Flask, render_template, send_from_directory
-from .models import db
-from .db import migrate
+
+# Use an alias for the real SQLAlchemy instance to avoid shadowing by a module named "app.db"
+from .models.base import db as SA_DB  # <- single SQLAlchemy() instance
+from flask_migrate import Migrate
+migrate = Migrate()
+
+# Blueprints (unchanged – keep your work)
 from .auth import auth_bp, login_manager
 from .characters import characters_bp
 from .classes_admin import classes_admin_bp
@@ -12,6 +18,48 @@ from .api_items import api as api_items_bp
 from .api_admin import admin_api
 from .security import admin_guard
 from .admin_panel import admin_ui
+
+def _json_column_type_for(engine) -> str:
+    return "TEXT" if engine.dialect.name == "sqlite" else "JSON"
+
+def _column_names(inspector: sa.engine.reflection.Inspector, table: str) -> set[str]:
+    try:
+        return {c["name"] for c in inspector.get_columns(table)}
+    except Exception:
+        return set()
+
+def _add_column_if_missing(conn: sa.engine.Connection, inspector, table: str, column: str, ddl: str):
+    cols = _column_names(inspector, table)
+    if column not in cols:
+        conn.execute(sa.text(f"ALTER TABLE {table} ADD COLUMN {ddl}"))
+
+def _backfill_coords(conn: sa.engine.Connection, have_xy: bool):
+    if have_xy:
+        rows = conn.execute(sa.text("SELECT character_id, x, y FROM character")).fetchall()
+        for cid, x, y in rows:
+            if x is not None and y is not None:
+                coords = json.dumps({"x": int(x), "y": int(y)})
+                conn.execute(sa.text(
+                    "UPDATE character SET last_coords=:c WHERE last_coords IS NULL AND character_id=:cid"
+                ), {"c": coords, "cid": cid})
+                conn.execute(sa.text(
+                    "UPDATE character SET first_time_spawn=:c WHERE first_time_spawn IS NULL AND character_id=:cid"
+                ), {"c": coords, "cid": cid})
+    else:
+        conn.execute(sa.text("""
+            UPDATE character
+            SET first_time_spawn = json_object(
+              'x', CAST(substr(cur_loc, 1, instr(cur_loc, ',')-1) AS INT),
+              'y', CAST(substr(cur_loc, instr(cur_loc, ',')+1) AS INT)
+            )
+            WHERE first_time_spawn IS NULL
+              AND cur_loc IS NOT NULL
+        """))
+        conn.execute(sa.text("""
+            UPDATE character
+            SET last_coords = first_time_spawn
+            WHERE last_coords IS NULL AND first_time_spawn IS NOT NULL
+        """))
 
 def create_app():
     app = Flask(__name__, static_folder="../static", template_folder="../templates")
@@ -26,80 +74,83 @@ def create_app():
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         SESSION_COOKIE_SAMESITE="Lax",
     )
-    app.config.setdefault("SECRET_KEY", "dev-change-me")
-    app.config.setdefault("ADMIN_PANEL_PASSWORD", "forge-master")
 
-    db.init_app(app)
-    migrate.init_app(app, db)
+    # Init core extensions with the un-shadowable alias
+    SA_DB.init_app(app)
+    migrate.init_app(app, SA_DB)
     login_manager.init_app(app)
 
-    with app.app_context():
-        from . import models  # ensure models are imported
-        if os.environ.get("AUTO_CREATE_TABLES", "1") == "1":
-            db.create_all()
+    # Helpful startup log
+    app.logger.setLevel(logging.INFO)
+    app.logger.info("DB URI: %s", app.config["SQLALCHEMY_DATABASE_URI"])
+    app.logger.info("AUTO_CREATE_TABLES=%s", os.environ.get("AUTO_CREATE_TABLES", "1"))
 
-            # -- temporary migrations for pre-beta databases --
-            inspector = sa.inspect(db.engine)
-            cols = {c["name"] for c in inspector.get_columns("character")}
-            with db.engine.begin() as conn:
-                # Ensure legacy column exists with safe defaults to avoid NOT NULL failures
-                if "is_deleted" not in cols:
-                    conn.execute(sa.text("ALTER TABLE character ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT 0"))
-                if "biography" not in cols:
-                    conn.execute(sa.text("ALTER TABLE character ADD COLUMN biography TEXT"))
-                    if "bio" in cols:
-                        conn.execute(sa.text("UPDATE character SET biography = bio"))
-                if "is_active" not in cols:
-                    conn.execute(sa.text("ALTER TABLE character ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT 1"))
+    with app.app_context():
+        # Ensure all models are imported so metadata is complete
+        from . import models as _models  # noqa: F401
+
+        # ===== DEV SAFETY MODE =====
+        # Keep your original "startup safety" block, guarded by AUTO_CREATE_TABLES.
+        if os.environ.get("AUTO_CREATE_TABLES", "1") == "1":
+            SA_DB.create_all()
+
+            inspector = sa.inspect(SA_DB.engine)
+            cols = _column_names(inspector, "character")
+            if cols:
+                json_type = _json_column_type_for(SA_DB.engine)
+                with SA_DB.engine.begin() as conn:
+                    _add_column_if_missing(conn, inspector, "character", "is_deleted", "BOOLEAN NOT NULL DEFAULT 0")
+                    _add_column_if_missing(conn, inspector, "character", "biography", "TEXT")
+                    if "biography" in _column_names(inspector, "character") and "bio" in cols:
+                        conn.execute(sa.text("UPDATE character SET biography = bio WHERE biography IS NULL"))
+
+                    _add_column_if_missing(conn, inspector, "character", "is_active", "BOOLEAN NOT NULL DEFAULT 1")
                     if "is_deleted" in cols:
                         conn.execute(sa.text("UPDATE character SET is_active = 0 WHERE is_deleted = 1"))
-                if "last_seen_at" not in cols:
-                    conn.execute(sa.text("ALTER TABLE character ADD COLUMN last_seen_at DATETIME"))
-                if "cur_loc" not in cols:
-                    conn.execute(sa.text("ALTER TABLE character ADD COLUMN cur_loc VARCHAR(64)"))
-                    if "x" in cols and "y" in cols:
-                        conn.execute(sa.text(
-                            "UPDATE character SET cur_loc = x || ',' || y WHERE x IS NOT NULL AND y IS NOT NULL"
-                        ))
-                if "first_time_spawn" not in cols:
-                    conn.execute(sa.text("ALTER TABLE character ADD COLUMN first_time_spawn JSON"))
-                if "last_coords" not in cols:
-                    conn.execute(sa.text("ALTER TABLE character ADD COLUMN last_coords JSON"))
-                    if "x" in cols and "y" in cols:
-                        rows = conn.execute(sa.text("SELECT character_id, x, y FROM character")).fetchall()
-                        for cid, x, y in rows:
-                            if x is not None and y is not None:
-                                coords = json.dumps({"x": int(x), "y": int(y)})
-                                conn.execute(sa.text("UPDATE character SET last_coords=:c WHERE character_id=:cid"), {"c": coords, "cid": cid})
-                                conn.execute(sa.text("UPDATE character SET first_time_spawn=:c WHERE character_id=:cid AND first_time_spawn IS NULL"), {"c": coords, "cid": cid})
 
-    # Blueprints
+                    _add_column_if_missing(conn, inspector, "character", "last_seen_at", "DATETIME")
+                    _add_column_if_missing(conn, inspector, "character", "cur_loc", "VARCHAR(64)")
+                    if "cur_loc" in _column_names(inspector, "character") and "x" in cols and "y" in cols:
+                        conn.execute(sa.text(
+                            "UPDATE character SET cur_loc = x || ',' || y "
+                            "WHERE cur_loc IS NULL AND x IS NOT NULL AND y IS NOT NULL"
+                        ))
+
+                    _add_column_if_missing(conn, inspector, "character", "first_time_spawn", f"{json_type}")
+                    _add_column_if_missing(conn, inspector, "character", "last_coords", f"{json_type}")
+
+                    cols_after = _column_names(inspector, "character")
+                    have_xy = "x" in cols_after and "y" in cols_after
+                    _backfill_coords(conn, have_xy)
+
+    # Blueprints (your existing ones)
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
-    app.register_blueprint(characters_bp)  # /api/characters
-    app.register_blueprint(classes_admin_bp) #class builder admin
-    app.register_blueprint(api_items_bp, url_prefix="/api")
+    app.register_blueprint(characters_bp)            # legacy /api/characters
+    app.register_blueprint(classes_admin_bp)
+    app.register_blueprint(api_items_bp, url_prefix="/api", name="items_api")
     app.register_blueprint(admin_api)
     app.register_blueprint(admin_ui)
+
     # Gameplay API
     try:
         from .api_gameplay import bp as gameplay_bp
-        app.register_blueprint(gameplay_bp)
-    except Exception:
-        pass
+        app.register_blueprint(gameplay_bp)          # /api/game/...
+    except Exception as e:
+        app.logger.warning("api_gameplay not registered: %s", e)
 
-    # Your other API blueprints (unchanged)
+    # Other APIs you had
     from .api.routes import bp as core_api_bp
     app.register_blueprint(core_api_bp)
     from .api.actions import bp as actions_api_bp
     app.register_blueprint(actions_api_bp)
     try:
         from shardEngine.endpoints import bp as shard_gen_v2_bp, api_bp
-        app.register_blueprint(shard_gen_v2_bp, url_prefix="/api/shard-gen-v2")
-        app.register_blueprint(api_bp, url_prefix="/api")
-    except Exception:
-        pass
+        app.register_blueprint(shard_gen_v2_bp, url_prefix="/api/shard-gen-v2", name="shard_gen_v2")
+        app.register_blueprint(api_bp, url_prefix="/api/shard-engine", name="shard_engine_api")
+    except Exception as e:
+        app.logger.warning("shardEngine endpoints not registered: %s", e)
 
-    # UI routes
+    # UI routes (unchanged)
     @app.route("/")
     def index():
         return render_template("index.html")
@@ -136,18 +187,18 @@ def create_app():
     def static_passthrough(filename):
         return send_from_directory(app.static_folder, filename)
 
-
     @app.route("/class-builder")
     def class_builder():
         return render_template("class_builder.html")
-    
+
     @app.route("/itemForge")
     def item_forge():
         admin_guard()
         return render_template("item_forge.html")
-    
+
     @app.route("/vault")
     def data_vault():
         admin_guard()
-        return render_template("theVault.html")    
+        return render_template("theVault.html")
+
     return app
