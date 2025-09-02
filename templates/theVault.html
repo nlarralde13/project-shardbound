@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Mímir’s Vault — Data Archive</title>
+  <title>Shardbound Admin Panel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root { --bg:#0b0f18; --ink:#e7ebff; --muted:#96a0c4; --panel:#121933; --line:#25305b; --accent:#77c9ff; --glow:#6ee7ff; }
@@ -41,8 +41,8 @@
   <header>
     <div class="sigil"></div>
     <div>
-      <h1>Mímir’s Vault</h1>
-      <div class="sub">Dwarven archives for data lookup — users, characters, items, instances, inventory, recipes, resources.</div>
+      <h1>Shardbound Admin Panel</h1>
+      <div class="sub">Administrative tools for data lookup — users, characters, items, instances, inventory, recipes, resources.</div>
     </div>
   </header>
 
@@ -67,7 +67,16 @@
             <div><label>Email contains</label><input id="u_email" placeholder="nick@..."></div>
             <div><label>Handle contains</label><input id="u_handle" placeholder="nick"></div>
           </div>
-          <div><button class="primary" id="btn_users">Search Users</button> <button id="btn_user_create">New User</button></div>
+          <div><button class="primary" id="btn_users">Search Users</button></div>
+          <h4>Create User</h4>
+          <div class="grid cols-2">
+            <div><label>Email</label><input id="u_new_email" placeholder="nick@..."></div>
+            <div><label>Handle</label><input id="u_new_handle" placeholder="nick"></div>
+          </div>
+          <div class="grid cols-2">
+            <div><label>Display Name</label><input id="u_new_display" placeholder="Nick"></div>
+            <div style="align-self:end"><button id="btn_user_create">Create User</button></div>
+          </div>
         </div>
 
         <!-- CHARACTERS -->
@@ -170,7 +179,8 @@
     const Ids = [
       "tab_users","tab_chars","tab_items","tab_insts","tab_inv","tab_recipes","tab_resources",
       "pane_users","pane_chars","pane_items","pane_insts","pane_inv","pane_recipes","pane_resources",
-      "u_email","u_handle","btn_users","btn_user_create",
+      "u_email","u_handle","btn_users",
+      "u_new_email","u_new_handle","u_new_display","btn_user_create",
       "c_email","c_name","c_active","c_user_id","btn_chars","btn_char_create",
       "i_id","i_name","i_type","i_rarity","btn_items","btn_item_create",
       "inst_item_id","btn_insts",
@@ -271,10 +281,16 @@
       showStatus(`Found ${data.meta.total} user(s). Click a user_id to open details.`);
       const rows = data.users.map(u=>[
         {html:`<a href="#" data-user="${u.user_id}">${u.user_id}</a>`},
-        u.email, u.handle, u.display_name, u.is_active ? "yes":"no", u.characters_count,
-        u.selected_character_id || "", u.created_at || "", u.last_login_at || ""
+        u.email,
+        u.handle,
+        u.display_name,
+        u.is_active ? "yes":"no",
+        {html:`<details><summary>${u.characters_count}</summary>${(u.character_names||[]).map(n=>escapeHtml(n)).join('<br>')}</details>`},
+        u.selected_character_id || "",
+        u.created_at || "",
+        u.last_login_at || ""
       ]);
-      E.results.innerHTML = renderTable(["user_id","email","handle","display_name","active","chars","#selected_char","created_at","last_login"], rows);
+      E.results.innerHTML = renderTable(["user_id","email","handle","display_name","active","characters","#selected_char","created_at","last_login"], rows);
       state.users.meta = data.meta;
       renderPager(data.meta, (p)=>runUsers(p));
       E.results.querySelectorAll('[data-user]').forEach(a=>{
@@ -319,13 +335,17 @@
     }
     btn_users.onclick = ()=>runUsers(1);
     btn_user_create.onclick = async ()=>{
-      const email = prompt('Email?');
-      if(!email) return;
-      const handle = prompt('Handle?') || '';
-      const display_name = prompt('Display name?') || '';
+      const email = E.u_new_email.value.trim();
+      if(!email){ alert('Email required'); return; }
+      const handle = E.u_new_handle.value.trim();
+      const display_name = E.u_new_display.value.trim();
       showStatus('Creating user...');
       const r = await fetch('/api/admin/users', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email, handle, display_name})}).then(r=>r.json()).catch(e=>({error:e.message}));
-      if(r.error) showStatus('❌ '+r.error); else { showStatus('✅ User created'); runUsers(); }
+      if(r.error) showStatus('❌ '+r.error); else {
+        showStatus('✅ User created');
+        E.u_new_email.value=''; E.u_new_handle.value=''; E.u_new_display.value='';
+        runUsers();
+      }
     };
 
     // CHARACTERS
