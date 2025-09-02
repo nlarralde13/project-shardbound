@@ -67,13 +67,19 @@ def users_list():
     )
     data = []
     for u, nchars in rows:
+        # fetch associated character names for each user
+        char_names = [c.name for c in Character.query.with_entities(Character.name).filter_by(user_id=u.user_id).all()]
         data.append(dict(
-            user_id=u.user_id, email=u.email, handle=u.handle, display_name=u.display_name,
+            user_id=u.user_id,
+            email=u.email,
+            handle=u.handle,
+            display_name=u.display_name,
             created_at=u.created_at.isoformat() if u.created_at else None,
             last_login_at=u.last_login_at.isoformat() if getattr(u, "last_login_at", None) else None,
             is_active=bool(getattr(u, "is_active", True)),
             selected_character_id=getattr(u, "selected_character_id", None),
             characters_count=int(nchars or 0),
+            character_names=char_names,
         ))
     return jsonify(users=data, meta=_meta(total, page, limit))
 
