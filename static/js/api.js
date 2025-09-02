@@ -90,7 +90,7 @@ export const API = {
   },
 
   async characterCreate(payload) {
-    const r = await fetch('/api/characters', {
+    const r = await fetch('/api/game/characters', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

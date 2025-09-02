@@ -5,13 +5,16 @@ from .users import User                      # noqa: F401
 from .characters import Character            # noqa: F401
 from .items import Item                      # noqa: F401
 from .inventory import ItemInstance, CharacterInventory   # noqa: F401
+# Gameplay models
+from .gameplay import (
+    Town, TownRoom, NPC, Quest, QuestState, CharacterState, EncounterTrigger,
+)  # noqa: F401
 # from .crafting import Recipe               # noqa: F401
-from .towns import Town                     # noqa: F401
 
 __all__ = [
     "db", "Model", "metadata",
     "User", "Character",
     "Item", "ItemInstance", "CharacterInventory",
-    "Town",
+    "Town", "TownRoom", "NPC", "Quest", "QuestState", "CharacterState", "EncounterTrigger",
     # "Recipe",
 ]

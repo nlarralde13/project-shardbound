@@ -68,6 +68,12 @@ def create_app():
     app.register_blueprint(api_items_bp, url_prefix="/api")
     app.register_blueprint(admin_api)
     app.register_blueprint(admin_ui)
+    # Gameplay API
+    try:
+        from .api_gameplay import bp as gameplay_bp
+        app.register_blueprint(gameplay_bp)
+    except Exception:
+        pass
 
     # Your other API blueprints (unchanged)
     from .api.routes import bp as core_api_bp

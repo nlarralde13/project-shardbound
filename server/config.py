@@ -1,1 +1,6 @@
 START_POS = (12, 15)
+# Demo gameplay coordinates
+START_TOWN_COORDS = (12, 15)
+PORT_TOWN_COORDS = (14, 9)
+AMBUSH_COORDS = (13, 12)
+TOWN_GRID_SIZE = (3, 3)

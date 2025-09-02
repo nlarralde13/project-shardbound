@@ -33,11 +33,24 @@ os.environ.setdefault("AUTO_CREATE_TABLES", "0")
 
 from app import create_app  # type: ignore
 from app.models import db, User, Character  # type: ignore
-# New models (adjust if your names differ)
+# Item/inventory models
 try:
     from app.models import Item, ItemInstance, CharacterInventory  # type: ignore
 except Exception:  # helpful error if models aren’t wired yet
     Item = ItemInstance = CharacterInventory = None  # type: ignore
+# Gameplay models
+try:
+    from app.models import (
+        Town,
+        TownRoom,
+        NPC,
+        Quest,
+        QuestState,
+        CharacterState,
+        EncounterTrigger,
+    )  # type: ignore
+except Exception:  # pragma: no cover - gameplay models optional
+    Town = TownRoom = NPC = Quest = QuestState = CharacterState = EncounterTrigger = None  # type: ignore
 
 
 def _fmt_dt(dt):
@@ -453,6 +466,75 @@ def cmd_list_shards(args):
     print_rows(rows, ["file","shard_id","label","created_at"])
 
 
+def cmd_seed_starter(_args):
+    """Seed minimal starter town, NPCs, quest, items, and encounter."""
+    if None in (Town, TownRoom, NPC, Quest, EncounterTrigger, Item):
+        print("Gameplay models not available."); return
+    # Town
+    town = Town.query.get("starter_town") or Town(town_id="starter_town")
+    town.name = "Starter Town"
+    town.world_x, town.world_y = 12, 15
+    town.grid_w, town.grid_h = 3, 3
+    db.session.add(town)
+    # Town rooms (3x3)
+    kinds = {(0,0):"exit", (1,1):"square", (0,1):"shop", (2,1):"craft_hall", (1,2):"dock"}
+    for y in range(3):
+        for x in range(3):
+            room = TownRoom.query.filter_by(town_id=town.town_id, room_x=x, room_y=y).first()
+            if not room:
+                room = TownRoom(town_id=town.town_id, room_x=x, room_y=y)
+            room.kind = kinds.get((x,y), "room")
+            room.label = room.kind
+            db.session.add(room)
+    # NPCs
+    for npc_id, name, kind in [
+        ("shady_figure", "Shady Figure", "quest"),
+        ("harbormaster", "Harbormaster", "quest"),
+    ]:
+        npc = NPC.query.get(npc_id) or NPC(npc_id=npc_id)
+        npc.name, npc.kind = name, kind
+        db.session.add(npc)
+    # Quest
+    quest = Quest.query.get("q_deliver_letter_001") or Quest(quest_id="q_deliver_letter_001")
+    quest.name = "Deliver Letter"
+    quest.giver_npc_id = "shady_figure"
+    quest.type = "deliver"
+    quest.target_world_x, quest.target_world_y = 14, 9
+    quest.required_item_id = "itm_letter_sealed"
+    quest.reward_json = {"xp":25, "gold":5}
+    db.session.add(quest)
+    # Encounter trigger
+    trig = EncounterTrigger.query.filter_by(label="starter_ambush").first()
+    if not trig:
+        trig = EncounterTrigger(label="starter_ambush", world_x=13, world_y=12, script_id="goblin_ambush_1")
+    db.session.add(trig)
+    # Items
+    items = [
+        dict(item_id="itm_sword_wood", item_version="1.0", name="Wooden Sword", type="weapon", rarity="common", stack_size=1, base_stats={"atk":2}),
+        dict(item_id="itm_shield_wood", item_version="1.0", name="Wooden Shield", type="armor", rarity="common", stack_size=1, base_stats={"def":1}),
+        dict(item_id="itm_potion_small", item_version="1.0", name="Small Potion", type="consumable", rarity="common", stack_size=10, base_stats={"heal":20}),
+        dict(item_id="itm_letter_sealed", item_version="1.0", name="Sealed Letter", type="quest", rarity="common", stack_size=1, base_stats={}),
+    ]
+    for it in items:
+        obj = Item.query.get(it["item_id"]) or Item(item_id=it["item_id"])
+        for k,v in it.items():
+            setattr(obj, k, v)
+        db.session.add(obj)
+    db.session.commit()
+    print("Seeded starter data.")
+
+
+def cmd_quest_reset(args):
+    """Remove quest states for a character."""
+    if QuestState is None:
+        print("QuestState model missing."); return
+    qs = QuestState.query.filter_by(character_id=args.char).all()
+    for q in qs:
+        db.session.delete(q)
+    db.session.commit()
+    print(f"Reset {len(qs)} quest states for character {args.char}")
+
+
 # =======================
 # argparse wiring
 # =======================
@@ -535,6 +617,13 @@ Examples:
     s.set_defaults(func=cmd_seed_world)
 
     s = sub.add_parser("list-shards", help="List shard JSON files"); s.add_argument("--dir"); s.set_defaults(func=cmd_list_shards)
+
+    # Gameplay helpers
+    s = sub.add_parser("seed-starter", help="Seed starter town, NPCs, quest, and items")
+    s.set_defaults(func=cmd_seed_starter)
+    s = sub.add_parser("quest-reset", help="Reset demo quest for a character")
+    s.add_argument("--char", required=True)
+    s.set_defaults(func=cmd_quest_reset)
 
     return p
 
