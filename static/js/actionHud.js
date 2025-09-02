@@ -96,6 +96,7 @@ export function initActionHUD({ mount = ".room-stage" } = {}) {
     try {
       setBusy(true);
       const out = await API.interact();
+      if (out?.poi) window.dispatchEvent(new CustomEvent("game:poi", { detail: out.poi }));
       if (out?.log) window.dispatchEvent(new CustomEvent("game:log", { detail: out.log.map(t => ({ text: t, ts: Date.now() })) }));
     } finally {
       setBusy(false);
@@ -149,12 +150,17 @@ async function doMove(dir) {
   if (!delta) return;
   try {
     setBusy(true);
-    const res = await API.move(delta[0], delta[1]);
-    if (res?.log) window.dispatchEvent(new CustomEvent("game:log", { detail: res.log.map(t => ({ text: t, ts: Date.now() })) }));
-    if (res?.room_delta) window.patchRoom?.(res.room_delta);
-    if (res?.room) window.patchRoom?.({ ...res.room });
-    const pos = res?.player?.pos || [];
-    if (pos.length === 2) window.dispatchEvent(new CustomEvent("game:moved", { detail: { x: pos[0], y: pos[1] } }));
+    let res;
+    if (window.__gameMode === 'town' && typeof window.townMove === 'function') {
+      res = await window.townMove(delta[0], delta[1]);
+    } else {
+      res = await API.move(delta[0], delta[1]);
+      if (res?.log) window.dispatchEvent(new CustomEvent("game:log", { detail: res.log.map(t => ({ text: t, ts: Date.now() })) }));
+      if (res?.room_delta) window.patchRoom?.(res.room_delta);
+      if (res?.room) window.patchRoom?.({ ...res.room });
+      const pos = res?.player?.pos || [];
+      if (pos.length === 2) window.dispatchEvent(new CustomEvent("game:moved", { detail: { x: pos[0], y: pos[1] } }));
+    }
     if (res?.interactions) updateActionHUD({ interactions: res.interactions });
   } catch (e) {
     console.error(e);

@@ -9,7 +9,10 @@ const container = document.getElementById('roomArt');
 let charId = null;
 let rooms = [];
 let questRoom = null;
+let playerRoom = null;
 let encounter = null;
+
+window.__gameMode = 'overworld';
 
 function log(msg) {
   const logEl = document.getElementById('console');
@@ -22,6 +25,32 @@ function log(msg) {
     console.log(msg);
   }
 }
+
+window.addEventListener('game:poi', async (e) => {
+  if (!charId) return;
+  const poi = e.detail;
+  if (mode.getMode() === 'overworld' && poi && (poi.type === 'town' || poi.type === 'village')) {
+    const r = await GameAPI.enterTown(charId);
+    rooms = r.rooms || [];
+    questRoom = r.quest_giver_room;
+    playerRoom = r.player_room;
+    mode.setMode('town');
+    window.__gameMode = 'town';
+    container && renderTown(container, rooms, playerRoom);
+  }
+});
+
+window.townMove = async (dx, dy) => {
+  if (!charId) return {};
+  const r = await GameAPI.townMove(charId, { dx, dy });
+  if (r?.room) {
+    playerRoom = { x: r.room.room_x, y: r.room.room_y };
+  } else {
+    playerRoom = { x: (playerRoom?.x || 0) + dx, y: (playerRoom?.y || 0) + dy };
+  }
+  container && renderTown(container, rooms, playerRoom);
+  return r;
+};
 
 async function handleCommand(text) {
   const parts = text.trim().split(/\s+/);
@@ -47,21 +76,28 @@ async function handleCommand(text) {
       const r = await GameAPI.enterTown(charId);
       rooms = r.rooms || [];
       questRoom = r.quest_giver_room;
+      playerRoom = r.player_room;
       mode.setMode('town');
-      container && renderTown(container, rooms, r.player_room);
+      window.__gameMode = 'town';
+      container && renderTown(container, rooms, playerRoom);
     }
   } else if (mode.getMode() === 'town') {
     if (cmd === 'leave') {
       await GameAPI.leaveTown(charId);
       mode.setMode('overworld');
+      window.__gameMode = 'overworld';
+      playerRoom = null;
       container && (container.innerHTML = '');
       log('Left town.');
     } else if (cmd === 'room') {
       const x = parseInt(parts[1], 10);
       const y = parseInt(parts[2], 10);
       if (Number.isNaN(x) || Number.isNaN(y)) { log('Usage: room x y'); return; }
-      await GameAPI.townMove(charId, { room_x: x, room_y: y });
-      container && renderTown(container, rooms, { x, y });
+      const dx = x - (playerRoom?.x || 0);
+      const dy = y - (playerRoom?.y || 0);
+      await GameAPI.townMove(charId, { dx, dy });
+      playerRoom = { x, y };
+      container && renderTown(container, rooms, playerRoom);
       if (questRoom && x === questRoom.x && y === questRoom.y) {
         log('a shady figure appears in the corner');
       }
