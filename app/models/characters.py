@@ -29,6 +29,8 @@ class Character(Model):
     first_time_spawn = db.Column(db.JSON)
     last_coords = db.Column(db.JSON)
     cur_loc = db.Column(db.String(64))
+    x = db.Column(db.Integer)
+    y = db.Column(db.Integer)
 
     # easy-mode state bucket (inventory, quests, flags) -> normalize later
     state = db.Column(db.JSON)

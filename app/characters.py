@@ -61,7 +61,10 @@ def list_characters():
 @characters_bp.route("/api/characters", methods=["POST"])
 @login_required
 def create_character():
-    return redirect("/api/game/characters", code=308)
+    # proxy to gameplay endpoint for backward compatibility
+    from .api_gameplay import create_character as _create
+
+    return _create()
 
 @characters_bp.route("/api/characters/<string:character_id>", methods=["DELETE"])
 @login_required

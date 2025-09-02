@@ -42,3 +42,9 @@ def admin_api_token():
 @admin_required()
 def admin_panel():
     return render_template("admin_panel.html")
+
+
+@admin_ui.route("/admin/console")
+@admin_required()
+def admin_console_page():
+    return render_template("admin_console.html")

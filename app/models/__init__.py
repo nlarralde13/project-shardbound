@@ -9,6 +9,7 @@ from .inventory import ItemInstance, CharacterInventory   # noqa: F401
 from .gameplay import (
     Town, TownRoom, NPC, Quest, QuestState, CharacterState, EncounterTrigger,
 )  # noqa: F401
+from .audit import AdminAuditLog  # noqa: F401
 # from .crafting import Recipe               # noqa: F401
 
 __all__ = [
@@ -16,5 +17,6 @@ __all__ = [
     "User", "Character",
     "Item", "ItemInstance", "CharacterInventory",
     "Town", "TownRoom", "NPC", "Quest", "QuestState", "CharacterState", "EncounterTrigger",
+    "AdminAuditLog",
     # "Recipe",
 ]

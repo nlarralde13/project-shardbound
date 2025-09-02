@@ -23,6 +23,10 @@ class User(Model, UserMixin):
     )
     last_login_at = db.Column(db.DateTime)
 
+    # RBAC fields
+    role = db.Column(db.String(16), nullable=False, default="user")
+    scopes = db.Column(db.JSON)
+
     # Active character (persist across sessions)
     selected_character_id = db.Column(
         db.String, db.ForeignKey("character.character_id"), nullable=True
