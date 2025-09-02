@@ -12,6 +12,9 @@ To access admin features set an admin passphrase before running the server:
 export ADMIN_PANEL_PASSWORD="your-passphrase"
 ```
 
+Logged-in users whose `role` is `admin` or `dev` skip the passphrase screen and
+are automatically issued an admin token when visiting `/admin/login`.
+
 ## Admin Interfaces
 
 ### UIs
