@@ -67,7 +67,7 @@
             <div><label>Email contains</label><input id="u_email" placeholder="nick@..."></div>
             <div><label>Handle contains</label><input id="u_handle" placeholder="nick"></div>
           </div>
-          <div><button class="primary" id="btn_users">Search Users</button></div>
+          <div><button class="primary" id="btn_users">Search Users</button> <button id="btn_user_create">New User</button></div>
         </div>
 
         <!-- CHARACTERS -->
@@ -83,7 +83,7 @@
             <div><label>User ID</label><input id="c_user_id" placeholder="uuid (optional)"></div>
             <div></div>
           </div>
-          <div><button class="primary" id="btn_chars">Search Characters</button></div>
+          <div><button class="primary" id="btn_chars">Search Characters</button> <button id="btn_char_create">New Character</button></div>
         </div>
 
         <!-- ITEMS -->
@@ -96,7 +96,7 @@
             <div><label>Type</label><input id="i_type" placeholder="weapon/consumable/..."></div>
             <div><label>Rarity</label><input id="i_rarity" placeholder="common/rare/..."></div>
           </div>
-          <div><button class="primary" id="btn_items">Search Items</button></div>
+          <div><button class="primary" id="btn_items">Search Items</button> <button id="btn_item_create">New Item</button></div>
         </div>
 
         <!-- INSTANCES -->
@@ -170,9 +170,9 @@
     const Ids = [
       "tab_users","tab_chars","tab_items","tab_insts","tab_inv","tab_recipes","tab_resources",
       "pane_users","pane_chars","pane_items","pane_insts","pane_inv","pane_recipes","pane_resources",
-      "u_email","u_handle","btn_users",
-      "c_email","c_name","c_active","c_user_id","btn_chars",
-      "i_id","i_name","i_type","i_rarity","btn_items",
+      "u_email","u_handle","btn_users","btn_user_create",
+      "c_email","c_name","c_active","c_user_id","btn_chars","btn_char_create",
+      "i_id","i_name","i_type","i_rarity","btn_items","btn_item_create",
       "inst_item_id","btn_insts",
       "inv_char_id","inv_slot_min","btn_inv",
       "r_id","r_name","r_out","btn_recipes",
@@ -187,6 +187,7 @@
       characters: (p)=>fetchJSON(`/api/admin/characters?${new URLSearchParams(p)}`),
       character: (id)=>fetchJSON(`/api/admin/characters/${encodeURIComponent(id)}`),
       items: (p)=>fetchJSON(`/api/admin/items?${new URLSearchParams(p)}`),
+      item: (id)=>fetchJSON(`/api/admin/items/${encodeURIComponent(id)}`),
       instances: (p)=>fetchJSON(`/api/admin/item_instances?${new URLSearchParams(p)}`),
       inventory: (cid,p)=>fetchJSON(`/api/admin/characters/${encodeURIComponent(cid)}/inventory?${new URLSearchParams(p)}`),
       recipes: (p)=>fetchJSON(`/api/admin/recipes?${new URLSearchParams(p)}`),
@@ -206,10 +207,15 @@
     function escapeHtml(s){ return s.replace(/[&<>"]/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c])) }
     function renderTable(headers, rows){
       const th = headers.map(h=>`<th>${h}</th>`).join("");
-      // FIXED: remove the extra ')' inside the template expression
-      const tr = rows.map(r=>`<tr>${r.map(c=>`<td>${
-        (c===undefined||c===null) ? "" : (typeof c==="object" ? ("<code>"+escapeHtml(JSON.stringify(c))+"</code>") : escapeHtml(String(c)))
-      }</td>`).join("")}</tr>`).join("");
+      const tr = rows.map(r=>`<tr>${r.map(c=>{
+          if (c && typeof c === 'object' && 'html' in c) {
+            return `<td>${c.html}</td>`;
+          }
+          if (c && typeof c === 'object') {
+            return `<td><code>${escapeHtml(JSON.stringify(c))}</code></td>`;
+          }
+          return `<td>${(c===undefined||c===null) ? '' : escapeHtml(String(c))}</td>`;
+        }).join("")}</tr>`).join("");
       return `<table><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>`;
     }
     function renderPager(meta, onJump){
@@ -264,7 +270,7 @@
       if (data.error){ showStatus("❌ "+data.error); return }
       showStatus(`Found ${data.meta.total} user(s). Click a user_id to open details.`);
       const rows = data.users.map(u=>[
-        `<a href="#" data-user="${u.user_id}">${u.user_id}</a>`,
+        {html:`<a href="#" data-user="${u.user_id}">${u.user_id}</a>`},
         u.email, u.handle, u.display_name, u.is_active ? "yes":"no", u.characters_count,
         u.selected_character_id || "", u.created_at || "", u.last_login_at || ""
       ]);
@@ -282,11 +288,45 @@
           E.pager.innerHTML = ""; // hide pager in detail view
           E.results.innerHTML =
             `<h3>User</h3>${renderTable(["field","value"], Object.entries(d).filter(([k])=>k!=="characters"))}
+             <h3>Edit User</h3>
+             <form id="user_form" class="grid cols-2">
+               <div><label>Handle</label><input name="handle" value="${escapeHtml(d.handle||'')}"></div>
+               <div><label>Display Name</label><input name="display_name" value="${escapeHtml(d.display_name||'')}"></div>
+               <div><label>Active</label><select name="is_active"><option value="true" ${d.is_active?'selected':''}>true</option><option value="false" ${!d.is_active?'selected':''}>false</option></select></div>
+               <div><label>Selected Character</label><input name="selected_character_id" value="${d.selected_character_id||''}"></div>
+               <div style="grid-column: span 2; display:flex; gap:8px"><button class="primary" type="submit">Save</button><button type="button" id="user_delete">Delete</button></div>
+             </form>
              <h3>Characters</h3>${renderTable(["character_id","name","class","level","active","shard_id","x","y","created_at"], (d.characters||[]).map(c=>[c.character_id,c.name,c.class_id||"",c.level||1,c.is_active?"yes":"no",c.shard_id||"",c.x??"",c.y??"",c.created_at||""]))}`;
+          const form = document.getElementById('user_form');
+          form.addEventListener('submit', async (ev2)=>{
+            ev2.preventDefault();
+            const fd = new FormData(form);
+            const payload = {};
+            fd.forEach((v,k)=>{ if(v!=="") payload[k]=v; });
+            if ('is_active' in payload) payload.is_active = payload.is_active === 'true';
+            showStatus('Saving user...');
+            const r = await fetch(`/api/admin/users/${encodeURIComponent(id)}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)}).then(r=>r.json()).catch(e=>({error:e.message}));
+            if (r.error) showStatus('❌ '+r.error); else showStatus('✅ User updated');
+          });
+          document.getElementById('user_delete').addEventListener('click', async ()=>{
+            if(!confirm('Delete user?')) return;
+            showStatus('Deleting user...');
+            const r = await fetch(`/api/admin/users/${encodeURIComponent(id)}`, {method:'DELETE'}).then(r=>r.json()).catch(e=>({error:e.message}));
+            if (r.error) showStatus('❌ '+r.error); else { showStatus('✅ User deleted'); runUsers(); }
+          });
         });
       });
     }
     btn_users.onclick = ()=>runUsers(1);
+    btn_user_create.onclick = async ()=>{
+      const email = prompt('Email?');
+      if(!email) return;
+      const handle = prompt('Handle?') || '';
+      const display_name = prompt('Display name?') || '';
+      showStatus('Creating user...');
+      const r = await fetch('/api/admin/users', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email, handle, display_name})}).then(r=>r.json()).catch(e=>({error:e.message}));
+      if(r.error) showStatus('❌ '+r.error); else { showStatus('✅ User created'); runUsers(); }
+    };
 
     // CHARACTERS
     async function runChars(page=1){
@@ -299,7 +339,7 @@
       if (data.error){ showStatus("❌ "+data.error); return }
       showStatus(`Found ${data.meta.total} character(s). Click character_id to open details.`);
       const rows = data.characters.map(c=>[
-        `<a href="#" data-char="${c.character_id}">${c.character_id}</a>`,
+        {html:`<a href="#" data-char="${c.character_id}">${c.character_id}</a>`},
         c.name, c.class_id || "", c.level || 1, c.is_active ? "yes":"no",
         c.user_id, c.shard_id || "", c.x ?? "", c.y ?? "", c.created_at || ""
       ]);
@@ -317,11 +357,51 @@
           E.pager.innerHTML = "";
           E.results.innerHTML =
             `<h3>Character</h3>${renderTable(["field","value"], Object.entries(d).filter(([k])=>k!=="inventory"))}
+             <h3>Edit Character</h3>
+             <form id="char_form" class="grid cols-2">
+               <div><label>Name</label><input name="name" value="${escapeHtml(d.name||'')}"></div>
+               <div><label>Class</label><input name="class_id" value="${escapeHtml(d.class_id||'')}"></div>
+               <div><label>Level</label><input name="level" value="${d.level||1}"></div>
+               <div><label>Active</label><select name="is_active"><option value="true" ${d.is_active?'selected':''}>true</option><option value="false" ${!d.is_active?'selected':''}>false</option></select></div>
+               <div><label>Shard ID</label><input name="shard_id" value="${d.shard_id||''}"></div>
+               <div><label>X</label><input name="x" value="${d.x??''}"></div>
+               <div><label>Y</label><input name="y" value="${d.y??''}"></div>
+               <div style="grid-column: span 2; display:flex; gap:8px"><button class="primary" type="submit">Save</button><button type="button" id="char_delete">Delete</button></div>
+             </form>
              <h3>Inventory</h3>${renderTable(["slot","item_id","name","instance_id","qty","equipped","acquired_at"], (d.inventory||[]).map(r=>[r.slot_index,r.item_id,r.name,r.instance_id,r.qty,r.equipped?"yes":"no",r.acquired_at||""]))}`;
+          const form = document.getElementById('char_form');
+          form.addEventListener('submit', async (ev2)=>{
+            ev2.preventDefault();
+            const fd = new FormData(form);
+            const payload = {};
+            fd.forEach((v,k)=>{ if(v!=="") payload[k]=v; });
+            if ('level' in payload) payload.level = Number(payload.level);
+            if ('x' in payload) payload.x = Number(payload.x);
+            if ('y' in payload) payload.y = Number(payload.y);
+            if ('is_active' in payload) payload.is_active = payload.is_active === 'true';
+            showStatus('Saving character...');
+            const r = await fetch(`/api/admin/characters/${encodeURIComponent(id)}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)}).then(r=>r.json()).catch(e=>({error:e.message}));
+            if (r.error) showStatus('❌ '+r.error); else showStatus('✅ Character updated');
+          });
+          document.getElementById('char_delete').addEventListener('click', async ()=>{
+            if(!confirm('Delete character?')) return;
+            showStatus('Deleting character...');
+            const r = await fetch(`/api/admin/characters/${encodeURIComponent(id)}`, {method:'DELETE'}).then(r=>r.json()).catch(e=>({error:e.message}));
+            if (r.error) showStatus('❌ '+r.error); else { showStatus('✅ Character deleted'); runChars(); }
+          });
         });
       });
     }
     btn_chars.onclick = ()=>runChars(1);
+    btn_char_create.onclick = async ()=>{
+      const user_id = prompt('Owner user_id?');
+      const name = prompt('Name?');
+      if(!user_id || !name) return;
+      const class_id = prompt('Class ID?', '') || '';
+      showStatus('Creating character...');
+      const r = await fetch('/api/admin/characters', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({user_id, name, class_id})}).then(r=>r.json()).catch(e=>({error:e.message}));
+      if(r.error) showStatus('❌ '+r.error); else { showStatus('✅ Character created'); runChars(); }
+    };
 
     // ITEMS
     async function runItems(page=1){
@@ -330,13 +410,72 @@
       showStatus("Searching items...");
       const data = await API.items(q).catch(e=>({error:e.message}));
       if (data.error){ showStatus("❌ "+data.error); return }
-      showStatus(`Found ${data.meta.total} item(s).`);
-      const rows = data.items.map(i=>[i.item_id, i.item_version, i.name, i.type, i.rarity, i.stack_size, i.base_stats]);
+      showStatus(`Found ${data.meta.total} item(s). Click item_id to edit.`);
+      const rows = data.items.map(i=>[
+        {html:`<a href="#" data-item="${i.item_id}">${i.item_id}</a>`},
+        i.item_version, i.name, i.type, i.rarity, i.stack_size, i.base_stats
+      ]);
       E.results.innerHTML = renderTable(["item_id","version","name","type","rarity","stack","base_stats"], rows);
       state.items.meta = data.meta;
       renderPager(data.meta, (p)=>runItems(p));
+      E.results.querySelectorAll('[data-item]').forEach(a=>{
+        a.addEventListener('click', async (ev)=>{
+          ev.preventDefault();
+          const id=a.getAttribute('data-item');
+          showStatus('Loading item...');
+          const d = await API.item(id).catch(e=>({error:e.message}));
+          if(d.error){ showStatus('❌ '+d.error); return }
+          showStatus(`Item loaded: ${d.name}`);
+          E.pager.innerHTML="";
+          E.results.innerHTML =
+            `<h3>Item</h3>${renderTable(["field","value"], Object.entries(d))}
+             <h3>Edit Item</h3>
+             <form id="item_form" class="grid cols-2">
+               <div><label>Name</label><input name="name" value="${escapeHtml(d.name||'')}"></div>
+               <div><label>Version</label><input name="item_version" value="${escapeHtml(d.item_version||'')}"></div>
+               <div><label>Type</label><input name="type" value="${escapeHtml(d.type||'')}"></div>
+               <div><label>Rarity</label><input name="rarity" value="${escapeHtml(d.rarity||'')}"></div>
+               <div><label>Stack Size</label><input name="stack_size" value="${d.stack_size||1}"></div>
+               <div><label>Base Stats (JSON)</label><input name="base_stats" value="${escapeHtml(JSON.stringify(d.base_stats||{}))}"></div>
+               <div style="grid-column: span 2; display:flex; gap:8px"><button class="primary" type="submit">Save</button><button type="button" id="item_delete">Delete</button></div>
+             </form>`;
+          const form = document.getElementById('item_form');
+          form.addEventListener('submit', async (ev2)=>{
+            ev2.preventDefault();
+            const fd = new FormData(form);
+            const payload = {};
+            fd.forEach((v,k)=>{ if(v!=="") payload[k]=v; });
+            if(payload.stack_size) payload.stack_size = Number(payload.stack_size);
+            if(payload.base_stats){ try{ payload.base_stats = JSON.parse(payload.base_stats); }catch{ payload.base_stats = {}; } }
+            showStatus('Saving item...');
+            const r = await fetch(`/api/admin/items/${encodeURIComponent(id)}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)}).then(r=>r.json()).catch(e=>({error:e.message}));
+            if(r.error) showStatus('❌ '+r.error); else showStatus('✅ Item updated');
+          });
+          document.getElementById('item_delete').addEventListener('click', async ()=>{
+            if(!confirm('Delete item?')) return;
+            showStatus('Deleting item...');
+            const r = await fetch(`/api/admin/items/${encodeURIComponent(id)}`, {method:'DELETE'}).then(r=>r.json()).catch(e=>({error:e.message}));
+            if(r.error) showStatus('❌ '+r.error); else { showStatus('✅ Item deleted'); runItems(); }
+          });
+        });
+      });
     }
     btn_items.onclick = ()=>runItems(1);
+    btn_item_create.onclick = async ()=>{
+      const item_id = prompt('Item ID?');
+      if(!item_id) return;
+      const item_version = prompt('Version?', '1');
+      const name = prompt('Name?');
+      const type = prompt('Type?');
+      const rarity = prompt('Rarity?', 'common');
+      if(!item_version || !name || !type || !rarity) return;
+      const stack_size = parseInt(prompt('Stack size?', '1')||'1',10);
+      let base_stats = {};
+      try { base_stats = JSON.parse(prompt('Base stats JSON?', '{}') || '{}'); } catch(e) { base_stats = {}; }
+      showStatus('Creating item...');
+      const r = await fetch('/api/admin/items', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({item_id,item_version,name,type,rarity,stack_size,base_stats})}).then(r=>r.json()).catch(e=>({error:e.message}));
+      if(r.error) showStatus('❌ '+r.error); else { showStatus('✅ Item created'); runItems(); }
+    };
 
     // INSTANCES
     async function runInsts(page=1){

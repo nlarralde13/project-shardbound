@@ -101,6 +101,44 @@ def user_detail(user_id):
     )
     return jsonify(payload)
 
+@admin_api.post("/users")
+def user_create():
+    data = request.get_json() or {}
+    email = data.get("email")
+    if not email:
+        return jsonify(error="email required"), 400
+    u = User(
+        email=email,
+        handle=data.get("handle"),
+        display_name=data.get("display_name"),
+        is_active=data.get("is_active", True),
+        selected_character_id=data.get("selected_character_id"),
+    )
+    db.session.add(u)
+    db.session.commit()
+    return jsonify(user_id=u.user_id), 201
+
+@admin_api.patch("/users/<user_id>")
+def user_update(user_id):
+    u = db.session.get(User, user_id)
+    if not u:
+        return jsonify(error="User not found"), 404
+    data = request.get_json() or {}
+    for field in ["email", "handle", "display_name", "is_active", "selected_character_id"]:
+        if field in data:
+            setattr(u, field, data[field])
+    db.session.commit()
+    return jsonify(status="updated")
+
+@admin_api.delete("/users/<user_id>")
+def user_delete(user_id):
+    u = db.session.get(User, user_id)
+    if not u:
+        return jsonify(error="User not found"), 404
+    db.session.delete(u)
+    db.session.commit()
+    return jsonify(status="deleted")
+
 # -------------- Characters --------------
 @admin_api.get("/characters")
 def characters_list():
@@ -158,6 +196,46 @@ def character_detail(character_id):
     )
     return jsonify(payload)
 
+@admin_api.post("/characters")
+def character_create():
+    data = request.get_json() or {}
+    if not data.get("user_id") or not data.get("name"):
+        return jsonify(error="user_id and name required"), 400
+    c = Character(
+        user_id=data["user_id"],
+        name=data["name"],
+        class_id=data.get("class_id"),
+        level=data.get("level", 1),
+        is_active=data.get("is_active", True),
+        shard_id=data.get("shard_id"),
+        x=data.get("x"),
+        y=data.get("y"),
+    )
+    db.session.add(c)
+    db.session.commit()
+    return jsonify(character_id=c.character_id), 201
+
+@admin_api.patch("/characters/<character_id>")
+def character_update(character_id):
+    c = db.session.get(Character, character_id)
+    if not c:
+        return jsonify(error="Character not found"), 404
+    data = request.get_json() or {}
+    for field in ["name", "class_id", "level", "is_active", "shard_id", "x", "y"]:
+        if field in data:
+            setattr(c, field, data[field])
+    db.session.commit()
+    return jsonify(status="updated")
+
+@admin_api.delete("/characters/<character_id>")
+def character_delete(character_id):
+    c = db.session.get(Character, character_id)
+    if not c:
+        return jsonify(error="Character not found"), 404
+    db.session.delete(c)
+    db.session.commit()
+    return jsonify(status="deleted")
+
 # -------------- Items / Instances --------------
 @admin_api.get("/items")
 def items_list():
@@ -174,6 +252,61 @@ def items_list():
     data = [dict(item_id=i.item_id, item_version=i.item_version, name=i.name, type=i.type,
                  rarity=i.rarity, stack_size=i.stack_size, base_stats=i.base_stats) for i in rows]
     return jsonify(items=data, meta=_meta(total, page, limit))
+
+@admin_api.get("/items/<item_id>")
+def item_detail(item_id):
+    i = db.session.get(Item, item_id)
+    if not i:
+        return jsonify(error="Item not found"), 404
+    return jsonify(dict(
+        item_id=i.item_id,
+        item_version=i.item_version,
+        name=i.name,
+        type=i.type,
+        rarity=i.rarity,
+        stack_size=i.stack_size,
+        base_stats=i.base_stats,
+    ))
+
+@admin_api.post("/items")
+def item_create():
+    data = request.get_json() or {}
+    required = ["item_id", "item_version", "name", "type", "rarity"]
+    if not all(k in data for k in required):
+        return jsonify(error="missing required fields"), 400
+    i = Item(
+        item_id=data["item_id"],
+        item_version=data["item_version"],
+        name=data["name"],
+        type=data["type"],
+        rarity=data["rarity"],
+        stack_size=data.get("stack_size", 1),
+        base_stats=data.get("base_stats", {}),
+    )
+    db.session.add(i)
+    db.session.commit()
+    return jsonify(item_id=i.item_id), 201
+
+@admin_api.patch("/items/<item_id>")
+def item_update(item_id):
+    i = db.session.get(Item, item_id)
+    if not i:
+        return jsonify(error="Item not found"), 404
+    data = request.get_json() or {}
+    for field in ["item_version", "name", "type", "rarity", "stack_size", "base_stats"]:
+        if field in data:
+            setattr(i, field, data[field])
+    db.session.commit()
+    return jsonify(status="updated")
+
+@admin_api.delete("/items/<item_id>")
+def item_delete(item_id):
+    i = db.session.get(Item, item_id)
+    if not i:
+        return jsonify(error="Item not found"), 404
+    db.session.delete(i)
+    db.session.commit()
+    return jsonify(status="deleted")
 
 @admin_api.get("/item_instances")
 def instances_list():
