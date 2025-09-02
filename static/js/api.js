@@ -84,7 +84,7 @@ export const API = {
 
   // ----- character API -----
   async charactersList() {
-    const r = await fetch('/api/characters', { credentials: 'include' });
+    const r = await fetch('/api/game/characters', { credentials: 'include' });
     if (!r.ok) throw new Error('Failed to list characters');
     return r.json();
   },
@@ -102,7 +102,7 @@ export const API = {
   },
 
   async characterSelect(character_id) {
-    const r = await fetch('/api/characters/select', {
+    const r = await fetch('/api/game/characters/select', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -114,14 +114,14 @@ export const API = {
   },
 
   async characterActive() {
-    const r = await fetch('/api/characters/active', { credentials: 'include' });
+    const r = await fetch('/api/game/characters/active', { credentials: 'include' });
     if (r.status === 404) return null;
     if (!r.ok) throw new Error('Failed to get active character');
     return r.json();
   },
 
   async autosaveCharacter(payload) {
-    const r = await fetch('/api/characters/autosave', {
+    const r = await fetch('/api/game/characters/autosave', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

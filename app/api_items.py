@@ -71,7 +71,7 @@ def create_item_instance():
     return jsonify(message='instance created', instance_id=inst.instance_id), 201
 
 
-@api.route('/characters/<character_id>/inventory', methods=['POST'])
+@api.route('/game/characters/<character_id>/inventory', methods=['POST'])
 def grant_inventory(character_id):
     data = request.get_json(force=True, silent=True) or {}
     required = ['slot_index', 'item_id', 'instance_id', 'qty', 'equipped']

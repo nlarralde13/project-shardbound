@@ -44,7 +44,7 @@
         </div>`;
     }
     async function load(){
-      const list = await api('/api/characters');
+      const list = await api('/api/game/characters');
       const el = document.getElementById('grid');
       el.innerHTML = list.map(card).join('') || '<div class="dim">No characters yet. Create one!</div>';
       el.querySelectorAll('button').forEach(b=>{
@@ -53,11 +53,11 @@
           const act = b.getAttribute('data-act');
           try{
             if(act==='play'){
-              await api('/api/characters/select',{method:'POST',headers:{'Content-Type':'application/json'}, body: JSON.stringify({character_id:id})});
+              await api('/api/game/characters/select',{method:'POST',headers:{'Content-Type':'application/json'}, body: JSON.stringify({character_id:id})});
               window.location.href = '/mvp';
             }else if(act==='delete'){
               if(confirm('Delete this character?')){
-                await api(`/api/characters/${id}`,{method:'DELETE'});
+                await api(`/api/game/characters/${id}`,{method:'DELETE'});
                 await load();
               }
             }

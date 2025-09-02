@@ -1,7 +1,7 @@
 """Gameplay API endpoints for demo scenario."""
 from __future__ import annotations
 
-import random
+import random, datetime as dt
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 
@@ -17,6 +17,7 @@ from .models import (
     Item,
     ItemInstance,
     CharacterInventory,
+    User,
 )
 from server.config import START_TOWN_COORDS, PORT_TOWN_COORDS, AMBUSH_COORDS, TOWN_GRID_SIZE
 
@@ -44,6 +45,43 @@ def _grant_item(char_id: str, item_id: str, qty: int = 1, slot_start: int = 0):
         db.session.add(inv)
 
 
+def _now():
+    return dt.datetime.utcnow()
+
+
+def _deep_merge(a, b):
+    """Merge dict b into dict a (in place). Lists are replaced."""
+    for k, v in (b or {}).items():
+        if isinstance(v, dict) and isinstance(a.get(k), dict):
+            _deep_merge(a[k], v)
+        else:
+            a[k] = v
+    return a
+
+
+@bp.get("/characters")
+@login_required
+def list_characters():
+    chars = (
+        Character.query
+        .filter_by(user_id=current_user.user_id, is_active=True)
+        .order_by(Character.created_at.asc())
+        .all()
+    )
+    def to_json(c: Character):
+        return {
+            "character_id": c.character_id,
+            "name": c.name,
+            "class_id": c.class_id,
+            "level": c.level,
+            "bio": c.biography,
+            "created_at": c.created_at.isoformat() + "Z",
+            "updated_at": c.updated_at.isoformat() + "Z",
+            "last_seen_at": c.last_seen_at.isoformat() + "Z" if c.last_seen_at else None,
+        }
+    return jsonify([to_json(c) for c in chars])
+
+
 @bp.post("/characters")
 @login_required
 def create_character():
@@ -59,6 +97,7 @@ def create_character():
         level=1,
         x=START_TOWN_COORDS[0],
         y=START_TOWN_COORDS[1],
+        cur_loc=f"{START_TOWN_COORDS[0]},{START_TOWN_COORDS[1]}",
         state={},
     )
     db.session.add(ch)
@@ -78,6 +117,120 @@ def create_character():
         x=ch.x,
         y=ch.y,
     ), 201
+
+
+@bp.delete("/characters/<string:character_id>")
+@login_required
+def delete_character(character_id: str):
+    ch = Character.query.filter_by(
+        character_id=character_id,
+        user_id=current_user.user_id,
+        is_active=True,
+    ).first()
+    if not ch:
+        return jsonify(error="not found"), 404
+    ch.is_active = False
+    if current_user.selected_character_id == ch.character_id:
+        current_user.selected_character_id = None
+    ch.updated_at = _now()
+    db.session.commit()
+    return jsonify(ok=True)
+
+
+@bp.post("/characters/select")
+@login_required
+def select_character():
+    data = request.get_json(force=True) or {}
+    character_id = data.get("character_id")
+    if not character_id:
+        return jsonify(error="character_id required"), 400
+    ch = Character.query.filter_by(
+        character_id=character_id,
+        user_id=current_user.user_id,
+        is_active=True,
+    ).first()
+    if not ch:
+        return jsonify(error="not found"), 404
+    user = db.session.get(User, current_user.user_id)
+    user.selected_character_id = ch.character_id
+    ch.last_seen_at = _now()
+    db.session.commit()
+    return jsonify(ok=True)
+
+
+@bp.get("/characters/active")
+@login_required
+def active_character():
+    user = db.session.get(User, current_user.user_id)
+    if not user or not user.selected_character_id:
+        return jsonify(error="no active character"), 404
+    ch = (
+        Character.query
+        .filter_by(
+            character_id=user.selected_character_id,
+            user_id=user.user_id,
+            is_active=True,
+        )
+        .first()
+    )
+    if not ch:
+        return jsonify(error="character not found"), 404
+    return jsonify(
+        {
+            "character_id": ch.character_id,
+            "name": ch.name,
+            "class_id": ch.class_id,
+            "level": ch.level,
+            "bio": ch.biography,
+            "shard_id": ch.shard_id,
+            "x": ch.x,
+            "y": ch.y,
+            "last_seen_at": ch.last_seen_at.isoformat() + "Z" if ch.last_seen_at else None,
+        }
+    )
+
+
+@bp.post("/characters/autosave")
+@login_required
+def autosave_state():
+    data = request.get_json(force=True) or {}
+    user = db.session.get(User, current_user.user_id)
+    if not user or not user.selected_character_id:
+        return jsonify(error="no character selected"), 400
+    ch = Character.query.filter_by(
+        character_id=user.selected_character_id,
+        user_id=user.user_id,
+        is_active=True,
+    ).first()
+    if not ch:
+        return jsonify(error="character not found"), 404
+
+    shard_id = data.pop("shard_id", None)
+    if shard_id is not None:
+        ch.shard_id = shard_id
+    x = data.pop("x", None)
+    if x is not None:
+        ch.x = x
+    y = data.pop("y", None)
+    if y is not None:
+        ch.y = y
+    if x is not None or y is not None:
+        ch.cur_loc = f"{ch.x},{ch.y}"
+
+    state_patch = data.pop("state", {})
+    current = dict(ch.state or {})
+    _deep_merge(current, state_patch)
+    ch.state = current
+
+    if "level" in data:
+        try:
+            ch.level = int(data["level"])
+        except Exception:
+            pass
+    ch.updated_at = _now()
+    ch.last_seen_at = _now()
+    db.session.commit()
+    return jsonify(ok=True, updated_at=ch.updated_at.isoformat() + "Z")
 
 
 @bp.post("/characters/<char_id>/enter_town")
