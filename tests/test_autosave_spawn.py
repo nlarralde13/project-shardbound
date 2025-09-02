@@ -19,8 +19,10 @@ def test_autosave_before_spawn_does_not_override_start():
         client.post('/api/characters/autosave', json={'x': 2, 'y': 0})
         ch = Character.query.get(cid)
         # position should remain at the intended start coords
-        assert (ch.x, ch.y) == START_POS
+        coords = ch.last_coords or {}
+        assert (coords.get("x"), coords.get("y")) == START_POS
         # spawning should still land at START_POS
         resp = client.post('/api/spawn', json={})
         data = resp.get_json()
         assert data['player']['pos'] == [START_POS[0], START_POS[1]]
+

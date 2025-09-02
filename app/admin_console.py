@@ -53,10 +53,6 @@ def cmd_char_move(argv: list[str]):
         coords = {"x": ns.x, "y": ns.y}
 
     ch.last_coords = coords
-    if hasattr(ch, "x"):
-        ch.x = coords["x"]
-    if hasattr(ch, "y"):
-        ch.y = coords["y"]
     ch.cur_loc = f"{coords['x']},{coords['y']}"
     db.session.commit()
 
