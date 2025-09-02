@@ -135,7 +135,7 @@
             bio: $('bio').value
           };
           if(!payload.name){ alert('Name required'); return; }
-          await api('/api/characters',{method:'POST',headers:{'Content-Type':'application/json'},body: JSON.stringify(payload)});
+          await api('/api/game/characters',{method:'POST',headers:{'Content-Type':'application/json'},body: JSON.stringify(payload)});
           // send them to select page so they can pick and play
           window.location.href = '/characters';
         }catch(e){ alert(e.message || 'Create failed'); }
