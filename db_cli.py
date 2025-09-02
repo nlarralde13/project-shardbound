@@ -139,8 +139,22 @@ def cmd_characters(args):
         q = q.filter(Character.user_id == u.user_id)
     if args.name: q = q.filter(Character.name.ilike(f"%{args.name}%"))
     q = q.order_by(Character.created_at.asc())
-    rows = [(c.character_id, c.name, c.class_id or "-", c.level or 1, c.user_id,
-             c.shard_id or "-", c.x, c.y, _fmt_dt(c.created_at)) for c in q.all()]
+    rows = []
+    for c in q.all():
+        coords = c.last_coords or c.first_time_spawn or {}
+        rows.append(
+            (
+                c.character_id,
+                c.name,
+                c.class_id or "-",
+                c.level or 1,
+                c.user_id,
+                c.shard_id or "-",
+                coords.get("x"),
+                coords.get("y"),
+                _fmt_dt(c.created_at),
+            )
+        )
     print_rows(rows, ["character_id","name","class","level","user_id","shard_id","x","y","created_at"])
 
 def cmd_tables(_args):

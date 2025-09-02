@@ -426,10 +426,6 @@ def admin_char_teleport(character_id):
     except Exception:
         return jsonify(error="x,y required (ints)"), 400
     ch.last_coords = coords
-    if hasattr(ch, "x"):
-        ch.x = coords["x"]
-    if hasattr(ch, "y"):
-        ch.y = coords["y"]
     ch.cur_loc = f"{coords['x']},{coords['y']}"
     db.session.commit()
     audit("char.teleport", "character", character_id, payload={"coords": coords, "note": body.get("note")})
@@ -437,8 +433,8 @@ def admin_char_teleport(character_id):
         "character_id": ch.character_id,
         "first_time_spawn": ch.first_time_spawn,
         "last_coords": ch.last_coords,
-        "x": getattr(ch, "x", None),
-        "y": getattr(ch, "y", None),
+        "x": (ch.last_coords or {}).get("x"),
+        "y": (ch.last_coords or {}).get("y"),
         "cur_loc": ch.cur_loc,
     }
     return jsonify(payload)

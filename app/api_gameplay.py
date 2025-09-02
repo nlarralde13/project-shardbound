@@ -75,8 +75,6 @@ def _get_coords(ch: Character) -> tuple[int, int]:
 def _set_coords(ch: Character, x: int, y: int) -> None:
     ch.last_coords = {"x": int(x), "y": int(y)}
     ch.cur_loc = f"{int(x)},{int(y)}"
-    ch.x = int(x)
-    ch.y = int(y)
 
 
 @bp.get("/characters")
@@ -119,8 +117,6 @@ def create_character():
         first_time_spawn=spawn,
         last_coords=spawn.copy(),
         cur_loc=f"{START_TOWN_COORDS[0]},{START_TOWN_COORDS[1]}",
-        x=spawn["x"],
-        y=spawn["y"],
         state={},
     )
     db.session.add(ch)
