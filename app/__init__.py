@@ -1,5 +1,6 @@
 # app/__init__.py
 import os
+import json
 import sqlalchemy as sa
 from flask import Flask, render_template, send_from_directory
 from .models import db
@@ -60,6 +61,17 @@ def create_app():
                         conn.execute(sa.text(
                             "UPDATE character SET cur_loc = x || ',' || y WHERE x IS NOT NULL AND y IS NOT NULL"
                         ))
+                if "first_time_spawn" not in cols:
+                    conn.execute(sa.text("ALTER TABLE character ADD COLUMN first_time_spawn JSON"))
+                if "last_coords" not in cols:
+                    conn.execute(sa.text("ALTER TABLE character ADD COLUMN last_coords JSON"))
+                    if "x" in cols and "y" in cols:
+                        rows = conn.execute(sa.text("SELECT character_id, x, y FROM character")).fetchall()
+                        for cid, x, y in rows:
+                            if x is not None and y is not None:
+                                coords = json.dumps({"x": int(x), "y": int(y)})
+                                conn.execute(sa.text("UPDATE character SET last_coords=:c WHERE character_id=:cid"), {"c": coords, "cid": cid})
+                                conn.execute(sa.text("UPDATE character SET first_time_spawn=:c WHERE character_id=:cid AND first_time_spawn IS NULL"), {"c": coords, "cid": cid})
 
     # Blueprints
     app.register_blueprint(auth_bp, url_prefix="/api/auth")

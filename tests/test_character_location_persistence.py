@@ -23,9 +23,9 @@ def test_cur_loc_updates_and_persists():
         client.post('/api/spawn', json={})
         client.post('/api/move', json={'dx': 1, 'dy': 0})
         ch = db.session.get(Character, cid)
-        assert ch.x == START_TOWN_COORDS[0] + 1
-        assert ch.y == START_TOWN_COORDS[1]
-        assert ch.cur_loc == f"{ch.x},{ch.y}"
+        assert ch.last_coords["x"] == START_TOWN_COORDS[0] + 1
+        assert ch.last_coords["y"] == START_TOWN_COORDS[1]
+        assert ch.cur_loc == f"{ch.last_coords['x']},{ch.last_coords['y']}"
         # clear session and spawn again; position should persist
         with client.session_transaction() as sess:
             sess.clear()
