@@ -82,12 +82,32 @@ def route(line: str, user: Any, character: Any, db: Any) -> List[Dict[str, Any]]
 
 # --- Default command registrations ---------------------------------------
 from executors import movement, inventory  # noqa: E402
+from executors.look import look_cmd, where_cmd  # noqa: E402
+
+for name, alias in (
+    ("n", "north"),
+    ("s", "south"),
+    ("e", "east"),
+    ("w", "west"),
+):
+    register({
+        "name": name,
+        "aliases": [alias],
+        "exec": movement.move,
+        "description": f"Move {alias}",
+    })
 
 register({
-    "name": "n",
-    "aliases": ["north"],
-    "exec": movement.move,
-    "description": "Move north",
+    "name": "look",
+    "aliases": ["l"],
+    "exec": look_cmd,
+    "description": "Look around",
+})
+
+register({
+    "name": "where",
+    "exec": where_cmd,
+    "description": "Show current location",
 })
 
 register({
