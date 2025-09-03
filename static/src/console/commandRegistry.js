@@ -81,21 +81,68 @@ class CommandRegistry {
   }
 }
 
-// Preload registry with example system commands.
+// Preload registry with core commands.
 const registry = new CommandRegistry();
 
 registry.register({
   name: 'help',
   aliases: ['?'],
   namespace: 'system',
-  description: 'List available commands.'
+  description: 'List available commands or show help for a command.',
+  usage: 'help [command]',
+  examples: ['help', 'help look']
 });
 
+registry.register({
+  name: 'look',
+  aliases: ['l'],
+  namespace: 'game',
+  description: 'Look around or at a specific target.',
+  usage: 'look [target]',
+  examples: ['look', 'look chest']
+});
+
+registry.register({
+  name: 'move',
+  aliases: ['go'],
+  namespace: 'game',
+  description: 'Move in a direction.',
+  usage: 'move <n|s|e|w>',
+  examples: ['move north', 'go e']
+});
+
+registry.register({
+  name: 'inv',
+  aliases: ['inventory', 'i'],
+  namespace: 'game',
+  description: 'Show your inventory.',
+  usage: 'inv',
+  examples: ['inv']
+});
+
+registry.register({
+  name: 'use',
+  namespace: 'game',
+  description: 'Use an item in your inventory.',
+  usage: 'use <item>',
+  examples: ['use potion']
+});
+
+registry.register({
+  name: 'equip',
+  namespace: 'game',
+  description: 'Equip an item from your inventory.',
+  usage: 'equip <item>',
+  examples: ['equip sword']
+});
+
+// hidden system command not shown in help list
 registry.register({
   name: 'clear',
   aliases: ['cls'],
   namespace: 'system',
-  description: 'Clear console output.'
+  description: 'Clear console output.',
+  hidden: true
 });
 
 // Export bound helpers and the registry instance.
