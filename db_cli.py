@@ -1,643 +1,262 @@
-# tools/db_cli.py
-# ┌───────────────────────────────────────────────────────────────────────┐
-# │  MÍMIR’S VAULT — Shardbound DB CLI                                    │
-# │  Dev-ops & data spelunking: users • characters • items • inventory    │
-# └───────────────────────────────────────────────────────────────────────┘
-# Usage (examples):
-#   python tools/db_cli.py users
-#   python tools/db_cli.py characters --email you@example.com
-#   python tools/db_cli.py items --type weapon
-#   python tools/db_cli.py item-upsert --json '{"item_id":"itm_sword","item_version":"1.0","name":"Sword","type":"weapon","rarity":"common","stack_size":1,"base_stats":{"atk":5,"icon":"/static/items/sword.png"}}'
-#   python tools/db_cli.py mint --item-id itm_sword --quantity 2
-#   python tools/db_cli.py inventory --email you@example.com --char-name Aria
-#   python tools/db_cli.py grant --email you@example.com --char-name Aria --item-id itm_sword --qty 2 --mint --equip
-#   python tools/db_cli.py items-export --file items.json
-#   python tools/db_cli.py items-import --file items.json
-#   python tools/db_cli.py validate-items
-#
-#   # World helpers you already had:
-#   python tools/db_cli.py seed-world --count 2 --prefix demo --overwrite
-#   python tools/db_cli.py list-shards
+# db_cli.py — Shardbound DB CLI (drop-in replacement)
+import os, sys, json, argparse, datetime
+from typing import Optional, List
 
-import os, sys, argparse, json, csv, uuid, random, string
-from pathlib import Path
-from datetime import datetime
+# Ensure local package import works when running directly
+sys.path.insert(0, os.path.abspath("."))
 
-# --- import app modules ---
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
-import sqlalchemy as sa  # type: ignore
+# Make sure dev bootstrap doesn't fight migrations
 os.environ.setdefault("AUTO_CREATE_TABLES", "0")
 
+import sqlalchemy as sa  # type: ignore
+
+# App + models
 from app import create_app  # type: ignore
 from app.models import db, User, Character  # type: ignore
-# Item/inventory models
 try:
     from app.models import Item, ItemInstance, CharacterInventory  # type: ignore
-except Exception:  # helpful error if models aren’t wired yet
+except Exception:
     Item = ItemInstance = CharacterInventory = None  # type: ignore
-# Gameplay models
-try:
-    from app.models import (
-        Town,
-        TownRoom,
-        NPC,
-        Quest,
-        QuestState,
-        CharacterState,
-        EncounterTrigger,
-    )  # type: ignore
-except Exception:  # pragma: no cover - gameplay models optional
-    Town = TownRoom = NPC = Quest = QuestState = CharacterState = EncounterTrigger = None  # type: ignore
 
+ALLOWED_ROLES = ["user","moderator","gm","admin","dev"]
 
 def _fmt_dt(dt):
-    if not dt: return "-"
-    if isinstance(dt, str): return dt
-    try: return dt.isoformat(timespec="seconds")
-    except Exception: return str(dt)
+    if not dt: return None
+    if isinstance(dt, (datetime.datetime, datetime.date)):
+        return dt.isoformat()
+    return str(dt)
 
-def _uid(): return uuid.uuid4().hex
-
-def print_rows(rows, headers):
-    if isinstance(rows, (list, tuple)) and len(rows) == 0:
-        print("(no rows)"); return
+def print_rows(rows: List[tuple], headers: List[str]) -> None:
+    if not rows:
+        print("(no rows)")
+        return
     widths = [len(h) for h in headers]
     for r in rows:
         for i, v in enumerate(r):
             widths[i] = max(widths[i], len("" if v is None else str(v)))
-    line = " | ".join(h.ljust(widths[i]) for i, h in enumerate(headers))
-    sep  = "-+-".join("-" * widths[i] for i in range(len(headers)))
-    print(line); print(sep)
+    line = " | ".join(h.ljust(widths[i]) for i,h in enumerate(headers))
+    print(line)
+    print("-+-".join("-"*w for w in widths))
     for r in rows:
-        print(" | ".join(("" if v is None else str(v)).ljust(widths[i]) for i, v in enumerate(r)))
+        print(" | ".join(("" if v is None else str(v)).ljust(widths[i]) for i,v in enumerate(r)))
 
+def _scopes_to_list(val) -> List[str]:
+    if val is None: return []
+    if isinstance(val, list): return val
+    if isinstance(val, (bytes, bytearray)): 
+        val = val.decode("utf-8", "ignore")
+    if isinstance(val, str):
+        s = val.strip()
+        if s.startswith("["):
+            try: return json.loads(s)
+            except Exception: return []
+        return [t.strip() for t in s.split(",") if t.strip()]
+    return []
 
-# -----------------------
-# helpers / selectors
-# -----------------------
-def get_user_by_selector(id=None, email=None) -> User | None:
-    if id: return db.session.get(User, id)
-    if email: return User.query.filter(User.email.ilike(email)).first()
-    return None
-
-def get_char_for_user(user: User, char_id=None, char_name=None) -> Character | None:
-    q = Character.query.filter_by(user_id=user.user_id, is_active=True)
-    if char_id: return q.filter_by(character_id=char_id).first()
-    if char_name: return q.filter(Character.name.ilike(char_name)).first()
-    return None
-
-def rand_handle(prefix="user"):
-    tail = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
-    return f"{prefix}_{tail}"
-
-def rand_name():
-    first = random.choice(["Aria","Doran","Kira","Lio","Maren","Nyx","Oren","Pax","Rhea","Soren","Tala"])
-    last  = random.choice(["Blackbriar","Stormfall","Duskhaven","Brightwind","Ironwood","Starfield"])
-    return f"{first} {last}"
-
-
-# =======================
-# USERS / CHARACTERS (existing set, kept)
-# =======================
-def cmd_users(args):
+def _user_by_selector(user_id: Optional[str], email: Optional[str]) -> Optional[User]:
     q = User.query
-    if args.email: q = q.filter(User.email.ilike(f"%{args.email}%"))
-    if args.handle: q = q.filter(User.handle.ilike(f"%{args.handle}%"))
-    q = q.order_by(User.created_at.asc())
+    if user_id: q = q.filter(User.user_id == user_id)
+    if email:   q = q.filter(User.email == email)
+    return q.first()
+
+def _character_by_selector(char_id: Optional[str], email: Optional[str], char_name: Optional[str]) -> Optional[Character]:
+    if char_id:
+        return Character.query.filter_by(character_id=char_id).first()
+    if email and char_name:
+        u = User.query.filter_by(email=email).first()
+        if not u: return None
+        return (Character.query
+                .filter_by(user_id=u.user_id, name=char_name)
+                .order_by(Character.created_at.asc())
+                .first())
+    return None
+
+def _xy_from_character(c: Character):
+    # prefer last_coords (JSON text) -> cur_loc "x,y" -> legacy (if present)
+    x = y = None
+    if hasattr(c, "last_coords") and c.last_coords:
+        try:
+            o = c.last_coords if isinstance(c.last_coords, dict) else json.loads(c.last_coords)
+            x, y = int(o.get("x")), int(o.get("y"))
+            return x, y
+        except Exception:
+            pass
+    if hasattr(c, "cur_loc") and c.cur_loc:
+        try:
+            a,b = str(c.cur_loc).split(",",1)
+            return int(a), int(b)
+        except Exception:
+            pass
+    if hasattr(c, "x") and hasattr(c, "y"):
+        try: return int(c.x), int(c.y)
+        except Exception: pass
+    return None, None
+
+# --------------------
+# Commands
+# --------------------
+
+def cmd_users(args):
     rows = []
+    q = User.query
+    if args.email:
+        q = q.filter(User.email.like(f"%{args.email}%"))
+    q = q.order_by(User.created_at.desc())
     for u in q.all():
-        active_name = "-"
-        if u.selected_character_id:
-            c = Character.query.filter_by(character_id=u.selected_character_id).first()
-            if c: active_name = c.name
-        rows.append((u.user_id, u.email, u.handle, u.display_name, u.age,
-                     _fmt_dt(u.created_at), _fmt_dt(u.last_login_at),
-                     active_name, u.characters.count(), "Active" if u.is_active else "Disabled"))
-    print_rows(rows, ["user_id","email","handle","display_name","age","created_at","last_login","active_char","#chars","status"])
+        active_name = None
+        if getattr(u, "selected_character_id", None):
+            ac = Character.query.filter_by(character_id=u.selected_character_id).first()
+            active_name = ac.name if ac else None
+        rows.append((
+            u.user_id, u.email, u.handle, u.display_name, u.age,
+            _fmt_dt(u.created_at), _fmt_dt(u.last_login_at),
+            active_name, u.characters.count(),
+            "Active" if u.is_active else "Disabled",
+            getattr(u, "role", "user")
+        ))
+    print_rows(rows, [
+        "user_id","email","handle","display_name","age",
+        "created_at","last_login","active_char","#chars","status","role"
+    ])
 
 def cmd_user(args):
-    u = get_user_by_selector(id=args.id, email=args.email)
-    if not u: print("User not found."); return
+    u = _user_by_selector(args.id, args.email)
+    if not u:
+        print("User not found.")
+        return
     payload = dict(
-        user_id=u.user_id, email=u.email, handle=u.handle, display_name=u.display_name,
-        age=u.age, is_active=u.is_active, created_at=_fmt_dt(u.created_at),
-        last_login_at=_fmt_dt(u.last_login_at), selected_character_id=u.selected_character_id,
-        characters=[dict(id=c.character_id, name=c.name, class_id=c.class_id, level=c.level, is_active=c.is_active)
-                    for c in u.characters.order_by(Character.created_at.asc()).all()]
+        user_id=u.user_id,
+        email=u.email,
+        handle=u.handle,
+        display_name=u.display_name,
+        age=u.age,
+        is_active=u.is_active,
+        created_at=_fmt_dt(u.created_at),
+        last_login_at=_fmt_dt(u.last_login_at),
+        selected_character_id=getattr(u, "selected_character_id", None),
+        role=getattr(u, "role", "user"),
+        scopes=_scopes_to_list(getattr(u, "scopes", None)),
+        characters=[dict(
+            id=c.character_id, name=c.name, class_id=c.class_id,
+            level=c.level, is_active=c.is_active
+        ) for c in u.characters.order_by(Character.created_at.asc()).all()]
     )
-    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    print(json.dumps(payload, indent=2))
+
+def cmd_user_role(args):
+    u = _user_by_selector(args.id, args.email)
+    if not u:
+        print("User not found.")
+        return
+    if not args.set:
+        print(json.dumps({"user_id": u.user_id, "email": u.email, "role": getattr(u, "role","user")}, indent=2))
+        return
+    if args.set not in ALLOWED_ROLES:
+        raise SystemExit(f"role must be one of: {', '.join(ALLOWED_ROLES)}")
+    u.role = args.set
+    db.session.commit()
+    print(json.dumps({"ok": True, "user_id": u.user_id, "role": u.role}, indent=2))
+
+def cmd_user_scope(args):
+    u = _user_by_selector(args.id, args.email)
+    if not u:
+        print("User not found.")
+        return
+    cur = set(_scopes_to_list(getattr(u, "scopes", None)))
+    if args.clear:
+        cur = set()
+    if args.add:
+        for s in args.add:
+            if s: cur.add(s)
+    if args.remove:
+        for s in args.remove:
+            cur.discard(s)
+    u.scopes = sorted(cur)
+    db.session.commit()
+    print(json.dumps({"ok": True, "user_id": u.user_id, "role": getattr(u,"role","user"), "scopes": u.scopes}, indent=2))
 
 def cmd_characters(args):
-    q = Character.query.filter_by(is_active=True)
-    if args.user_id: q = q.filter(Character.user_id == args.user_id)
+    q = Character.query
     if args.email:
-        u = get_user_by_selector(email=args.email)
-        if not u: print("No user with that email."); return
+        u = User.query.filter_by(email=args.email).first()
+        if not u:
+            print("No such user.")
+            return
         q = q.filter(Character.user_id == u.user_id)
-    if args.name: q = q.filter(Character.name.ilike(f"%{args.name}%"))
-    q = q.order_by(Character.created_at.asc())
+    q = q.order_by(Character.created_at.desc())
     rows = []
     for c in q.all():
-        coords = c.last_coords or c.first_time_spawn or {}
-        rows.append(
-            (
-                c.character_id,
-                c.name,
-                c.class_id or "-",
-                c.level or 1,
-                c.user_id,
-                c.shard_id or "-",
-                coords.get("x"),
-                coords.get("y"),
-                _fmt_dt(c.created_at),
-            )
-        )
-    print_rows(rows, ["character_id","name","class","level","user_id","shard_id","x","y","created_at"])
-
-def cmd_tables(_args):
-    inspector = sa.inspect(db.engine)
-    print("Tables:")
-    for t in inspector.get_table_names():
-        print(" -", t)
-
-def cmd_head(args):
-    res = db.session.execute(sa.text(f"SELECT * FROM {args.table} LIMIT :n"), {"n": int(args.n)})
-    rows = res.fetchall()
-    print_rows(rows, res.keys())
+        x,y = _xy_from_character(c)
+        rows.append((
+            c.character_id, c.name, getattr(c, "class_id", None), c.level,
+            x, y,
+            "yes" if c.is_active else "no",
+            _fmt_dt(c.created_at)
+        ))
+    print_rows(rows, ["character_id","name","class","lvl","x","y","active","created_at"])
 
 def cmd_sql(args):
-    q = args.query.strip()
-    res = db.session.execute(sa.text(q))
-    try:
+    # Dangerous but sometimes necessary; use responsibly.
+    sql = args.query
+    if not sql:
+        print("Provide --query")
+        return
+    # Decide if it's a SELECT-ish
+    is_select = sql.strip().lower().startswith(("select","pragma","with","show"))
+    if is_select:
+        res = db.session.execute(sa.text(sql))
         rows = res.fetchall()
-        print_rows(rows, res.keys())
-    except sa.exc.ResourceClosedError:
-        print("OK (no result set).")
-
-def cmd_export(args):
-    table, fmt, out = args.table, args.format.lower(), Path(args.out).resolve()
-    out.parent.mkdir(parents=True, exist_ok=True)
-    res = db.session.execute(sa.text(f"SELECT * FROM {table}"))
-    rows = res.fetchall(); headers = list(res.keys())
-    if fmt == "json":
-        out.write_text(json.dumps([dict(zip(headers, r)) for r in rows], ensure_ascii=False, indent=2), encoding="utf-8")
-    elif fmt == "csv":
-        with open(out, "w", encoding="utf-8", newline="") as f:
-            w = csv.writer(f); w.writerow(headers)
-            for r in rows: w.writerow(list(r))
-    else:
-        print("Use --format json|csv"); return
-    print(f"Wrote {len(rows)} rows to {out}")
-
-
-# =======================
-# ITEMS / INSTANCES / INVENTORY  (NEW)
-# =======================
-def _require_models():
-    if Item is None or ItemInstance is None or CharacterInventory is None:
-        raise SystemExit("Item/Instance/Inventory models are not available under app.models. Check your imports.")
-
-def cmd_items(args):
-    _require_models()
-    q = Item.query
-    if args.id: q = q.filter(Item.item_id.ilike(f"%{args.id}%"))
-    if args.name: q = q.filter(Item.name.ilike(f"%{args.name}%"))
-    if args.type: q = q.filter(Item.type.ilike(args.type))
-    if args.rarity: q = q.filter(Item.rarity.ilike(args.rarity))
-    q = q.order_by(Item.item_id.asc())
-    # count instances per item
-    cnt_sub = db.session.query(ItemInstance.item_id, sa.func.count().label("n_inst")).group_by(ItemInstance.item_id).subquery()
-    rows = []
-    for it in q.outerjoin(cnt_sub, cnt_sub.c.item_id == Item.item_id).all():
-        n_inst = db.session.query(cnt_sub.c.n_inst).filter(cnt_sub.c.item_id == it.item_id).scalar() or 0
-        rows.append((it.item_id, it.item_version, it.name, it.type, it.rarity, it.stack_size, n_inst))
-    print_rows(rows, ["item_id","version","name","type","rarity","stack","#inst"])
-
-def cmd_item(args):
-    _require_models()
-    it = db.session.get(Item, args.id)
-    if not it: print("Item not found."); return
-    payload = dict(item_id=it.item_id, item_version=it.item_version, name=it.name,
-                   type=it.type, rarity=it.rarity, stack_size=it.stack_size, base_stats=it.base_stats)
-    print(json.dumps(payload, indent=2, ensure_ascii=False))
-
-def cmd_item_upsert(args):
-    _require_models()
-    data = {}
-    if args.file: data = json.loads(Path(args.file).read_text("utf-8"))
-    if args.json: data.update(json.loads(args.json))
-    for k in ["item_id","item_version","name","type","rarity"]:
-        v = getattr(args, k, None)
-        if v: data[k] = v
-    if args.stack_size is not None: data["stack_size"] = int(args.stack_size)
-    if args.base_stats: data["base_stats"] = json.loads(args.base_stats)
-
-    required = ["item_id","item_version","name","type","rarity"]
-    missing = [k for k in required if k not in data]
-    if missing: raise SystemExit("Missing required fields: " + ", ".join(missing))
-
-    it = db.session.get(Item, data["item_id"])
-    if not it:
-        it = Item(item_id=data["item_id"], item_version=data["item_version"], name=data["name"],
-                  type=data["type"], rarity=data["rarity"], stack_size=int(data.get("stack_size",1)),
-                  base_stats=data.get("base_stats") or {})
-        db.session.add(it); action = "created"
-    else:
-        it.item_version = data["item_version"]; it.name = data["name"]
-        it.type = data["type"]; it.rarity = data["rarity"]
-        if "stack_size" in data: it.stack_size = int(data["stack_size"])
-        if "base_stats" in data and data["base_stats"] is not None: it.base_stats = data["base_stats"]
-        action = "updated"
-    db.session.commit()
-    print(f"Item {action}: {it.item_id}")
-
-def cmd_instances(args):
-    _require_models()
-    q = ItemInstance.query
-    if args.item_id: q = q.filter(ItemInstance.item_id == args.item_id)
-    q = q.order_by(ItemInstance.instance_id.asc())
-    rows = [(i.instance_id, i.item_id, i.item_version, i.quantity) for i in q.all()]
-    print_rows(rows, ["instance_id","item_id","version","qty"])
-
-def cmd_mint(args):
-    _require_models()
-    it = db.session.get(Item, args.item_id)
-    if not it: raise SystemExit("Item not found.")
-    inst = ItemInstance(instance_id=_uid(), item_id=it.item_id,
-                        item_version=args.item_version or it.item_version,
-                        quantity=max(1, int(args.quantity or 1)))
-    db.session.add(inst); db.session.commit()
-    print(json.dumps({"message":"instance created","instance_id":inst.instance_id}, indent=2))
-
-def _resolve_character(char_id=None, email=None, char_name=None):
-    if char_id: return db.session.get(Character, char_id)
-    if email:
-        u = get_user_by_selector(email=email)
-        if not u: return None
-        return get_char_for_user(u, char_name=char_name)
-    return None
-
-def _find_next_free_slot(character_id, start_at=0):
-    taken = {row.slot_index for row in CharacterInventory.query.filter_by(character_id=character_id).all()}
-    i = start_at
-    while i in taken: i += 1
-    return i
-
-def cmd_inventory(args):
-    _require_models()
-    c = _resolve_character(args.char_id, args.email, args.char_name)
-    if not c: print("Character not found."); return
-    q = (db.session.query(
-            CharacterInventory.slot_index, CharacterInventory.item_id, Item.name,
-            CharacterInventory.instance_id, CharacterInventory.qty,
-            CharacterInventory.equipped, CharacterInventory.acquired_at)
-         .outerjoin(Item, Item.item_id == CharacterInventory.item_id)
-         .filter(CharacterInventory.character_id == c.character_id)
-         .order_by(CharacterInventory.slot_index.asc()))
-    rows = [(r.slot_index, r.item_id, r.name or "(unknown)", r.instance_id,
-             r.qty, "yes" if r.equipped else "no", _fmt_dt(r.acquired_at)) for r in q.all()]
-    print_rows(rows, ["slot","item_id","name","instance_id","qty","eq","acquired_at"])
-
-def cmd_grant(args):
-    _require_models()
-    c = _resolve_character(args.char_id, args.email, args.char_name)
-    if not c: raise SystemExit("Character not found.")
-    it = db.session.get(Item, args.item_id)
-    if not it: raise SystemExit("Item not found.")
-
-    instance_id = args.instance_id
-    if not instance_id and args.mint:
-        inst = ItemInstance(instance_id=_uid(), item_id=it.item_id,
-                            item_version=args.item_version or it.item_version,
-                            quantity=max(1, int(args.qty or 1)))
-        db.session.add(inst); db.session.flush()
-        instance_id = inst.instance_id
-    if not instance_id: raise SystemExit("Provide --instance-id or add --mint")
-
-    slot_index = args.slot_index if args.slot_index is not None else _find_next_free_slot(c.character_id, args.slot_start or 0)
-    existing = CharacterInventory.query.filter_by(character_id=c.character_id, slot_index=int(slot_index)).first()
-    if existing and not args.replace:
-        raise SystemExit(f"Slot {slot_index} already used; add --replace or omit --slot-index for auto")
-    if existing: db.session.delete(existing); db.session.flush()
-
-    row = CharacterInventory(id=_uid(), character_id=c.character_id, slot_index=int(slot_index),
-                             item_id=it.item_id, instance_id=instance_id,
-                             qty=max(1, int(args.qty or 1)), equipped=bool(args.equip),
-                             acquired_at=datetime.utcnow())
-    db.session.add(row); db.session.commit()
-    print(json.dumps({"message":"granted","character_id":c.character_id,"slot_index":row.slot_index,"instance_id":instance_id}, indent=2))
-
-def cmd_validate_items(_args):
-    _require_models()
-    problems = []
-    for it in Item.query.all():
-        if not isinstance(it.base_stats, (dict, list)): problems.append(("item", it.item_id, "base_stats not JSON-object/list"))
-        if (it.stack_size or 0) < 1: problems.append(("item", it.item_id, "stack_size < 1"))
-    for inst in ItemInstance.query.all():
-        if (inst.quantity or 0) < 1: problems.append(("instance", inst.instance_id, "quantity < 1"))
-        if not db.session.get(Item, inst.item_id): problems.append(("instance", inst.instance_id, f"missing parent item {inst.item_id}"))
-    for inv in CharacterInventory.query.all():
-        if (inv.qty or 0) < 1: problems.append(("inventory", inv.id, "qty < 1"))
-        if not db.session.get(ItemInstance, inv.instance_id): problems.append(("inventory", inv.id, f"missing instance {inv.instance_id}"))
-        if not db.session.get(Item, inv.item_id): problems.append(("inventory", inv.id, f"missing item {inv.item_id}"))
-    if not problems: print("All good ✅"); return
-    print_rows([(k,i,m) for (k,i,m) in problems], ["kind","id","problem"])
-
-def cmd_items_export(args):
-    _require_models()
-    data, q = [], Item.query
-    if args.type: q = q.filter(Item.type.ilike(args.type))
-    if args.rarity: q = q.filter(Item.rarity.ilike(args.rarity))
-    for it in q.all():
-        data.append(dict(item_id=it.item_id, item_version=it.item_version, name=it.name,
-                         type=it.type, rarity=it.rarity, stack_size=it.stack_size, base_stats=it.base_stats))
-    Path(args.file).write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
-    print(f"Wrote {len(data)} items to {args.file}")
-
-def cmd_items_import(args):
-    _require_models()
-    payload = json.loads(Path(args.file).read_text("utf-8"))
-    n_created = n_updated = 0
-    for rec in payload:
-        it = db.session.get(Item, rec["item_id"])
-        if not it:
-            it = Item(**rec); db.session.add(it); n_created += 1
+        if rows:
+            headers = rows[0].keys()
+            print_rows([tuple(r) for r in rows], list(headers))
         else:
-            it.item_version = rec.get("item_version", it.item_version)
-            it.name = rec.get("name", it.name)
-            it.type = rec.get("type", it.type)
-            it.rarity = rec.get("rarity", it.rarity)
-            it.stack_size = rec.get("stack_size", it.stack_size)
-            if rec.get("base_stats") is not None: it.base_stats = rec["base_stats"]
-            n_updated += 1
-    db.session.commit()
-    print(f"Imported items. created={n_created} updated={n_updated}")
+            print("(no rows)")
+    else:
+        res = db.session.execute(sa.text(sql))
+        db.session.commit()
+        try:
+            rowcount = res.rowcount
+        except Exception:
+            rowcount = "?"
+        print(json.dumps({"ok": True, "rowcount": rowcount}, indent=2))
 
-def cmd_bulk_grant(args):
-    _require_models()
-    def _all_active_characters(): return Character.query.filter_by(is_active=True).all()
-    if not args.item_id and not args.kit_file:
-        raise SystemExit("Provide --item-id or --kit-file")
-    kit = None
-    if args.kit_file:
-        kit = json.loads(Path(args.kit_file).read_text("utf-8"))
-        if not isinstance(kit, list):
-            raise SystemExit("kit-file must be a JSON list of {item_id,qty,equip,slot_offset?}")
-    targets = _all_active_characters() if args.all_active else []
-    if args.email:
-        u = get_user_by_selector(email=args.email)
-        if not u: raise SystemExit("User not found")
-        c = get_char_for_user(u, char_name=args.char_name) or get_char_for_user(u)
-        if not c: raise SystemExit("Character not found for user")
-        targets = [c]
-    if not targets: raise SystemExit("No characters matched the selection")
-    single = None
-    if args.item_id:
-        it = db.session.get(Item, args.item_id)
-        if not it: raise SystemExit(f"Item not found: {args.item_id}")
-        single = dict(item_id=it.item_id, qty=max(1, int(args.qty or 1)), equip=bool(args.equip))
-    granted_total = 0
-    for c in targets:
-        base_slot = args.slot_start or 0
-        grants = kit if kit else [single]
-        for idx, g in enumerate(grants):
-            if not g: continue
-            it = db.session.get(Item, g["item_id"])
-            if not it: continue
-            inst = ItemInstance(instance_id=_uid(), item_id=it.item_id, item_version=it.item_version, quantity=int(g.get("qty",1)))
-            db.session.add(inst); db.session.flush()
-            slot = _find_next_free_slot(c.character_id, base_slot + int(g.get("slot_offset", idx)))
-            row = CharacterInventory(id=_uid(), character_id=c.character_id, slot_index=slot,
-                                     item_id=it.item_id, instance_id=inst.instance_id, qty=int(g.get("qty",1)),
-                                     equipped=bool(g.get("equip", False)), acquired_at=datetime.utcnow())
-            db.session.add(row); granted_total += 1
-    db.session.commit()
-    print(f"Granted {granted_total} entries to {len(targets)} character(s).")
-
-
-# =======================
-# WORLD helpers (yours, preserved)
-# =======================
-DEMO_SITE_TEMPLATES = [
-    ("city","Highspire"),("town","Stoneford"),("small_village","Fort Lonely"),
-    ("port","Port Smith"),("dungeon","Hidden Grove"),("ruins","Old Ruins"),("volcano","Ashmaw"),
-]
-DEMO_RESOURCES = ["sap_wood","ash_wood","maple_wood","copper_deposit","iron_deposit","silver_deposit"]
-DEMO_QUESTS    = ["Q001","Q002","Q003"]
-
-def _rand_coord(w, h): return f"{random.randint(0, max(0,w-1))},{random.randint(0, max(0,h-1))}"
-
-def generate_demo_shard(shard_id: str, label: str, width: int = 64, height: int = 64, rng_seed: int | None = None):
-    if rng_seed is not None: random.seed(rng_seed)
-    sites, counters = {}, {}
-    for kind, default_name in DEMO_SITE_TEMPLATES:
-        counters.setdefault(kind, 0); counters[kind] += 1
-        key = f"{kind}_{counters[kind]}"; site = {"name": default_name, "coords": _rand_coord(width, height)}
-        if kind == "dungeon": site["dungeon_id"] = "D001"
-        sites[key] = site
-    return {
-        "shard_id": shard_id, "label": label, "version": 1, "created_at": datetime.utcnow().isoformat()+"Z",
-        "meta": {"width": width, "height": height}, "sites": sites,
-        "available_quests": DEMO_QUESTS, "shard_resources": DEMO_RESOURCES,
-    }
-
-def cmd_seed_world(args):
-    out_dir = Path(args.out_dir) if args.out_dir else (ROOT / "static" / "public" / "shards")
-    out_dir.mkdir(parents=True, exist_ok=True)
-    count, prefix, width, height = int(args.count or 2), (args.prefix or "demo"), int(args.width or 64), int(args.height or 64)
-    seed = int(args.seed) if args.seed is not None else None
-    overwrite = bool(args.overwrite)
-    created = []
-    for i in range(1, count+1):
-        shard_id = f"{prefix}_{i:04d}"; label = f"{prefix.title()} Shard {i}"
-        data = generate_demo_shard(shard_id, label, width, height, (seed + i) if seed is not None else None)
-        out_path = out_dir / f"{shard_id}.json"
-        if out_path.exists() and not overwrite:
-            print(f"Skip (exists): {out_path}"); continue
-        out_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-        print(f"Wrote {out_path}"); created.append(shard_id)
-    if args.assign_email and created:
-        u = get_user_by_selector(email=args.assign_email)
-        if not u: print(f"assign_email: no user for {args.assign_email}")
-        else:
-            first = created[0]; n = 0
-            for c in u.characters.filter_by(is_active=True).all():
-                c.shard_id = first; n += 1
-            db.session.commit(); print(f"Assigned shard '{first}' to {n} character(s)")
-
-def cmd_list_shards(args):
-    dir_ = Path(args.dir) if args.dir else (ROOT / "static" / "public" / "shards")
-    files = sorted(dir_.glob("*.json"))
-    if not files: print(f"No shard json files in {dir_}"); return
-    rows = []
-    for p in files:
-        try: data = json.loads(p.read_text("utf-8"))
-        except Exception: rows.append((p.name, "—", "—", "—")); continue
-        rows.append((p.name, data.get("shard_id","—"), data.get("label","—"), data.get("created_at","—")))
-    print_rows(rows, ["file","shard_id","label","created_at"])
-
-
-def cmd_seed_starter(_args):
-    """Seed minimal starter town, NPCs, quest, items, and encounter."""
-    if None in (Town, TownRoom, NPC, Quest, EncounterTrigger, Item):
-        print("Gameplay models not available."); return
-    # Town
-    town = Town.query.get("starter_town") or Town(town_id="starter_town")
-    town.name = "Starter Town"
-    town.world_x, town.world_y = 12, 15
-    town.grid_w, town.grid_h = 3, 3
-    db.session.add(town)
-    # Town rooms (3x3)
-    kinds = {(0,0):"exit", (1,1):"square", (0,1):"shop", (2,1):"craft_hall", (1,2):"dock"}
-    for y in range(3):
-        for x in range(3):
-            room = TownRoom.query.filter_by(town_id=town.town_id, room_x=x, room_y=y).first()
-            if not room:
-                room = TownRoom(town_id=town.town_id, room_x=x, room_y=y)
-            room.kind = kinds.get((x,y), "room")
-            room.label = room.kind
-            db.session.add(room)
-    # NPCs
-    for npc_id, name, kind in [
-        ("shady_figure", "Shady Figure", "quest"),
-        ("harbormaster", "Harbormaster", "quest"),
-    ]:
-        npc = NPC.query.get(npc_id) or NPC(npc_id=npc_id)
-        npc.name, npc.kind = name, kind
-        db.session.add(npc)
-    # Quest
-    quest = Quest.query.get("q_deliver_letter_001") or Quest(quest_id="q_deliver_letter_001")
-    quest.name = "Deliver Letter"
-    quest.giver_npc_id = "shady_figure"
-    quest.type = "deliver"
-    quest.target_world_x, quest.target_world_y = 14, 9
-    quest.required_item_id = "itm_letter_sealed"
-    quest.reward_json = {"xp":25, "gold":5}
-    db.session.add(quest)
-    # Encounter trigger
-    trig = EncounterTrigger.query.filter_by(label="starter_ambush").first()
-    if not trig:
-        trig = EncounterTrigger(label="starter_ambush", world_x=13, world_y=12, script_id="goblin_ambush_1")
-    db.session.add(trig)
-    # Items
-    items = [
-        dict(item_id="itm_sword_wood", item_version="1.0", name="Wooden Sword", type="weapon", rarity="common", stack_size=1, base_stats={"atk":2}),
-        dict(item_id="itm_shield_wood", item_version="1.0", name="Wooden Shield", type="armor", rarity="common", stack_size=1, base_stats={"def":1}),
-        dict(item_id="itm_potion_small", item_version="1.0", name="Small Potion", type="consumable", rarity="common", stack_size=10, base_stats={"heal":20}),
-        dict(item_id="itm_letter_sealed", item_version="1.0", name="Sealed Letter", type="quest", rarity="common", stack_size=1, base_stats={}),
-    ]
-    for it in items:
-        obj = Item.query.get(it["item_id"]) or Item(item_id=it["item_id"])
-        for k,v in it.items():
-            setattr(obj, k, v)
-        db.session.add(obj)
-    db.session.commit()
-    print("Seeded starter data.")
-
-
-def cmd_quest_reset(args):
-    """Remove quest states for a character."""
-    if QuestState is None:
-        print("QuestState model missing."); return
-    qs = QuestState.query.filter_by(character_id=args.char).all()
-    for q in qs:
-        db.session.delete(q)
-    db.session.commit()
-    print(f"Reset {len(qs)} quest states for character {args.char}")
-
-
-# =======================
-# argparse wiring
-# =======================
 def build_parser():
-    epilog = """
-Examples:
-  # Items / Instances
-  db_cli.py items --type weapon
-  db_cli.py item --id itm_potion_small
-  db_cli.py item-upsert --json '{"item_id":"itm_potion_small","item_version":"1.0","name":"Minor Healing Potion","type":"consumable","rarity":"common","stack_size":20,"base_stats":{"heal":20,"icon":"/static/items/potion_small.png"}}'
-  db_cli.py mint --item-id itm_potion_small --quantity 3
-  db_cli.py items-export --file items.json
-  db_cli.py items-import --file items.json
-  db_cli.py validate-items
-
-  # Inventory
-  db_cli.py inventory --email you@example.com --char-name Aria
-  db_cli.py grant --email you@example.com --char-name Aria --item-id itm_potion_small --qty 3 --mint --equip --slot-start 0
-
-  # Users / Characters (existing)
-  db_cli.py users
-  db_cli.py characters --email you@example.com
-
-  # World JSON
-  db_cli.py seed-world --count 3 --prefix sandbox --overwrite
-  db_cli.py list-shards
-"""
-    p = argparse.ArgumentParser(
-        prog="db_cli",
-        description="Mímir’s Vault — DB inspector & toolbelt for Shardbound",
-        epilog=epilog,
-        formatter_class=argparse.RawTextHelpFormatter,
-    )
+    p = argparse.ArgumentParser(description="Shardbound DB CLI")
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    # Users/characters (kept)
     s = sub.add_parser("users", help="List users")
-    s.add_argument("--email"); s.add_argument("--handle"); s.set_defaults(func=cmd_users)
+    s.add_argument("--email", help="Filter by email contains")
+    s.set_defaults(func=cmd_users)
 
-    s = sub.add_parser("user", help="Show one user (+characters) as JSON")
-    g = s.add_mutually_exclusive_group(required=True); g.add_argument("--id"); g.add_argument("--email")
+    s = sub.add_parser("user", help="Show a single user (JSON)")
+    g = s.add_mutually_exclusive_group(required=True)
+    g.add_argument("--id")
+    g.add_argument("--email")
     s.set_defaults(func=cmd_user)
 
+    s = sub.add_parser("user-role", help="Get or set a user's role")
+    g = s.add_mutually_exclusive_group(required=True)
+    g.add_argument("--id")
+    g.add_argument("--email")
+    s.add_argument("--set", choices=ALLOWED_ROLES, help="Set a new role")
+    s.set_defaults(func=cmd_user_role)
+
+    s = sub.add_parser("user-scope", help="Manage a user's scopes")
+    g = s.add_mutually_exclusive_group(required=True)
+    g.add_argument("--id")
+    g.add_argument("--email")
+    s.add_argument("--add", action="append", help="Add a scope (repeatable)")
+    s.add_argument("--remove", action="append", help="Remove a scope (repeatable)")
+    s.add_argument("--clear", action="store_true", help="Clear all scopes")
+    s.set_defaults(func=cmd_user_scope)
+
     s = sub.add_parser("characters", help="List characters")
-    s.add_argument("--user-id"); s.add_argument("--email"); s.add_argument("--name"); s.set_defaults(func=cmd_characters)
+    s.add_argument("--email", help="Limit to a user's characters")
+    s.set_defaults(func=cmd_characters)
 
-    s = sub.add_parser("tables", help="List DB tables"); s.set_defaults(func=cmd_tables)
-    s = sub.add_parser("head", help="Show top N from a table"); s.add_argument("--table", required=True); s.add_argument("--n", default=10); s.set_defaults(func=cmd_head)
-    s = sub.add_parser("sql", help="Run ad-hoc SQL (be careful)"); s.add_argument("--query", required=True); s.set_defaults(func=cmd_sql)
-    s = sub.add_parser("export", help="Export a table to JSON/CSV"); s.add_argument("--table", required=True); s.add_argument("--format", choices=["json","csv"], required=True); s.add_argument("--out", required=True); s.set_defaults(func=cmd_export)
-
-    # Items / Instances / Inventory (NEW)
-    s = sub.add_parser("items", help="List items (filters: --id --name --type --rarity)"); s.add_argument("--id"); s.add_argument("--name"); s.add_argument("--type"); s.add_argument("--rarity"); s.set_defaults(func=cmd_items)
-    s = sub.add_parser("item", help="Show one item as JSON"); s.add_argument("--id", required=True); s.set_defaults(func=cmd_item)
-    s = sub.add_parser("item-upsert", help="Create/Update an item (from --json or flags)"); s.add_argument("--file"); s.add_argument("--json"); s.add_argument("--item_id"); s.add_argument("--item_version"); s.add_argument("--name"); s.add_argument("--type"); s.add_argument("--rarity"); s.add_argument("--stack_size", type=int); s.add_argument("--base_stats"); s.set_defaults(func=cmd_item_upsert)
-    s = sub.add_parser("instances", help="List item instances"); s.add_argument("--item-id"); s.set_defaults(func=cmd_instances)
-    s = sub.add_parser("mint", help="Mint an item instance"); s.add_argument("--item-id", required=True); s.add_argument("--item-version"); s.add_argument("--quantity", type=int, default=1); s.set_defaults(func=cmd_mint)
-
-    s = sub.add_parser("inventory", help="List inventory for a character")
-    g = s.add_mutually_exclusive_group(required=True); g.add_argument("--char-id"); g.add_argument("--email")
-    s.add_argument("--char-name"); s.set_defaults(func=cmd_inventory)
-
-    s = sub.add_parser("grant", help="Grant an instance to character inventory")
-    g = s.add_mutually_exclusive_group(required=False); g.add_argument("--char-id"); g.add_argument("--email")
-    s.add_argument("--char-name"); s.add_argument("--slot-index", type=int); s.add_argument("--slot-start", type=int)
-    s.add_argument("--item-id"); s.add_argument("--item-version"); s.add_argument("--qty", type=int, default=1)
-    s.add_argument("--equip", action="store_true"); s.add_argument("--instance-id"); s.add_argument("--mint", action="store_true"); s.add_argument("--replace", action="store_true")
-    s.set_defaults(func=cmd_grant)
-
-    s = sub.add_parser("validate-items", help="Validate items/instances/inventory"); s.set_defaults(func=cmd_validate_items)
-    s = sub.add_parser("items-export", help="Export items to JSON"); s.add_argument("--file", required=True); s.add_argument("--type"); s.add_argument("--rarity"); s.set_defaults(func=cmd_items_export)
-    s = sub.add_parser("items-import", help="Import items from JSON"); s.add_argument("--file", required=True); s.set_defaults(func=cmd_items_import)
-    s = sub.add_parser("bulk-grant", help="Grant item or kit to many characters"); s.add_argument("--all-active", action="store_true"); s.add_argument("--email"); s.add_argument("--char-name"); s.add_argument("--item-id"); s.add_argument("--qty", type=int, default=1); s.add_argument("--equip", action="store_true"); s.add_argument("--slot-start", type=int, default=0); s.add_argument("--kit-file"); s.set_defaults(func=cmd_bulk_grant)
-
-    # World helpers (kept)
-    s = sub.add_parser("seed-world", help="Generate demo shard JSON")
-    s.add_argument("--count", type=int, default=2); s.add_argument("--prefix", default="demo"); s.add_argument("--out-dir")
-    s.add_argument("--width", type=int, default=64); s.add_argument("--height", type=int, default=64)
-    s.add_argument("--seed", type=int); s.add_argument("--overwrite", action="store_true"); s.add_argument("--assign-email")
-    s.set_defaults(func=cmd_seed_world)
-
-    s = sub.add_parser("list-shards", help="List shard JSON files"); s.add_argument("--dir"); s.set_defaults(func=cmd_list_shards)
-
-    # Gameplay helpers
-    s = sub.add_parser("seed-starter", help="Seed starter town, NPCs, quest, and items")
-    s.set_defaults(func=cmd_seed_starter)
-    s = sub.add_parser("quest-reset", help="Reset demo quest for a character")
-    s.add_argument("--char", required=True)
-    s.set_defaults(func=cmd_quest_reset)
+    s = sub.add_parser("sql", help="Execute raw SQL (danger!)")
+    s.add_argument("--query", required=True)
+    s.set_defaults(func=cmd_sql)
 
     return p
 
