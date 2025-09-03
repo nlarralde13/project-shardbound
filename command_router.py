@@ -14,6 +14,8 @@ import shlex
 
 CommandExec = Callable[[Dict[str, Any], Dict[str, Any]], List[Dict[str, Any]]]
 
+MAX_LINE_LEN = 512
+
 @dataclass
 class CommandDef:
     name: str
@@ -63,6 +65,8 @@ def route(line: str, user: Any, character: Any, db: Any) -> List[Dict[str, Any]]
     """
     if not isinstance(line, str):
         return [{"type": "text", "data": "Invalid input"}]
+    if len(line) > MAX_LINE_LEN:
+        return [{"type": "text", "data": "Line too long"}]
     try:
         parts = shlex.split(line)
     except ValueError as e:
