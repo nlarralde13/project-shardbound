@@ -160,14 +160,49 @@ export function renderFrames(frames = []) {
   if (!Array.isArray(frames)) return;
   for (const f of frames) {
     if (f.type === 'status') {
-      setStatus(f.data);
+      if (f.data?.clear && scrollEl) {
+        scrollEl.innerHTML = '';
+      } else {
+        setStatus(f.data);
+      }
     } else if (f.type === 'text') {
       print(f.data);
     } else if (f.type === 'table') {
-      const rows = f.data || [];
-      for (const row of rows) print(Object.values(row).join(' '));
+      renderTable(f.data);
+    } else if (f.type === 'json') {
+      try {
+        const lines = JSON.stringify(f.data, null, 2).split('\n');
+        print(lines);
+      } catch (e) {
+        print(String(e));
+      }
     }
   }
+  if (scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight;
+}
+
+function renderTable(rows = []) {
+  if (!Array.isArray(rows) || !rows.length) return;
+  const cols = Object.keys(rows[0]);
+  const widths = {};
+  for (const c of cols) widths[c] = c.length;
+  for (const row of rows) {
+    for (const c of cols) {
+      const val = row[c] !== undefined ? String(row[c]) : '';
+      if (val.length > widths[c]) widths[c] = val.length;
+    }
+  }
+  const lines = [];
+  lines.push(cols.map(c => pad(c, widths[c])).join('  '));
+  lines.push(cols.map(c => '-'.repeat(widths[c])).join('  '));
+  for (const row of rows) {
+    lines.push(cols.map(c => pad(String(row[c] ?? ''), widths[c])).join('  '));
+  }
+  print(lines);
+}
+
+function pad(str, len) {
+  return str.padEnd(len);
 }
 
 // bindHotkeys() -> focus input on '/'
