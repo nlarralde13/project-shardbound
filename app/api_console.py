@@ -1,21 +1,75 @@
-"""API endpoint for console command execution."""
+"""Lightweight console execution API.
+
+Provides a single POST `/api/console/exec` endpoint that echoes back
+input lines and stubs out basic commands.  Intended for early console UI
+experiments.
+"""
 from __future__ import annotations
+
+import time
+from collections import defaultdict, deque
+from typing import Deque
 
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 
-from .models import db, Character
-import command_router as router
+bp = Blueprint("api_console", __name__, url_prefix="/api/console")
 
-bp = Blueprint("console_api", __name__, url_prefix="/api/console")
+# in-memory per-user rate limiting; not persistent and only suitable for
+# low traffic testing purposes
+_RATE_LIMIT: defaultdict[str, Deque[float]] = defaultdict(deque)
+_MAX_PER_SEC = 5
+_WINDOW = 1.0  # seconds
 
 
-@bp.post("/run")
+@bp.post("/exec")
 @login_required
-def run_command():
+def exec_command():
+    """Execute a console command.
+
+    Input JSON: ``{"line": str, "context": {"character_id": str?, "shard_id": str?}}``
+    Output JSON: ``{"status": "ok"|"error", "frames": [{"type", "data"}], "error": {"message", "code"}}``
+    """
     data = request.get_json(force=True, silent=True) or {}
-    line = data.get("line", "")
-    char_id = data.get("character_id")
-    character = Character.query.get(char_id) if char_id else None
-    frames = router.route(line, current_user, character, db)
-    return jsonify(frames)
+    line = data.get("line")
+    if line is None or not isinstance(line, str):
+        line = ""
+    line = line.strip()
+
+    if len(line) > 512:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "frames": [],
+                    "error": {"message": "Line too long", "code": "line_too_long"},
+                }
+            ),
+            400,
+        )
+
+    # simple per-user rate limiting (5 requests per second window)
+    user_id = str(current_user.get_id())
+    now = time.monotonic()
+    q = _RATE_LIMIT[user_id]
+    while q and now - q[0] > _WINDOW:
+        q.popleft()
+    if len(q) >= _MAX_PER_SEC:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "frames": [],
+                    "error": {"message": "Rate limit exceeded", "code": "rate_limit"},
+                }
+            ),
+            429,
+        )
+    q.append(now)
+
+    frames = [{"type": "text", "data": line}]
+    if line.lower() == "look":
+        frames.append({"type": "text", "data": "You look around. There is nothing of note."})
+
+    return jsonify({"status": "ok", "frames": frames})
+
