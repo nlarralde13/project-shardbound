@@ -7,18 +7,16 @@ function ts() {
   return d.toLocaleTimeString();
 }
 function appendConsole(label, data) {
-  const box = $('consoleBox');
   const hdr = `[${ts()}] ${label}`;
   let body = '';
   if (data !== undefined) {
     if (typeof data === 'string') body = data;
     else body = JSON.stringify(data, null, 2);
   }
-  box.textContent += hdr + (body ? '\n' + body : '') + '\n\n';
-  box.scrollTop = box.scrollHeight;
+  console.log(hdr + (body ? '\n' + body : ''));
 }
 function clearConsole() {
-  $('consoleBox').textContent = '';
+  /* console removed */
 }
 
 /* ---------------- API ---------------- */
@@ -480,17 +478,6 @@ async function boot() {
   $('btnToJSON').addEventListener('click', () => { const doc = syncFormToJSON(); appendConsole('Form → JSON', { class_id: doc.class_id }); setMsg('Form → JSON'); });
   $('btnFromJSON').addEventListener('click', () => { syncJSONToForm(); });
 
-  // Console controls
-  $('btnClearConsole').addEventListener('click', () => clearConsole());
-  $('btnCopyConsole').addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText($('consoleBox').textContent); setMsg('Console copied'); }
-    catch { setMsg('Copy failed'); }
-  });
-  $('btnShowPayload').addEventListener('click', () => {
-    const doc = syncFormToJSON();
-    currentPayloadCache = doc;
-    appendConsole('Current Payload', doc);
-  });
 
   // skills/abilities/equipment adders
   $('btnAddSkill').addEventListener('click', () => { addSkillRow('', 0, 0); syncFormToJSON(); });

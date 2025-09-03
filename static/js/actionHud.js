@@ -22,7 +22,7 @@ export function initActionHUD({ mount = ".room-stage" } = {}) {
   const overlay = document.createElement("div");
   overlay.className = "action-overlay";
   overlay.innerHTML = `
-    <div class="console-actions">
+    <div class="action-controls">
       <div class="group">
         <span class="label">Exits</span>
         <div class="btns">
