@@ -101,3 +101,22 @@ World & Gameplay Helpers:
 8. Leave town and move to (13,12) to trigger the goblin ambush.
 9. Defeat the goblins, then travel to (14,9) to meet the Harbormaster.
 10. Talk to the Harbormaster to complete the quest.
+
+## Inventory API & UI Demo
+
+This repo now includes a tiny inventory system wired end-to-end.
+
+### Setup
+1. Apply migrations (uses SQLite by default):
+   ```
+   FLASK_APP=app.py flask db upgrade
+   ```
+2. Start the development server:
+   ```
+   python app.py
+   ```
+3. Visit [http://localhost:5000/mvp](http://localhost:5000/mvp).
+4. A panel near the bottom shows the inventory for `demo-character-id`.
+   Use the **Add Potion** and **Remove Potion** buttons to test the
+   `/api/characters/<id>/inventory` endpoints.
+

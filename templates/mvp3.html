@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/mvp3.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/mapOverlay.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/town.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='src/ui/inventoryPanel.css') }}">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600..900&family=IM+Fell+English:ital@0;1&family=Crimson+Text:wght@400;600&display=swap" rel="stylesheet">
 
   <script>window.SHARDBIOME_SOURCE = 'grid';</script>
@@ -136,6 +137,13 @@
 
   <!-- Action Bar mount -->
   <div id="action-root" class="action-root"></div>
+
+  <!-- Inventory panel mount and demo buttons -->
+  <div id="inventory-root"></div>
+  <div style="margin:8px 0;">
+    <button id="btn-add-potion" class="btn">Add Potion</button>
+    <button id="btn-remove-potion" class="btn">Remove Potion</button>
+  </div>
 
   <!-- ES modules -->
   <script type="module" src="{{ url_for('static', filename='js/mvp3.js') }}"></script>
