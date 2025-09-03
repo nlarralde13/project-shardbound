@@ -7,6 +7,7 @@ import { applyRoomDelta } from '/static/js/roomPatcher.js';
 import { API, autosaveCharacterState } from '/static/js/api.js';
 import { updateActionHUD } from '/static/js/actionHud.js';
 import { initInventoryPanel, addItem as addInvItem, removeItem as removeInvItem } from '../src/ui/inventoryPanel.js';
+import { mountConsole, print as consolePrint, setPrompt as consoleSetPrompt, setStatus as consoleSetStatus, bindHotkeys as consoleBindHotkeys } from '../src/console/consoleUI.js';
 
 const QS = new URLSearchParams(location.search);
 const DEV_MODE = QS.has('devmode');
@@ -37,14 +38,17 @@ const roomTitle    = document.getElementById('roomTitle');
 const roomBiome    = document.getElementById('roomBiome');
 const roomArt      = document.getElementById('roomArt');
 
-const consoleEl    = document.getElementById('console');
-const cmdInput     = document.getElementById('cmd');
-const cmdSend      = document.getElementById('cmdSend');
 
 const statHP       = document.getElementById('statHP');
 const statMP       = document.getElementById('statMP');
 const statSTA      = document.getElementById('statSTA');
 const statHunger   = document.getElementById('statHunger');
+const consoleRoot  = document.getElementById('console-root');
+mountConsole(consoleRoot);
+consoleBindHotkeys();
+window.consolePrint = consolePrint;
+window.consoleSetPrompt = consoleSetPrompt;
+window.consoleSetStatus = consoleSetStatus;
 
 function updateCharHud(p = {}){
   if(statHP && Number.isFinite(p.hp) && Number.isFinite(p.max_hp)){
@@ -69,12 +73,10 @@ window.updateCharHud = updateCharHud;
 const _log = [];
 function log(text, cls='', ts=null){
   const stamp = new Date(ts || Date.now()).toLocaleTimeString();
-  _log.push({text:`[${stamp}] ${text}`,cls});
-  if (_log.length>300) _log.shift();
-  if (!consoleEl) return;
-  const frag = document.createDocumentFragment();
-  for (const {text:t,cls:c} of _log.slice(-140)) { const d=document.createElement('div'); d.className='line'+(c?' '+c:''); d.textContent=t; frag.appendChild(d); }
-  consoleEl.replaceChildren(frag);
+  const line = `[${stamp}] ${text}`;
+  _log.push({ text: line, cls });
+  if (_log.length > 300) _log.shift();
+  consolePrint(line, { mode: cls ? 'system' : 'normal' });
 }
 
 // ---- overlay instance (visuals live in overlayMap.js) ----
