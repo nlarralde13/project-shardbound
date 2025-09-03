@@ -1,13 +1,18 @@
 import command_router as router
 from app import create_app
 from app.player_service import get_player
+from app.models import db, Character
 
 
 def test_inv_returns_table_frame():
     app = create_app()
-    with app.test_request_context():
-        frames = router.route('inv', None, None, None)
-        assert frames and frames[0]['type'] == 'table'
+    with app.app_context():
+        char = Character(user_id="u1", name="Tester")
+        db.session.add(char)
+        db.session.commit()
+        with app.test_request_context():
+            frames = router.route('inv', None, char, db.session)
+    assert frames and frames[0]['type'] == 'table'
 
 
 def test_move_updates_position_and_look():

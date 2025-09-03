@@ -116,3 +116,39 @@ register({
     "exec": inventory.inv,
     "description": "Show inventory",
 })
+
+register({
+    "name": "inspect",
+    "exec": inventory.inspect_cmd,
+    "description": "Inspect item",
+})
+
+register({
+    "name": "use",
+    "exec": inventory.use_cmd,
+    "description": "Use item",
+})
+
+register({
+    "name": "equip",
+    "exec": inventory.equip_cmd,
+    "description": "Equip item",
+})
+
+register({
+    "name": "unequip",
+    "exec": inventory.unequip_cmd,
+    "description": "Unequip slot",
+})
+
+register({
+    "name": "drop",
+    "exec": inventory.drop_cmd,
+    "description": "Drop item",
+})
+
+register({
+    "name": "take",
+    "exec": inventory.take_cmd,
+    "description": "Take item",
+})
