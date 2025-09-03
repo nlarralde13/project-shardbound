@@ -12,7 +12,13 @@ function load() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const arr = JSON.parse(raw);
-      if (Array.isArray(arr)) return arr;
+      if (Array.isArray(arr)) {
+        const out = [];
+        for (const line of arr) {
+          if (out[out.length - 1] !== line) out.push(line);
+        }
+        return out;
+      }
     }
   } catch (e) {
     // ignore
@@ -30,6 +36,10 @@ function save() {
 
 export function push(line) {
   if (!line) return;
+  if (entries[entries.length - 1] === line) {
+    index = entries.length;
+    return;
+  }
   entries.push(line);
   if (entries.length > MAX) entries = entries.slice(entries.length - MAX);
   index = entries.length;

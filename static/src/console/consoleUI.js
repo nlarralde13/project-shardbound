@@ -143,6 +143,21 @@ export function setStatus(info = {}) {
   statusEl.textContent = parts.join(' | ');
 }
 
+// renderFrames(frames) -> handle console frames (text/status)
+export function renderFrames(frames = []) {
+  if (!Array.isArray(frames)) return;
+  for (const f of frames) {
+    if (f.type === 'status') {
+      setStatus(f.data);
+    } else if (f.type === 'text') {
+      print(f.data);
+    } else if (f.type === 'table') {
+      const rows = f.data || [];
+      for (const row of rows) print(Object.values(row).join(' '));
+    }
+  }
+}
+
 // bindHotkeys() -> focus input on '/'
 export function bindHotkeys() {
   document.addEventListener('keydown', ev => {
@@ -154,4 +169,4 @@ export function bindHotkeys() {
 }
 
 // expose for debugging
-export default { mountConsole, print, setPrompt, setStatus, bindHotkeys };
+export default { mountConsole, print, setPrompt, setStatus, bindHotkeys, renderFrames };
