@@ -29,9 +29,10 @@
 }
 */
 
-let rootEl, scrollEl, inputEl, statusEl;
-const history = [];
-let histIndex = 0;
+import * as history from './history.js';
+import { complete } from './completions.js';
+
+let rootEl, scrollEl, inputEl, statusEl, compEl;
 
 // mountConsole(rootElement)
 // Creates console structure inside rootElement
@@ -61,13 +62,26 @@ export function mountConsole(root) {
   inputEl.style.outline = 'none';
   inputEl.addEventListener('keydown', handleKey); // key events
 
+  compEl = document.createElement('div');
+  compEl.className = 'completions';
+  compEl.style.position = 'absolute';
+  compEl.style.background = '#111';
+  compEl.style.color = '#eee';
+  compEl.style.fontSize = '12px';
+  compEl.style.padding = '2px 4px';
+  compEl.style.display = 'none';
+  compEl.style.zIndex = '10';
+  compEl.style.left = '4px';
+  compEl.style.bottom = '24px';
+
   statusEl = document.createElement('div');
   statusEl.className = 'status';
   statusEl.style.fontSize = '12px';
   statusEl.style.padding = '2px 4px';
   statusEl.style.background = '#111';
 
-  rootEl.replaceChildren(scrollEl, inputEl, statusEl);
+  rootEl.style.position = 'relative';
+  rootEl.replaceChildren(scrollEl, inputEl, compEl, statusEl);
 }
 
 function handleKey(ev) {
@@ -76,21 +90,27 @@ function handleKey(ev) {
     if (val.trim()) {
       print(val);
       history.push(val);
-      histIndex = history.length;
     }
     inputEl.value = '';
+    compEl.style.display = 'none';
   } else if (ev.key === 'ArrowUp') {
-    if (histIndex > 0) {
-      histIndex--;
-      inputEl.value = history[histIndex] || '';
-    }
+    inputEl.value = history.prev();
     ev.preventDefault();
   } else if (ev.key === 'ArrowDown') {
-    if (histIndex < history.length) {
-      histIndex++;
-      inputEl.value = history[histIndex] || '';
+    inputEl.value = history.next();
+    ev.preventDefault();
+  } else if (ev.key === 'Tab') {
+    const { suggestion, list } = complete(inputEl.value);
+    if (suggestion) inputEl.value = suggestion;
+    if (list.length) {
+      compEl.innerHTML = list.join('<br>');
+      compEl.style.display = 'block';
+    } else {
+      compEl.style.display = 'none';
     }
     ev.preventDefault();
+  } else {
+    compEl.style.display = 'none';
   }
 }
 
