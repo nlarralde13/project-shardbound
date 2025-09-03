@@ -80,3 +80,4 @@ def exec_command():
         frames.extend(exec_where())
 
     return jsonify({"status": "ok", "frames": frames})
+
