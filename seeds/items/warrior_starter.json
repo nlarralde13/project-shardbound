@@ -1,0 +1,30 @@
+{
+  "items": [
+    { "slug": "wooden-sword",  "name": "Wooden Sword",  "type": "weapon",    "slot": "mainhand", "stackable": false, "max_stack": 1,  "rarity": "common", "icon_path": "/static/assets/items/wooden_sword.png",  "stats": {"attack": 2},  "on_equip": {"attack": "+2"} },
+    { "slug": "buckler",       "name": "Buckler",       "type": "shield",    "slot": "offhand",  "stackable": false, "max_stack": 1,  "rarity": "common", "icon_path": "/static/assets/items/buckler.png",       "stats": {"defense": 1}, "on_equip": {"defense": "+1"} },
+    { "slug": "health-potion", "name": "Health Potion", "type": "consumable", "slot": null,       "stackable": true,  "max_stack": 20, "rarity": "common", "icon_path": "/static/assets/items/health_potion.png", "on_use": {"heal": "1d4"} },
+    { "slug": "bread",         "name": "Bread",         "type": "consumable", "slot": null,       "stackable": true,  "max_stack": 10, "rarity": "common", "icon_path": "/static/assets/items/bread.png",          "on_use": {"heal": "1d2"} },
+    { "slug": "leather-jerkin","name": "Leather Jerkin","type": "armor",     "slot": "chest",   "stackable": false, "max_stack": 1,  "rarity": "common", "icon_path": "/static/assets/items/leather_jerkin.png", "on_equip": {"defense": "+1"} },
+    { "slug": "ripped-pants",  "name": "Ripped Pants",  "type": "armor",     "slot": "legs",    "stackable": false, "max_stack": 1,  "rarity": "common", "icon_path": "/static/assets/items/ripped_pants.png" },
+    { "slug": "torch",         "name": "Torch",         "type": "utility",   "slot": null,       "stackable": true,  "max_stack": 10, "rarity": "common", "icon_path": "/static/assets/items/torch.png" },
+    { "slug": "bandage",       "name": "Bandage",       "type": "consumable", "slot": null,      "stackable": true,  "max_stack": 10, "rarity": "common", "icon_path": "/static/assets/items/bandage.png", "on_use": {"heal": "1d3"} },
+    { "slug": "whetstone",     "name": "Whetstone",     "type": "utility",   "slot": null,       "stackable": true,  "max_stack": 5,  "rarity": "common", "icon_path": "/static/assets/items/whetstone.png" }
+  ],
+  "loadout": {
+    "class": "warrior",
+    "level_min": 1,
+    "level_max": 10,
+    "items": [
+      { "slug": "wooden-sword",  "quantity": 1 },
+      { "slug": "buckler",       "quantity": 1 },
+      { "slug": "health-potion", "quantity": 3 },
+      { "slug": "bread",         "quantity": 2 },
+      { "slug": "leather-jerkin","quantity": 1 },
+      { "slug": "ripped-pants",  "quantity": 1 },
+      { "slug": "torch",         "quantity": 2 },
+      { "slug": "bandage",       "quantity": 2 },
+      { "slug": "whetstone",     "quantity": 1 }
+    ]
+  }
+}
+

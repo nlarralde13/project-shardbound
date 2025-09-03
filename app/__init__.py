@@ -15,6 +15,7 @@ from .auth import auth_bp, login_manager
 from .characters import characters_bp
 from .classes_admin import classes_admin_bp
 from .api_items import api as api_items_bp
+from .api.catalog import bp as catalog_api_bp
 from .api_admin import admin_api
 from .security import admin_guard
 from .admin_panel import admin_ui
@@ -135,6 +136,8 @@ def create_app():
 
     # Blueprints (your existing ones)
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
+    # Register catalog API before legacy items endpoints to take precedence for /api/items
+    app.register_blueprint(catalog_api_bp)
     app.register_blueprint(characters_bp)            # legacy /api/characters
     app.register_blueprint(classes_admin_bp)
     app.register_blueprint(api_items_bp, url_prefix="/api", name="items_api")

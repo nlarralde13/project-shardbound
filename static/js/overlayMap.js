@@ -206,7 +206,6 @@ export function initOverlayMap({ devMode = false } = {}) {
       fctx.strokeStyle = '#3aa2ff';              fctx.lineWidth = s*1.6; for (const p of rivers) path(p);
       fctx.restore();
     }
-
     const roads = state.shard?.layers?.roads?.paths;
     if (Array.isArray(roads) && roads.length) {
       const w=Math.max(1.5,state.tile.w*.18);

@@ -19,6 +19,7 @@ from .models import (
     CharacterInventory,
     User,
 )
+from .models.inventory_v2 import StarterLoadout, CharacterItem
 from server.config import START_TOWN_COORDS, PORT_TOWN_COORDS, AMBUSH_COORDS, TOWN_GRID_SIZE
 
 bp = Blueprint("api_gameplay", __name__, url_prefix="/api/game")
@@ -124,10 +125,26 @@ def create_character():
     # character state
     st = CharacterState(character_id=ch.character_id, mode="overworld")
     db.session.add(st)
-    # starter kit
-    _grant_item(ch.character_id, "itm_sword_wood")
-    _grant_item(ch.character_id, "itm_shield_wood", slot_start=1)
-    _grant_item(ch.character_id, "itm_potion_small", qty=3, slot_start=2)
+    # starter kit (v2): resolve warrior loadout and grant items in same transaction
+    if ch.class_id == "warrior" and int(ch.level or 1) == 1:
+        lvl = 1
+        rows = (
+            StarterLoadout.query
+            .filter(StarterLoadout.class_name == "warrior")
+            .filter(StarterLoadout.level_min <= lvl, StarterLoadout.level_max >= lvl)
+            .all()
+        )
+        if rows:
+            id_set = [r.item_id for r in rows]
+            items = {i.item_id: i for i in Item.query.filter(Item.item_id.in_(id_set)).all()}
+            for r in rows:
+                if items.get(r.item_id):
+                    db.session.add(CharacterItem(
+                        character_id=ch.character_id,
+                        item_id=r.item_id,
+                        quantity=int(r.quantity or 1),
+                        bound=False,
+                    ))
     db.session.commit()
     sx, sy = _get_coords(ch)
     return jsonify(

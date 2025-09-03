@@ -87,6 +87,7 @@
   <script type="module">
     const $ = (id) => document.getElementById(id);
     let classes = [];
+    let catalog = {};
 
     async function api(path, opts={}){
       const r = await fetch(path, {credentials:'include', ...opts});
@@ -107,7 +108,8 @@
       $('pCHA').textContent = a.cha ?? '-';
       const g = c.per_level_gains || {};
       $('pGains').textContent = `HP +${g.hp ?? 0}, MP +${g.mp ?? 0}, STA +${g.stamina ?? 0}, Stat Points +${g.stat_points ?? 0}`;
-      $('pEquip').textContent = (c.starting_equipment || []).join(', ') || '—';
+      // loadout preview is populated asynchronously by updateLoadoutUI
+      $('pEquip').textContent = 'Loading…';
       $('pAbilities').innerHTML = (c.abilities || [])
         .filter(ab => (ab.unlock_level || 1) <= 1)
         .map(ab => `<li>${ab.name} (${ab.ability_id})</li>`).join('') || '<li class="dim">—</li>';
@@ -117,9 +119,44 @@
       const cid = $('class_id').value;
       const c = classes.find(x => x.class_id === cid);
       fillPreview(c);
+      updateLoadoutUI(cid);
+    }
+
+    async function loadCatalog(){
+      try{
+        const r = await fetch('/static/public/api/catalog.json', {headers:{'Accept':'application/json'}});
+        if(!r.ok) throw new Error('catalog fetch failed');
+        const list = await r.json();
+        catalog = Object.fromEntries((Array.isArray(list)?list:[]).map(it => [it.slug, it]));
+      }catch{ catalog = {}; }
+    }
+
+    async function fetchLoadout(classId, level=1){
+      const params = new URLSearchParams({class: classId, level: String(level)});
+      const r = await fetch(`/api/starter-loadouts?${params.toString()}`, {credentials:'include'});
+      if(!r.ok) return [];
+      const arr = await r.json().catch(()=>[]);
+      return Array.isArray(arr) ? arr : [];
+    }
+
+    function renderEquip(list){
+      if(!Array.isArray(list) || list.length===0){ $('pEquip').textContent='—'; return; }
+      const html = list.map(({slug, quantity})=>{
+        const it = catalog[slug] || { name: slug, icon_path: '' };
+        const icon = it.icon_path ? `<img src="${it.icon_path}" alt="" style="width:20px;height:20px;vertical-align:middle;margin-right:6px;border-radius:4px;object-fit:cover;border:1px solid #223;"/>` : '';
+        const qty = quantity && quantity>1 ? ` ×${quantity}` : '';
+        return `<div>${icon}<span>${it.name || slug}${qty}</span></div>`;
+      }).join('');
+      $('pEquip').innerHTML = `<div style="display:grid;grid-template-columns:1fr;gap:4px;">${html}</div>`;
+    }
+
+    async function updateLoadoutUI(classId){
+      const list = await fetchLoadout(classId, 1);
+      renderEquip(list);
     }
 
     async function boot(){
+      await loadCatalog();
       classes = await api('/api/classes');
       $('class_id').innerHTML = classes.map(c => `<option value="${c.class_id}">${c.name} (${c.class_id})</option>`).join('');
       onClassChange();
@@ -135,6 +172,7 @@
             bio: $('bio').value
           };
           if(!payload.name){ alert('Name required'); return; }
+          // Create character via gameplay API; server will grant loadout
           await api('/api/game/characters',{method:'POST',headers:{'Content-Type':'application/json'},body: JSON.stringify(payload)});
           // send them to select page so they can pick and play
           window.location.href = '/characters';

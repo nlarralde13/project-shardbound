@@ -367,6 +367,14 @@ document.addEventListener('click', (e) => {
 
 // ==== BOOTSTRAP ====
 document.addEventListener('DOMContentLoaded', async () => {
+  // Load item catalog for tooltips/inventory
+  try {
+    const res = await fetch('/static/public/api/catalog.json', { headers: { 'Accept': 'application/json' } });
+    if (res.ok) {
+      window.__itemCatalog = await res.json();
+      window.dispatchEvent(new CustomEvent('catalog:loaded', { detail: { count: Array.isArray(window.__itemCatalog) ? window.__itemCatalog.length : 0 } }));
+    }
+  } catch {}
   await loadAvailableShards();
   if (shardSelect?.value) { try { await loadShard(shardSelect.value); } catch {} }
 });

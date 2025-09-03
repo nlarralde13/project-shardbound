@@ -53,6 +53,143 @@ def _scopes_to_list(val) -> List[str]:
         return [t.strip() for t in s.split(",") if t.strip()]
     return []
 
+# --------------------
+# Seed + Export helpers
+# --------------------
+
+def _slugify(name: str) -> str:
+    import re
+    s = re.sub(r"[^a-zA-Z0-9]+", "-", (name or "").strip().lower()).strip("-")
+    return re.sub(r"-+", "-", s) or "item"
+
+
+def cmd_seed_items(args):
+    from app.models.items import Item
+    from app.models.inventory_v2 import StarterLoadout
+    path = args.file
+    if not os.path.exists(path):
+        print(f"Seed file not found: {path}")
+        return
+    with open(path, "r", encoding="utf-8") as f:
+        payload = json.load(f)
+    items = payload.get("items") or []
+    loadout = payload.get("loadout") or {}
+
+    created = 0
+    updated = 0
+    for spec in items:
+        slug = spec.get("slug") or _slugify(spec.get("name") or "")
+        itm = Item.query.filter_by(slug=slug).first()
+        if not itm:
+            itm = Item(
+                item_id=spec.get("item_id") or f"itm_{slug}",
+                item_version=str(spec.get("item_version") or "1"),
+                name=spec.get("name") or slug,
+                type=spec.get("type") or "misc",
+                rarity=spec.get("rarity") or "common",
+                stack_size=int(spec.get("max_stack") or 1),
+                base_stats=spec.get("stats") or {},
+                slug=slug,
+                description=spec.get("description"),
+                slot=spec.get("slot"),
+                stackable=bool(spec.get("stackable")) if spec.get("stackable") is not None else None,
+                max_stack=int(spec.get("max_stack")) if spec.get("max_stack") is not None else None,
+                icon_path=spec.get("icon_path"),
+                stats=spec.get("stats") or None,
+                on_use=spec.get("on_use") or None,
+                on_equip=spec.get("on_equip") or None,
+                tags=spec.get("tags") or None,
+            )
+            db.session.add(itm)
+            created += 1
+        else:
+            itm.name = spec.get("name") or itm.name
+            itm.type = spec.get("type") or itm.type
+            itm.rarity = spec.get("rarity") or itm.rarity
+            if spec.get("max_stack") is not None:
+                try:
+                    itm.max_stack = int(spec.get("max_stack"))
+                except Exception:
+                    pass
+            itm.description = spec.get("description") or itm.description
+            itm.slot = spec.get("slot") or itm.slot
+            if spec.get("stackable") is not None:
+                itm.stackable = bool(spec.get("stackable"))
+            itm.icon_path = spec.get("icon_path") or itm.icon_path
+            itm.stats = spec.get("stats") or itm.stats
+            itm.on_use = spec.get("on_use") or itm.on_use
+            itm.on_equip = spec.get("on_equip") or itm.on_equip
+            itm.tags = spec.get("tags") or itm.tags
+            updated += 1
+    db.session.commit()
+    print(json.dumps({"ok": True, "created": created, "updated": updated}, indent=2))
+
+    # Upsert loadout rows
+    cls = (loadout.get("class") or "warrior").lower()
+    level_min = int(loadout.get("level_min") or 1)
+    level_max = int(loadout.get("level_max") or 10)
+    # Clear existing overlapping range for class to keep idempotent simplicity
+    StarterLoadout.query.filter_by(class_name=cls).filter(
+        StarterLoadout.level_min == level_min, StarterLoadout.level_max == level_max
+    ).delete(synchronize_session=False)
+    items_spec = loadout.get("items") or []
+    # Map slug -> item_id
+    slugs = [s.get("slug") for s in items_spec if s.get("slug")]
+    from app.models.items import Item as ItemModel
+    rows = ItemModel.query.filter(ItemModel.slug.in_(slugs)).all() if slugs else []
+    by_slug = {r.slug: r for r in rows}
+    added = 0
+    for it in items_spec:
+        r = by_slug.get(it.get("slug"))
+        if not r:
+            continue
+        db.session.add(StarterLoadout(
+            class_name=cls,
+            level_min=level_min,
+            level_max=level_max,
+            item_id=r.item_id,
+            quantity=int(it.get("quantity") or 1),
+        ))
+        added += 1
+    db.session.commit()
+    print(json.dumps({"ok": True, "loadout": {"class": cls, "level_min": level_min, "level_max": level_max, "items": added}}, indent=2))
+    # Export catalog for client consumption
+    try:
+        from types import SimpleNamespace
+        cmd_export_catalog(SimpleNamespace(out="static/public/api/catalog.json"))
+    except Exception:
+        pass
+
+
+def cmd_export_catalog(args):
+    from app.models.items import Item
+    out_path = args.out
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    rows = (
+        Item.query
+        .order_by(Item.slug.asc().nullslast())
+        .all()
+    )
+    data = [
+        {
+            "slug": r.slug,
+            "name": r.name,
+            "type": r.type,
+            "slot": r.slot,
+            "icon_path": r.icon_path,
+            "stackable": bool(r.stackable) if r.stackable is not None else None,
+            "max_stack": r.max_stack,
+            "stats": r.stats or r.base_stats or {},
+            "on_use": r.on_use,
+            "on_equip": r.on_equip,
+            "tags": r.tags,
+        }
+        for r in rows if r.slug
+    ]
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+    print(json.dumps({"ok": True, "path": out_path, "count": len(data)}, indent=2))
+
 def _user_by_selector(user_id: Optional[str], email: Optional[str]) -> Optional[User]:
     q = User.query
     if user_id: q = q.filter(User.user_id == user_id)
@@ -257,6 +394,16 @@ def build_parser():
     s = sub.add_parser("sql", help="Execute raw SQL (danger!)")
     s.add_argument("--query", required=True)
     s.set_defaults(func=cmd_sql)
+
+    # seed-items
+    s = sub.add_parser("seed-items", help="Seed warrior starter catalog and loadout")
+    s.add_argument("--file", default="seeds/items/warrior_starter.json")
+    s.set_defaults(func=cmd_seed_items)
+
+    # export-catalog
+    s = sub.add_parser("export-catalog", help="Export item catalog JSON for client")
+    s.add_argument("--out", default="static/public/api/catalog.json")
+    s.set_defaults(func=cmd_export_catalog)
 
     return p
 
