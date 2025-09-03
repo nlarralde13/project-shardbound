@@ -45,7 +45,7 @@ export async function dispatch(parsed = {}, { rpcExec } = {}) {
     const def = registry.get(link.cmd);
     if (def && executors.has(def.namespace)) {
       const exec = executors.get(def.namespace);
-      const frames = await exec({ line, command: link, context, def });
+      const frames = await exec({ line, command: link, context, def, rpcExec });
       if (Array.isArray(frames)) out.push(...frames);
     } else if (rpcExec) {
       const cmdLine = buildLine(link);
@@ -74,15 +74,32 @@ function buildLine(link) {
 }
 
 // Default system executor with built-in commands
-registerExecutor('system', async ({ command }) => {
+registerExecutor('system', async ({ command, rpcExec }) => {
   if (command.cmd === 'help') {
-    const cmds = registry.list();
-    return [
-      {
-        type: 'table',
-        data: cmds.map(c => ({ command: c.name, description: c.description || '' }))
+    const target = command.args?.[0];
+    if (!target) {
+      const cmds = registry.list().filter(c => !c.hidden);
+      return [
+        {
+          type: 'table',
+          data: cmds.map(c => ({ command: c.name, description: c.description || '' }))
+        }
+      ];
+    }
+    const def = registry.get(target);
+    if (def) {
+      const lines = [def.description || ''];
+      if (def.usage) lines.push(`Usage: ${def.usage}`);
+      if (def.examples?.length) {
+        lines.push('Examples:');
+        for (const ex of def.examples) lines.push(`  ${ex}`);
       }
-    ];
+      return [{ type: 'text', data: lines.join('\n') }];
+    }
+    if (rpcExec) {
+      return await rpcExec({ line: `help ${target}` });
+    }
+    return [{ type: 'text', data: `No help available for ${target}` }];
   }
   if (command.cmd === 'clear') {
     return [{ type: 'status', data: { clear: true } }];

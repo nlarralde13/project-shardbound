@@ -20,6 +20,8 @@ class CommandDef:
     exec: CommandExec
     aliases: Optional[List[str]] = None
     description: str | None = None
+    usage: str | None = None
+    examples: Optional[List[str]] = None
 
 
 _commands: Dict[str, CommandDef] = {}
@@ -84,6 +86,39 @@ def route(line: str, user: Any, character: Any, db: Any) -> List[Dict[str, Any]]
 from executors import movement, inventory  # noqa: E402
 from executors.look import look_cmd, where_cmd  # noqa: E402
 
+
+def help_cmd(cmd: Dict[str, Any], ctx: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Provide help information for commands."""
+    args = cmd.get("args", [])
+    if args:
+        target = resolve(args[0])
+        if not target:
+            return [{"type": "text", "data": f"No help for {args[0]}"}]
+        lines = [target.description or ""]
+        if target.usage:
+            lines.append(f"Usage: {target.usage}")
+        if target.examples:
+            lines.append("Examples:")
+            lines.extend(f"  {ex}" for ex in target.examples)
+        return [{"type": "text", "data": "\n".join(lines)}]
+
+    rows = [
+        {"command": d.name, "description": d.description or ""}
+        for d in _commands.values()
+    ]
+    rows.sort(key=lambda r: r["command"])
+    return [{"type": "table", "data": rows}]
+
+
+register({
+    "name": "help",
+    "aliases": ["?"],
+    "exec": help_cmd,
+    "description": "List available commands or show help for a command",
+    "usage": "help [command]",
+    "examples": ["help", "help use"],
+})
+
 for name, alias in (
     ("n", "north"),
     ("s", "south"),
@@ -98,10 +133,21 @@ for name, alias in (
     })
 
 register({
+    "name": "move",
+    "aliases": ["go"],
+    "exec": movement.move,
+    "description": "Move in a direction",
+    "usage": "move <n|s|e|w>",
+    "examples": ["move north", "go east"],
+})
+
+register({
     "name": "look",
     "aliases": ["l"],
     "exec": look_cmd,
     "description": "Look around",
+    "usage": "look [target]",
+    "examples": ["look", "look chest"],
 })
 
 register({
@@ -115,6 +161,8 @@ register({
     "aliases": ["inventory", "i"],
     "exec": inventory.inv,
     "description": "Show inventory",
+    "usage": "inv",
+    "examples": ["inv"],
 })
 
 register({
@@ -127,12 +175,16 @@ register({
     "name": "use",
     "exec": inventory.use_cmd,
     "description": "Use item",
+    "usage": "use <item>",
+    "examples": ["use potion"],
 })
 
 register({
     "name": "equip",
     "exec": inventory.equip_cmd,
     "description": "Equip item",
+    "usage": "equip <item>",
+    "examples": ["equip sword"],
 })
 
 register({
