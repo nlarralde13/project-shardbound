@@ -1,0 +1,184 @@
+Folder PATH listing
+Volume serial number is 9832-EB22
+C:.
+¦   static.txt
+¦   static_tree.txt
+¦   
++---assets
+¦   +---2d
+¦   ¦   +---biomes
+¦   ¦   ¦       dark_forest.png
+¦   ¦   ¦       desert.png
+¦   ¦   ¦       medium_settlement.png
+¦   ¦   ¦       ocean_port.png
+¦   ¦   ¦       plains.png
+¦   ¦   ¦       town.png
+¦   ¦   ¦       town2.png
+¦   ¦   ¦       tundra.png
+¦   ¦   ¦       unknown.png
+¦   ¦   ¦       
+¦   ¦   +---overlayMap
+¦   ¦   ¦       biome_forest.png
+¦   ¦   ¦       biome_ocean.png
+¦   ¦   ¦       biome_plains.png
+¦   ¦   ¦       default_room.png
+¦   ¦   ¦       dungeon.png
+¦   ¦   ¦       town_city.png
+¦   ¦   ¦       town_port.png
+¦   ¦   ¦       town_village.png
+¦   ¦   ¦       
+¦   ¦   +---roads
+¦   ¦   ¦       road_plains_to_ocean.png
+¦   ¦   ¦       road_to_castle.png
+¦   ¦   ¦       
+¦   ¦   +---tokens
+¦   ¦   ¦       boat.png
+¦   ¦   ¦       character.png
+¦   ¦   ¦       
+¦   ¦   +---webm
+¦   ¦       +---ocean_frames
+¦   ¦               ocean_frame_1.png
+¦   ¦               ocean_frame_2.png
+¦   ¦               ocean_frame_3.png
+¦   ¦               ocean_frame_4.png
+¦   ¦               ocean_frame_5.png
+¦   ¦               ocean_frame_6.png
+¦   ¦               ocean_frame_7.png
+¦   ¦               ocean_frame_8.png
+¦   ¦               
+¦   +---items
+¦   ¦       health_potion.png
+¦   ¦       iron_sword.png
+¦   ¦       oak_wood.png
+¦   ¦       
+¦   +---logos
+¦           cogsprocket.png
+¦           shardbound_main.png
+¦           
++---css
+¦       character.css
+¦       hudBars.css
+¦       mapOverlay.css
+¦       mvp2.css
+¦       mvp3.css
+¦       retro-ui.css
+¦       shard-viewer-v2.css
+¦       shard-viewer.css
+¦       styles.css
+¦       town.css
+¦       
++---data
+¦       15257034_shard_fire_island.json
+¦       shard_isle_of_cinder.json
+¦       
++---js
+¦   ¦   actionHud.js
+¦   ¦   api.js
+¦   ¦   biomeRegistry.js
+¦   ¦   characters.js
+¦   ¦   class_builder.js
+¦   ¦   eventTables.js
+¦   ¦   mvp3.js
+¦   ¦   overlayMap.js
+¦   ¦   roomLoader.js
+¦   ¦   roomPatcher.js
+¦   ¦   settlementRegistry.js
+¦   ¦   shard-viewer-v2.js
+¦   ¦   
+¦   +---combat
+¦   ¦       combatUI.js
+¦   ¦       
+¦   +---movement
+¦   ¦       movementController.js
+¦   ¦       movementRules.js
+¦   ¦       
+¦   +---net
+¦   ¦       gameApi.js
+¦   ¦       
+¦   +---town
+¦   ¦       townRenderer.js
+¦   ¦       
+¦   +---ui
+¦           modeManager.js
+¦           
++---public
+¦   +---api
+¦   ¦       catalog.json
+¦   ¦       
+¦   +---debug
+¦   ¦       generate-20250822-160305.json
+¦   ¦       generate-20250822-160639.json
+¦   ¦       generate-20250822-160726.json
+¦   ¦       generate-20250822-161139.json
+¦   ¦       generate-20250822-161327.json
+¦   ¦       generate-20250822-201855.json
+¦   ¦       generate-20250822-202323.json
+¦   ¦       generate-20250822-202611.json
+¦   ¦       generate-20250822-202637.json
+¦   ¦       generate-20250822-202651.json
+¦   ¦       generate-20250822-203703.json
+¦   ¦       generate-20250822-205232.json
+¦   ¦       generate-20250822-210051.json
+¦   ¦       generate-20250822-210242.json
+¦   ¦       generate-20250823-160327.json
+¦   ¦       generate-20250823-160355.json
+¦   ¦       generate-20250823-164755.json
+¦   ¦       generate-20250823-164916.json
+¦   ¦       generate-20250823-201043.json
+¦   ¦       generate-20250823-230914.json
+¦   ¦       generate-20250827-181119.json
+¦   ¦       plan-20250822-160303.json
+¦   ¦       plan-20250822-160632.json
+¦   ¦       plan-20250822-160720.json
+¦   ¦       plan-20250822-160733.json
+¦   ¦       plan-20250822-161124.json
+¦   ¦       plan-20250822-161319.json
+¦   ¦       plan-20250822-201847.json
+¦   ¦       plan-20250822-202321.json
+¦   ¦       plan-20250822-202606.json
+¦   ¦       plan-20250822-202633.json
+¦   ¦       plan-20250822-202649.json
+¦   ¦       plan-20250822-202807.json
+¦   ¦       plan-20250822-203701.json
+¦   ¦       plan-20250822-210044.json
+¦   ¦       plan-20250822-210239.json
+¦   ¦       plan-20250823-160326.json
+¦   ¦       plan-20250823-160354.json
+¦   ¦       plan-20250823-164751.json
+¦   ¦       plan-20250823-201042.json
+¦   ¦       plan-20250823-230912.json
+¦   ¦       plan-20250827-181117.json
+¦   ¦       
+¦   +---shards
+¦           00089451_test123.json
+¦           shard_isle_of_cinder.json
+¦           shard_isle_of_cinder.json.bak
+¦           
++---src
+¦   ¦   mvp3.js
+¦   ¦   
+¦   +---console
+¦   ¦   ¦   commandRegistry.js
+¦   ¦   ¦   completions.js
+¦   ¦   ¦   consoleUI.js
+¦   ¦   ¦   dispatch.js
+¦   ¦   ¦   history.js
+¦   ¦   ¦   parse.js
+¦   ¦   ¦   
+¦   ¦   +---help
+¦   ¦   ¦       commands.md
+¦   ¦   ¦       generate.mjs
+¦   ¦   ¦       
+¦   ¦   +---__tests__
+¦   ¦           parser.spec.js
+¦   ¦           
+¦   +---ui
+¦           inventoryPanel.css
+¦           inventoryPanel.js
+¦           
++---textures
+        ab0af6e49b31729aafd5c2340c8cad51.jpg
+        galaxy-bg.jpg
+        leather-pattern.png
+        parchment-bg.jpg
+        

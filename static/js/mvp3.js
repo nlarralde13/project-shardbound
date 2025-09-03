@@ -1,77 +1,185 @@
-// MVP3 Orchestrator (overlay-owned styling)
-// Purpose: orchestration only. No map styling here.
+// MVP3 Orchestrator — preserves existing behavior, adds safer shard loading & Console v2 wiring
 
+// ==== GAME/VIEW IMPORTS (keep your existing modules) ====
 import { initOverlayMap } from '/static/js/overlayMap.js';
-import { setShard as setRoomShard, assertCanonicalTiles, buildRoom } from '/static/js/roomLoader.js';
+import {
+  setRoomShard,
+  assertCanonicalTiles,
+  buildRoom,
+  summarizeBiomes
+} from '/static/js/roomLoader.js';
 import { applyRoomDelta } from '/static/js/roomPatcher.js';
 import { API, autosaveCharacterState } from '/static/js/api.js';
 import { updateActionHUD } from '/static/js/actionHud.js';
-import { initInventoryPanel, addItem as addInvItem, removeItem as removeInvItem } from '../src/ui/inventoryPanel.js';
-import { mountConsole, print as consolePrint, setPrompt as consoleSetPrompt, setStatus as consoleSetStatus, bindHotkeys as consoleBindHotkeys } from '../src/console/consoleUI.js';
+import {
+  initInventoryPanel,
+  addItem as addInvItem,
+  removeItem as removeInvItem
+} from '/static/src/ui/inventoryPanel.js';
 
+// ==== CONSOLE V2 IMPORTS ====
+import {
+  mountConsole,
+  print as consolePrint,
+  setPrompt as consoleSetPrompt,
+  setStatus as consoleSetStatus,
+  bindHotkeys as consoleBindHotkeys
+} from '/static/src/console/consoleUI.js';
+import { parse } from '/static/src/console/parse.js';
+import { dispatch } from '/static/src/console/dispatch.js';
+
+// ==== GLOBAL/ENV ====
 const QS = new URLSearchParams(location.search);
 const DEV_MODE = QS.has('devmode');
 
+// Simple user token persistence for autosave/demo
 const USER_TOKEN = (() => {
-  const k = 'mvp3_user_token';
-  const q = QS.get('token');
-  if (q) { localStorage.setItem(k, q); return q; }
-  let v = localStorage.getItem(k);
-  if (!v) { v = crypto.getRandomValues(new Uint32Array(4)).join('-'); localStorage.setItem(k, v); }
+  const key = 'mvp3_user_token';
+  const fromQS = QS.get('token');
+  if (fromQS) {
+    localStorage.setItem(key, fromQS);
+    return fromQS;
+  }
+  let v = localStorage.getItem(key);
+  if (!v) {
+    v = crypto.getRandomValues(new Uint32Array(4)).join('-');
+    localStorage.setItem(key, v);
+  }
   return v;
 })();
 
-// ---- DOM ----
+// ==== DOM HOOKS ====
 const overlayMapEl = document.getElementById('overlayMap');
-const overlayChar  = document.getElementById('overlayChar');
-const overlayInv   = document.getElementById('overlayInv');
+const btnWorldMap   = document.getElementById('btnWorldMap');
+const overlayChar   = document.getElementById('overlayCharacter');
+const overlayInv    = document.getElementById('overlayInventory');
 
-const btnWorldMap  = document.getElementById('btnWorldMap');
-const btnCharacter = document.getElementById('btnCharacter');
-const btnInventory = document.getElementById('btnInventory');
+const btnCharacter  = document.getElementById('btnCharacter');
+const btnInventory  = document.getElementById('btnInventory');
 
-const shardSelect  = document.getElementById('shardSelect');
-const btnLoadShard = document.getElementById('btnLoadShard');
-const shardStatus  = document.getElementById('shardStatus');
+const shardSelect   = document.getElementById('shardSelect');
+const btnLoadShard  = document.getElementById('btnLoadShard');
+const shardStatus   = document.getElementById('shardStatus');
 
-const roomTitle    = document.getElementById('roomTitle');
-const roomBiome    = document.getElementById('roomBiome');
-const roomArt      = document.getElementById('roomArt');
+const roomTitle = document.getElementById('roomTitle');
+const roomBiome = document.getElementById('roomBiome');
+const roomArt   = document.getElementById('roomArt');
 
+const statHP     = document.getElementById('statHP');
+const statMP     = document.getElementById('statMP');
+const statSTA    = document.getElementById('statSTA');
+const statHunger = document.getElementById('statHunger');
 
-const statHP       = document.getElementById('statHP');
-const statMP       = document.getElementById('statMP');
-const statSTA      = document.getElementById('statSTA');
-const statHunger   = document.getElementById('statHunger');
-const consoleRoot  = document.getElementById('console-root');
-mountConsole(consoleRoot);
-consoleBindHotkeys();
-window.consolePrint = consolePrint;
-window.consoleSetPrompt = consoleSetPrompt;
-window.consoleSetStatus = consoleSetStatus;
+// ==== CONSOLE V2 MOUNT & WIRING ====
+const consoleRoot = document.getElementById('console-root');
 
-function updateCharHud(p = {}){
-  if(statHP && Number.isFinite(p.hp) && Number.isFinite(p.max_hp)){
-    statHP.style.width = Math.max(0, Math.min(100, (p.hp / p.max_hp) * 100)) + '%';
-  }
-  if(statMP && Number.isFinite(p.mp) && Number.isFinite(p.max_mp)){
-    statMP.style.width = Math.max(0, Math.min(100, (p.mp / p.max_mp) * 100)) + '%';
-  }
-  const stam = Number.isFinite(p.stamina) ? p.stamina : p.energy;
-  const maxStam = Number.isFinite(p.max_stamina) ? p.max_stamina : (p.max_energy ?? 100);
-  if(statSTA && Number.isFinite(stam) && Number.isFinite(maxStam)){
-    statSTA.style.width = Math.max(0, Math.min(100, (stam / maxStam) * 100)) + '%';
-  }
-  if(statHunger && Number.isFinite(p.hunger)){
-    statHunger.textContent = `Hunger: ${p.hunger}`;
+// normalize server response → Frame[]
+async function apiExec(line, context = {}) {
+  try {
+    const res = await fetch('/api/console/exec', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ line, context })
+    });
+
+    if (!res.ok) {
+      let text = '';
+      try { text = await res.text(); } catch {}
+      return [{ type: 'text', data: `API error ${res.status}${text ? `: ${text}` : ''}` }];
+    }
+    const json = await res.json().catch(() => null);
+
+    if (json && Array.isArray(json.frames)) return json.frames;
+    if (json && json.type && json.data) return [json];
+    return [{ type: 'text', data: 'Unexpected server response.' }];
+  } catch (err) {
+    return [{ type: 'text', data: `Network error: ${err?.message || String(err)}` }];
   }
 }
 
-window.updateCharHud = updateCharHud;
+const __consoleUI = mountConsole(consoleRoot, {
+  onSubmit: async (line, ctx = {}) => {
+    const parsed = parse(line);
+    if (parsed?.error) {
+      return [{ type: 'text', data: `Error: ${parsed.error.message}` }];
+    }
+    const frames = await dispatch(
+      { line, ...parsed, context: ctx },
+      { rpcExec: ({ line: single }) => apiExec(single, ctx) }
+    );
+    return Array.isArray(frames) ? frames : [{ type: 'text', data: 'No output.' }];
+  }
+});
+consoleBindHotkeys();
 
-// ---- console log (light) ----
+// Optional helpers for quick debugging via DevTools
+window.consolePrint      = consolePrint;
+window.consoleSetPrompt  = consoleSetPrompt;
+window.consoleSetStatus  = consoleSetStatus;
+window.__consoleV2 = { apiExec, parse, dispatch, ui: __consoleUI };
+
+// ==== SMALL UTILITIES ====
+const clampPct = (v) => Math.max(0, Math.min(100, v));
+const toggle = (el, force) => {
+  if (!el) return;
+  const show = (typeof force === 'boolean') ? force : el.classList.contains('hidden');
+  el.classList.toggle('hidden', !show);
+};
+const isTyping = (t) => {
+  if (!t) return false;
+  const tag = t.tagName;
+  if (tag === 'TEXTAREA') return true;
+  if (tag === 'INPUT') {
+    const disallowed = ['checkbox', 'radio', 'button', 'range', 'submit', 'reset', 'file', 'color'];
+    return !disallowed.includes((t.type || '').toLowerCase());
+  }
+  return t.isContentEditable === true;
+};
+
+// ---- ART RESOLUTION HELPERS (for game card — unchanged behavior) ----
+async function headOk(url) { try { const r=await fetch(url,{method:'HEAD'}); return r.ok; } catch { return false; } }
+function makeArtCandidates(room) {
+  const biome = (room.biome || '').toLowerCase();
+  const poi   = (room.poi?.type || room.town?.type || room.tags?.find(t => /town|city|village|port|dungeon/i.test(t)) || '').toString().toLowerCase();
+  const roots = ['/static/assets/rooms','/static/assets/biomes','/static/assets/2d/rooms','/static/assets/2d/biomes'];
+  const names = [];
+  if (poi) names.push(`poi_${poi}.png`, `town_${poi}.png`, `${poi}.png`);
+  if (biome) names.push(`biome_${biome}.png`, `${biome}.png`);
+  names.push('default_room.png','unknown.png');
+  const out=[]; for(const root of roots) for(const n of names) out.push(`${root}/${n}`); return out;
+}
+async function resolveArtSrc(room) {
+  if (room.artSrc) return room.artSrc;
+  for (const url of makeArtCandidates(room)) { if (await headOk(url)) return url; }
+  return '';
+}
+
+// ==== CHARACTER HUD ====
+function updateCharHud(p = {}) {
+  if (statHP && Number.isFinite(p.hp) && Number.isFinite(p.max_hp)) statHP.style.width = clampPct((p.hp / p.max_hp) * 100) + '%';
+  if (statMP && Number.isFinite(p.mp) && Number.isFinite(p.max_mp)) statMP.style.width = clampPct((p.mp / p.max_mp) * 100) + '%';
+  if (statSTA && Number.isFinite(p.sta) && Number.isFinite(p.max_sta)) statSTA.style.width = clampPct((p.sta / p.max_sta) * 100) + '%';
+  if (statHunger && Number.isFinite(p.hunger)) statHunger.style.width = clampPct(p.hunger) + '%';
+}
+
+// ==== ROOM RENDER ====
+function renderRoomInfo(room, opts = { flavor: true }) {
+  if (!room) return;
+  if (roomTitle) roomTitle.textContent = room.title || `(${room.x},${room.y})`;
+  if (roomBiome) roomBiome.textContent = room.biome || '';
+  const applyArt = (src) => {
+    if (!roomArt) return;
+    if (roomArt.tagName === 'IMG') { roomArt.removeAttribute('src'); if (src) roomArt.src = src; roomArt.alt = room.title || 'room art'; }
+    else { roomArt.style.backgroundImage = src ? `url("${src}")` : ''; roomArt.title = room.title || ''; roomArt.setAttribute('aria-hidden', src ? 'false' : 'true'); }
+  };
+  if (room.artSrc) applyArt(room.artSrc);
+  else resolveArtSrc(room).then(applyArt);
+  if (opts.flavor && room.flavor) log(room.flavor, 'log-flavor');
+}
+
+// ==== LIGHTWEIGHT LOG MIRROR → CONSOLE ====
 const _log = [];
-function log(text, cls='', ts=null){
+function log(text, cls, ts) {
   const stamp = new Date(ts || Date.now()).toLocaleTimeString();
   const line = `[${stamp}] ${text}`;
   _log.push({ text: line, cls });
@@ -79,19 +187,17 @@ function log(text, cls='', ts=null){
   consolePrint(line, { mode: cls ? 'system' : 'normal' });
 }
 
-// ---- overlay instance (visuals live in overlayMap.js) ----
+// ==== OVERLAY MAP INSTANCE ====
 const overlay = initOverlayMap?.({ devMode: DEV_MODE });
-
-// small helpers
-const toggle = (el, force) => { if (!el) return; const show = (typeof force==='boolean') ? force : el.classList.contains('hidden'); el.classList.toggle('hidden', !show); };
-const openMap = () => { overlayMapEl?.classList.remove('hidden'); overlay?.render?.(); };
-const closeMap = () => overlayMapEl?.classList.add('hidden');
+const openMap   = () => { overlayMapEl?.classList.remove('hidden'); overlay?.render?.(); };
+const closeMap  = () => overlayMapEl?.classList.add('hidden');
 const toggleMap = () => overlayMapEl?.classList.contains('hidden') ? openMap() : closeMap();
 
-// ---- state ----
+// ==== GAME STATE ====
 let CurrentPos = { x: 0, y: 0 };
+window.currentRoom = null;
 
-// Room patching from server deltas
+// Accept room delta payloads from server and re-render
 window.patchRoom = (delta) => {
   window.currentRoom = applyRoomDelta(window.currentRoom || {}, delta || {});
   const hostiles = (window.currentRoom?.enemies || []).some(e => (e.hp_now ?? e.hp) > 0);
@@ -104,65 +210,18 @@ window.patchRoom = (delta) => {
   }
 };
 
-// ---- room render (keeps your working art swap) ----
-let __anim = null;
-function renderRoomInfo(room, { flavor = true } = {}) {
-  if (__anim?.raf) cancelAnimationFrame(__anim.raf);
-  __anim = null;
-  roomTitle && (roomTitle.textContent = room.title || '');
-  roomBiome && (roomBiome.textContent = room.subtitle || '');
-
-  if (roomArt) roomArt.classList.add('fade-out');
-  roomArt.style.backgroundImage    = 'none';
-  roomArt.style.backgroundSize     = '';
-  roomArt.style.backgroundPosition = '';
-  roomArt.style.backgroundRepeat   = '';
-  void roomArt.offsetWidth;
-
-  const art = room.art || {};
-  roomArt.style.backgroundImage    = art.image || 'none';
-  roomArt.style.backgroundSize     = art.size || '';
-  roomArt.style.backgroundPosition = art.position || '';
-  roomArt.style.backgroundRepeat   = art.repeat || '';
-  setTimeout(()=>roomArt.classList.remove('fade-out'), 80);
-
-  if (flavor && room.description) {
-    const key = `${room.x},${room.y}:${room.biome}:${room.label||'none'}`;
-    if (renderRoomInfo._k !== key) { log(room.description, 'log-flavor'); renderRoomInfo._k = key; }
-  }
-
-  if (Array.isArray(art.frames) && art.frames.length>1 && typeof art.animIndex==='number') {
-    const frameMS = Math.max(60, Number(art.frame_ms || 120));
-    __anim = { idx:0, total:art.frames.length, animLayer:art.animIndex, base:Array.isArray(art.layers)?art.layers.slice():[], acc:0, ms:frameMS, raf:null, last:0 };
-    const step = (ts) => {
-      if (!__anim) return;
-      if (!__anim.last) __anim.last = ts;
-      const dt = ts - __anim.last; __anim.last = ts; __anim.acc += dt;
-      while (__anim.acc >= __anim.ms) {
-        __anim.acc -= __anim.ms; __anim.idx = (__anim.idx+1) % __anim.total;
-        const layers = __anim.base.slice(); layers[__anim.animLayer] = `url("${art.frames[__anim.idx]}")`;
-        roomArt.style.backgroundImage    = layers.join(', ');
-        roomArt.style.backgroundSize     = new Array(layers.length).fill('cover').join(', ');
-        roomArt.style.backgroundPosition = new Array(layers.length).fill('center').join(', ');
-        roomArt.style.backgroundRepeat   = new Array(layers.length).fill('no-repeat').join(', ');
-      }
-      __anim.raf = requestAnimationFrame(step);
-    };
-    __anim.raf = requestAnimationFrame(step);
-  }
-}
-
-// ---- movement events (from HUD/server only; no keyboard here) ----
-window.addEventListener('game:moved', (ev) => {
-  const d = ev?.detail || {}; if (!Number.isFinite(d.x) || !Number.isFinite(d.y)) return;
-  CurrentPos = { x: d.x, y: d.y };
-  const hostiles = window.currentRoom?.enemies?.some(e => (e.hp_now ?? e.hp) > 0);
-  const room = buildRoom(d.x, d.y, { mode: hostiles ? 'combat' : 'idle' });
+// Position changes (e.g., from combat/movement server events)
+window.addEventListener('game:position', (ev) => {
+  const d = ev.detail || {};
+  CurrentPos.x = d.x ?? CurrentPos.x;
+  CurrentPos.y = d.y ?? CurrentPos.y;
+  const room = buildRoom(CurrentPos.x, CurrentPos.y);
   renderRoomInfo(room);
-  overlay?.setPos?.(d.x, d.y); overlay?.render?.();
+  overlay?.setPos?.(d.x, d.y);
+  overlay?.render?.();
 });
 
-// Route server log events into local console
+// Pipe generic log events into console
 window.addEventListener('game:log', (ev) => {
   const events = ev.detail || [];
   for (const e of events) {
@@ -171,91 +230,132 @@ window.addEventListener('game:log', (ev) => {
   }
 });
 
-// ---- keyboard for overlays only (M/C/I/ESC) ----
-const isTyping = (t)=>!t?false:(t.tagName==='TEXTAREA')||(t.tagName==='INPUT'&&!['checkbox','radio','button','range','submit','reset','file','color'].includes((t.type||'').toLowerCase()))||t.isContentEditable===true;
-window.addEventListener('keydown', (e)=>{
+// ==== KEYBOARD SHORTCUTS (overlays only; console uses its own hotkeys) ====
+window.addEventListener('keydown', (e) => {
   if (isTyping(e.target)) return;
   const k = e.key?.toLowerCase?.();
-  if (k==='m'){ e.preventDefault(); toggleMap(); }
-  if (k==='c'){ e.preventDefault(); toggle(overlayChar); }
-  if (k==='i'){ e.preventDefault(); toggle(overlayInv); }
-  if (k==='escape'){ e.preventDefault(); closeMap(); overlayChar?.classList.add('hidden'); overlayInv?.classList.add('hidden'); }
+  if (k === 'm') { e.preventDefault(); toggleMap(); }
+  if (k === 'c') { e.preventDefault(); toggle(overlayChar); }
+  if (k === 'i') { e.preventDefault(); toggle(overlayInv); }
+  if (k === 'escape') { e.preventDefault(); closeMap(); overlayChar?.classList.add('hidden'); overlayInv?.classList.add('hidden'); }
 });
 
-// ---- shard picker ----
-function normalizeShardList(items){ const out=[]; if(!Array.isArray(items)) return out;
-  for(const it of items){
-    if (typeof it==='string'){ const s=it.trim(); if(s) out.push({name:s.replace(/^.*\//,''), url:s}); continue; }
-    if (it && typeof it==='object'){ const url=typeof it.url==='string'?it.url:null; if(!url) continue; const name=(typeof it.name==='string'&&it.name.trim())?it.name.trim():url.replace(/^.*\//,''); out.push({name,url}); }
-  } return out;
+// ==== SHARD LOADING FLOW ====
+
+function normalizeShardList(items) {
+  const out = [];
+  if (!Array.isArray(items)) return out;
+  for (const it of items) {
+    if (typeof it === 'string') {
+      const s = it.trim();
+      if (s) out.push({ name: s.replace(/^.*\//, ''), url: s });
+    } else if (it && typeof it === 'object') {
+      const url = typeof it.url === 'string' ? it.url.trim() : '';
+      if (!url) continue;
+      const name = it.name ? it.name.trim() : url.replace(/^.*\//, '');
+      out.push({ name, url });
+    }
+  }
+  return out;
 }
 
-async function fetchShardList(){
-  try{
-    const r=await fetch('/api/shards',{headers:{'Accept':'application/json'}}); if(!r.ok) throw new Error(`HTTP ${r.status}`);
-    const raw=await r.json(); const list=normalizeShardList(raw); if(list.length) return list; throw new Error('empty');
-  }catch{
-    return normalizeShardList([
-      { name:'Starter (local)', url:'/static/public/shards/00089451_test123.json' },
-      '/static/public/shards/00089451_test123.json'
-    ]);
+async function loadAvailableShards() {
+  try {
+    if (shardStatus) shardStatus.textContent = 'Loading…';
+    const res = await fetch('/api/shards');
+    const json = await res.json().catch(() => ({}));
+    const list = normalizeShardList(json?.items || json || []);
+    if (shardSelect) {
+      shardSelect.innerHTML = '';
+      for (const s of list) {
+        const opt = document.createElement('option');
+        opt.value = s.url; opt.textContent = s.name; shardSelect.appendChild(opt);
+      }
+      const demo = '/static/public/shards/00089451_test123.json';
+      if (![...shardSelect.options].some(o => o.value === demo)) {
+        const o = document.createElement('option'); o.value = demo; o.textContent = '00089451_test123.json'; shardSelect.appendChild(o);
+      }
+      shardSelect.value = demo;
+    }
+    if (shardStatus) shardStatus.textContent = 'Ready';
+  } catch (e) {
+    console.error(e);
+    if (shardStatus) shardStatus.textContent = 'Error';
   }
 }
 
-async function populateShardPicker(items){
-  if(!shardSelect) return;
-  const list = normalizeShardList(items); shardSelect.replaceChildren();
-  if(!list.length){ const o=document.createElement('option'); o.value=''; o.textContent='— No shards found —'; shardSelect.appendChild(o); return; }
-  for(const {name,url} of list){ const o=document.createElement('option'); o.value=url; o.textContent=name; shardSelect.appendChild(o); }
-  const d='/static/public/shards/00089451_test123.json';
-  if (![...shardSelect.options].some(o=>o.value===d)){ const o=document.createElement('option'); o.value=d; o.textContent='Starter (default)'; shardSelect.appendChild(o); }
-  if(!shardSelect.value) shardSelect.value = d;
-}
+// SAFE shard loader
+async function loadShard(url) {
+  if (!url) return;
+  if (shardStatus) shardStatus.textContent = 'Loading…';
+  try {
+    const res = await fetch(url);
+    const shard = await res.json();
 
-// ---- shard load ----
-async function loadShard(url){
-  if(!url||typeof url!=='string'){ shardStatus&&(shardStatus.textContent='Invalid shard URL'); throw new Error('bad url'); }
-  shardStatus&&(shardStatus.textContent='Loading…');
-  const res = await fetch(url); if(!res.ok){ shardStatus&&(shardStatus.textContent=`Load failed (${res.status})`); throw new Error('fetch fail'); }
-  const shard = await res.json();
+    if (!Array.isArray(shard?.tiles) || !Array.isArray(shard.tiles[0])) {
+      console.error('[mvp3] Bad shard shape:', shard && Object.keys(shard));
+      throw new Error('Shard tiles must be a 2D array');
+    }
+    assertCanonicalTiles(shard.tiles);
+    setRoomShard(shard);
 
-  // dev fallback so POIs exist
-  if (DEV_MODE && (!Array.isArray(shard.sites) || shard.sites.length===0)){
-    const gw = shard.tiles?.[0]?.length || 40, gh = shard.tiles?.length || 40;
-    shard.sites = [{x:Math.floor(gw/2),y:Math.floor(gh/2)-1,type:'town',name:'Larkstead'},{x:3,y:3,type:'port',name:'Drift Haven'}];
+    const summary = summarizeBiomes(shard.tiles);
+    console.log('Biome summary', summary);
+    if ((summary.unknown || 0) > 0) {
+      consolePrint(`{yellow}Warning{/}: Unknown biome tokens encountered (unknown=${summary.unknown})`, { mode: 'system' });
+    }
+
+    CurrentPos = { x: 12, y: 15 };
+
+    const room = buildRoom(CurrentPos.x, CurrentPos.y);
+    window.currentRoom = room;
+    renderRoomInfo(room, { flavor: true });
+
+    // Normalize biome tokens for the overlay → image keys
+    const overlayTiles = shard.tiles.map(row => row.map(t => {
+      const raw = (t && typeof t === 'object') ? (t.biome || t.type || t.terrain || 'unknown') : String(t || 'unknown');
+      const b = raw.toLowerCase();
+      if (b === 'water' || b === 'ocean') return 'ocean';
+      if (b === 'coast' || b === 'beach') return 'plains';   // show sand as plains tile image for now
+      if (b === 'grass' || b === 'plain' || b === 'plains') return 'plains';
+      if (b === 'forest' || b === 'woods') return 'forest';
+      if (b === 'swamp') return 'marsh';                     // not in atlas → will fall back to default
+      return b;                                              // others will fall back to default image
+    }));
+    const overlayShard = { ...shard, tiles: overlayTiles };
+    overlay?.setShard?.(overlayShard);
+    overlay?.setPos?.(CurrentPos.x, CurrentPos.y);
+    overlay?.render?.();
+
+    document.dispatchEvent(new CustomEvent('game:log', {
+      detail: [{ text: `Shard loaded. Spawn at (${CurrentPos.x},${CurrentPos.y})`, ts: Date.now() }]
+    }));
+
+    window.__lastShard = shard;
+    if (shardStatus) shardStatus.textContent = 'Loaded';
+  } catch (e) {
+    console.error(e);
+    if (shardStatus) shardStatus.textContent = 'Error';
+    consolePrint(`{red}Failed to load shard{/}: ${e?.message || e}`, { mode: 'system' });
   }
-
-  assertCanonicalTiles(shard.tiles);
-  setRoomShard(shard);
-
-  const gw=shard.tiles?.[0]?.length||0, gh=shard.tiles?.length||0;
-  const spawn = shard.spawn || [Math.floor(gw/2), Math.floor(gh/2)];
-  CurrentPos = { x:spawn[0], y:spawn[1] };
-
-  renderRoomInfo(buildRoom(CurrentPos.x, CurrentPos.y), { flavor:true });
-
-  // overlay sync (overlay fully owns visuals)
-  overlay?.setToken?.(USER_TOKEN);
-  overlay?.setPos?.(CurrentPos.x, CurrentPos.y);
-  overlay?.setShard?.(shard);
-  overlay?.render?.();
-
-  window.dispatchEvent(new CustomEvent('game:log', {
-    detail: [{ text: `Shard loaded. Local spawn at (${CurrentPos.x},${CurrentPos.y})`, ts: Date.now() }]
-  }));
-
-  window.__lastShard = shard;
-  shardStatus && (shardStatus.textContent = 'Loaded');
 }
 
+// ==== UI WIRES ====
+btnLoadShard?.addEventListener('click', async () => {
+  const url = shardSelect?.value;
+  if (!url) return;
+  await loadShard(url);
+});
+shardSelect?.addEventListener('change', () => btnLoadShard?.click());
+btnWorldMap?.addEventListener('click', () => toggleMap());
+btnCharacter?.addEventListener('click', () => toggle(overlayChar));
+btnInventory?.addEventListener('click', () => toggle(overlayInv));
 
-// Close buttons inside panels
 overlayChar?.querySelector('[data-close="char"]')
   ?.addEventListener('click', () => overlayChar.classList.add('hidden'));
 overlayInv?.querySelector('[data-close="inv"]')
   ?.addEventListener('click', () => overlayInv.classList.add('hidden'));
 
-// Click on the dark backdrop closes (but not when clicking inside .panel)
 document.addEventListener('click', (e) => {
   const target = e.target;
   if (!(target instanceof Element)) return;
@@ -265,53 +365,28 @@ document.addEventListener('click', (e) => {
   if (!panel) overlay.classList.add('hidden');
 });
 
-// ---- UI wires ----
-btnLoadShard?.addEventListener('click', async ()=>{ const url=shardSelect?.value; if(!url) return; try{ await loadShard(url); }catch{} });
-shardSelect?.addEventListener('change', ()=>btnLoadShard?.click());
-btnWorldMap?.addEventListener('click', ()=>toggleMap());
-btnCharacter?.addEventListener('click', ()=>toggle(overlayChar));
-btnInventory?.addEventListener('click', ()=>toggle(overlayInv));
+// ==== BOOTSTRAP ====
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadAvailableShards();
+  if (shardSelect?.value) { try { await loadShard(shardSelect.value); } catch {} }
+});
 
-// ---- boot ----
-(async ()=>{
-  try{
-    const items = await fetchShardList();
-    await populateShardPicker(items);
-    const current = shardSelect?.value || '/static/public/shards/00089451_test123.json';
-    await loadShard(current);
-    document.getElementById('mapUserToken')?.replaceChildren(document.createTextNode(`Token: ${USER_TOKEN}`));
-  }catch(e){
-    console.warn('Auto-load failed:', e);
-    shardStatus && (shardStatus.textContent='Please select a shard to load.');
-  }
-})();
+// ==== AUTOSAVE TICK ====
+let _autosaveTimer = null;
+function startAutosave() {
+  clearInterval(_autosaveTimer);
+  _autosaveTimer = setInterval(async () => {
+    try { const state = { pos: CurrentPos, token: USER_TOKEN, ts: Date.now() }; await autosaveCharacterState(state); }
+    catch { /* no-op */ }
+  }, 15000);
+}
+startAutosave();
 
-// periodic autosave of position + lightweight state
-setInterval(() => {
-  const payload = {
-    x: CurrentPos.x,
-    y: CurrentPos.y,
-    state: {
-      last_room_id: window.currentRoomId || null,
-      inventory: window.playerInventory || [],
-      quests: window.currentQuests || { active: [], completed: [] },
-    },
-  };
-  if (window.__lastShard?.meta?.name) payload.shard_id = window.__lastShard.meta.name;
-  autosaveCharacterState(payload).catch(() => { /* swallow in UI */ });
-}, 60_000);
-
-// Inventory panel demo wiring
+// ==== INVENTORY PANEL QUICK DEMO ====
 document.addEventListener('DOMContentLoaded', () => {
   const characterId = window.SHARDBOUND?.characterId || 'demo-character-id';
   const mount = document.getElementById('inventory-root');
-  if (mount) {
-    initInventoryPanel({ characterId, mountEl: mount });
-  }
-  document.getElementById('btn-add-potion')?.addEventListener('click', () => {
-    addInvItem(characterId, 'health-potion', 1);
-  });
-  document.getElementById('btn-remove-potion')?.addEventListener('click', () => {
-    removeInvItem(characterId, 'health-potion', 1);
-  });
+  if (mount) initInventoryPanel({ characterId, mountEl: mount });
+  document.getElementById('btn-add-potion')?.addEventListener('click', () => { addInvItem(characterId, 'health-potion', 1); });
+  document.getElementById('btn-remove-potion')?.addEventListener('click', () => { removeInvItem(characterId, 'health-potion', 1); });
 });
