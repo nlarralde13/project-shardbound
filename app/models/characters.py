@@ -44,4 +44,9 @@ class Character(Model):
     )
     last_seen_at = db.Column(db.DateTime)
 
-
+    # link to items this character carries
+    inventory_items = db.relationship(
+        "InventoryItem",
+        back_populates="character",
+        cascade="all, delete-orphan",
+    )
