@@ -1,4 +1,4 @@
-"""Movement command executors (stub)."""
+
 from __future__ import annotations
 from typing import Any, Dict, List
 
@@ -11,3 +11,4 @@ def move(cmd: Dict[str, Any], ctx: Dict[str, Any]) -> List[Dict[str, Any]]:
     ``ctx``.
     """
     return [{"type": "text", "data": "You move north."}]
+

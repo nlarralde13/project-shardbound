@@ -13,6 +13,9 @@ from typing import Deque
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 
+from executors.movement import move_command, DIRS as MOVE_DIRS
+from executors.look import look as exec_look, where as exec_where
+
 bp = Blueprint("api_console", __name__, url_prefix="/api/console")
 
 # in-memory per-user rate limiting; not persistent and only suitable for
@@ -68,8 +71,13 @@ def exec_command():
     q.append(now)
 
     frames = [{"type": "text", "data": line}]
-    if line.lower() == "look":
-        frames.append({"type": "text", "data": "You look around. There is nothing of note."})
+    cmd = line.lower()
+    if cmd in MOVE_DIRS:
+        frames.extend(move_command(cmd))
+    elif cmd in ("look", "l"):
+        frames.extend(exec_look())
+    elif cmd == "where":
+        frames.extend(exec_where())
 
     return jsonify({"status": "ok", "frames": frames})
 
