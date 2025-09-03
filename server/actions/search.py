@@ -31,9 +31,28 @@ def search_room(*, player, payload: dict) -> dict:
            ", ".join(f"{x['qty']} × {x['name']}" for x in found) + "!"
            ) if found else "You rummage around… nothing of value."
 
+    events = [{"type":"log","text": msg}]
+    # Shardgate discovery on search
+    try:
+        g = gate_at(WORLD, room_obj.x, room_obj.y)
+    except Exception:
+        g = None
+    if g:
+        events.append({"type":"log","text":"There is a Shardgate here."})
+        try:
+            if current_user.is_authenticated:
+                user = db.session.get(User, current_user.user_id)
+                if user and user.selected_character_id:
+                    exists = CharacterDiscovery.query.filter_by(character_id=user.selected_character_id, shardgate_id=g.get('id')).first()
+                    if not exists:
+                        db.session.add(CharacterDiscovery(character_id=user.selected_character_id, shardgate_id=g.get('id')))
+                        db.session.commit()
+        except Exception:
+            db.session.rollback()
+
     return {
         "ok": True,
-        "events":[{"type":"log","text": msg}],
+        "events": events,
         "gains": found,
         "player": player.as_public(),
         "room_delta": {"searchables": room_obj.searchables},

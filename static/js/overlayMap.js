@@ -52,6 +52,8 @@ export function initOverlayMap({ devMode = false } = {}) {
     tile: { w: 8, h: 8 },
     title: '',
     pois: [],
+    gates: [],
+    discoveredGateIds: [],
   };
 
   const gctx = gridCanvas.getContext('2d');
@@ -87,10 +89,19 @@ export function initOverlayMap({ devMode = false } = {}) {
     state.gridH = g.length;
     state.gridW = g[0]?.length || 0;
     state.pois = Array.isArray(shard?.pois) ? shard.pois : (Array.isArray(shard?.sites) ? shard.sites : []);
+    // shardgates layer (optional)
+    const nodes = shard?.layers?.shardgates?.nodes;
+    state.gates = Array.isArray(nodes) ? nodes.map(n => ({ id: String(n.id||''), link: String(n.link||''), x: (n.x|0), y: (n.y|0) })) : [];
     if (shard?.name) setTitle(shard.name);
     fitCanvases();
     preloadTilesForGrid();
     render();
+    // Fetch discovered gates for current character
+    fetch('/api/discoveries').then(r=>r.json()).then(j=>{
+      const list = Array.isArray(j?.shardgates) ? j.shardgates : [];
+      state.discoveredGateIds = list.map(String);
+      render();
+    }).catch(()=>{});
   }
   function setPos(x, y) { state.pos.x = x|0; state.pos.y = y|0; render(); }
 
@@ -235,6 +246,12 @@ export function initOverlayMap({ devMode = false } = {}) {
     }
   }
 
+  // Shardgate icon (optional PNG); fall back to vector glyph if missing
+  const gateIcon = new Image();
+  gateIcon.onload = () => render();
+  gateIcon.onerror = () => { /* keep vector fallback */ };
+  gateIcon.src = `${TILE_BASE}shardgate.png`;
+
   function drawPOI() {
     pctx.clearRect(0,0,poiCanvas.width, poiCanvas.height);
     for (const s of state.pois) {
@@ -248,6 +265,40 @@ export function initOverlayMap({ devMode = false } = {}) {
       const dx = px(s.x) + (state.tile.w - size)/2;
       const dy = py(s.y) + (state.tile.h - size)/2;
       pctx.drawImage(img, dx, dy, size, size);
+    }
+  }
+
+  function drawShardgates() {
+    if (!Array.isArray(state.gates) || state.gates.length === 0) return;
+    for (const g of state.gates) {
+      // Dev mode: always show. Normal: only discovered or current tile
+      const isHere = (g.x === (state.pos.x|0) && g.y === (state.pos.y|0));
+      if (!state.devMode) {
+        if (!isHere && !state.discoveredGateIds.includes(g.id)) continue;
+      }
+      const size = Math.floor(Math.min(state.tile.w, state.tile.h) * 0.66);
+      const dx = px(g.x) + (state.tile.w - size)/2;
+      const dy = py(g.y) + (state.tile.h - size)/2;
+      if (gateIcon && gateIcon.complete && gateIcon.naturalWidth > 0) {
+        pctx.drawImage(gateIcon, dx, dy, size, size);
+      } else {
+        // fallback glyph: small magenta diamond
+        const cx0 = dx + size/2, cy0 = dy + size/2, r = size/2;
+        pctx.save();
+        pctx.globalAlpha = 0.95;
+        pctx.fillStyle = '#d16bff';
+        pctx.strokeStyle = '#5a2a86';
+        pctx.lineWidth = Math.max(1, size * 0.12);
+        pctx.beginPath();
+        pctx.moveTo(cx0, cy0 - r);
+        pctx.lineTo(cx0 + r, cy0);
+        pctx.lineTo(cx0, cy0 + r);
+        pctx.lineTo(cx0 - r, cy0);
+        pctx.closePath();
+        pctx.fill();
+        pctx.stroke();
+        pctx.restore();
+      }
     }
   }
 
@@ -303,6 +354,7 @@ export function initOverlayMap({ devMode = false } = {}) {
     drawBiomes();
     drawWaterRoads();
     drawPOI();
+    drawShardgates();
     debugSettlementDots(); // only paints when state.devMode === true
     drawPlayer();
   }
@@ -311,7 +363,20 @@ export function initOverlayMap({ devMode = false } = {}) {
   window.addEventListener('resize', () => {
     if (!root.classList.contains('hidden')) { fitCanvases(); render(); }
   });
-  window.addEventListener('game:moved', (ev)=>{ const d=ev.detail||{}; if(Number.isFinite(d.x)&&Number.isFinite(d.y)) setPos(d.x,d.y); });
+  window.addEventListener('game:moved', (ev)=>{ const d=ev.detail||{}; if(Number.isFinite(d.x)&&Number.isFinite(d.y)) { setPos(d.x,d.y); refreshDiscoveries(); } });
+  window.addEventListener('game:position', (ev)=>{ const d=ev.detail||{}; if(Number.isFinite(d.x)&&Number.isFinite(d.y)) { setPos(d.x,d.y); refreshDiscoveries(); } });
+
+  async function refreshDiscoveries(){
+    try{
+      const j = await fetch('/api/discoveries').then(r=>r.json()).catch(()=>null);
+      const list = Array.isArray(j?.shardgates) ? j.shardgates : [];
+      const ids = list.map(String);
+      // Only re-render when changed to avoid flicker
+      const changed = ids.length !== state.discoveredGateIds.length || ids.some((id,i)=>id!==state.discoveredGateIds[i]);
+      state.discoveredGateIds = ids;
+      if (changed) render();
+    }catch{}
+  }
 
   return { setShard, setPos, setTitle, setDev(v){state.devMode=!!v; render();}, render };
 

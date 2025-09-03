@@ -103,6 +103,15 @@ registry.register({
 });
 
 registry.register({
+  name: 'search',
+  aliases: ['explore'],
+  namespace: 'game',
+  description: 'Search the area for points of interest.',
+  usage: 'search',
+  examples: ['search', 'explore']
+});
+
+registry.register({
   name: 'move',
   aliases: ['go'],
   namespace: 'game',

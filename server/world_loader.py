@@ -94,6 +94,9 @@ class World:
 
     # cache of rolled rooms
     _rooms: Dict[Coord, Room] = field(default_factory=lambda: LRURoomCache(maxsize=256), repr=False)
+    # optional shardgate data
+    gates_by_id: Dict[str, Dict] = field(default_factory=dict)
+    gates_xy: Dict[Coord, Dict] = field(default_factory=dict)
 
     def biome_at(self, x: int, y: int) -> str:
         W, H = self.size
@@ -199,10 +202,37 @@ def load_world(path: str | Path) -> World:
         seed=(data.get("meta") or {}).get("seed", 0),
     )
 
+    # Optional shardgates layer
+    try:
+        gates = ((layers.get("shardgates") or {}).get("nodes") or [])
+        for n in gates:
+            if not isinstance(n, dict):
+                continue
+            _id = str(n.get("id") or "").strip()
+            link = str(n.get("link") or "").strip()
+            x = n.get("x")
+            y = n.get("y")
+            if not _id or not link or x is None or y is None:
+                continue
+            node = {"id": _id, "link": link, "x": int(x), "y": int(y)}
+            world.gates_by_id[_id] = node
+            world.gates_xy[(int(x), int(y))] = node
+    except Exception:
+        # ignore malformed gate data
+        pass
+
     # expose as "current" for simple adapters that don't pass world
     global _CURRENT_WORLD
     _CURRENT_WORLD = world
     return world
+
+# ---- Shardgate helpers -------------------------------------------------------
+
+def gate_at(world: World, x: int, y: int) -> Optional[Dict]:
+    return world.gates_xy.get((int(x), int(y)))
+
+def gate_by_id(world: World, gate_id: str) -> Optional[Dict]:
+    return world.gates_by_id.get(str(gate_id))
 
 # ------------------------ Room generation / respawn ------------------------
 

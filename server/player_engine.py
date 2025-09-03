@@ -78,6 +78,11 @@ def can_enter(world, x: int, y: int, player: Player) -> tuple[bool, str]:
 
     # Terrain-based restrictions — road/bridge can carve a pass
     biome = world.biome_at(x, y)
+    # Treat open ocean as requiring a boat unless overridden
+    if biome.lower() == "ocean" and not (
+        on_road or on_bridge or player.flags.get("has_boat") or player.flags.get("can_swim") or player.flags.get("can_fly")
+    ):
+        return False, "ocean"
     if biome in IMPASSABLE_BIOMES and not (
         on_road
         or on_bridge

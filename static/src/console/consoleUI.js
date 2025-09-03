@@ -167,6 +167,12 @@ export function renderFrames(frames = []) {
       }
     } else if (f.type === 'text') {
       print(f.data);
+    } else if (f.type === 'event') {
+      try {
+        const name = f.data?.name;
+        const payload = f.data?.payload ?? {};
+        if (name) window.dispatchEvent(new CustomEvent(name, { detail: payload }));
+      } catch {}
     } else if (f.type === 'table') {
       renderTable(f.data);
     } else if (f.type === 'json') {

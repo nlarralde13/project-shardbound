@@ -2,6 +2,7 @@
 // Emits: "game:log" (events[]), "game:moved" ({x,y})
 
 import { API } from "/static/js/api.js";
+import { findShardgateAt, getRoomShard } from "/static/js/roomLoader.js";
 import { io } from "https://cdn.socket.io/4.7.5/socket.io.esm.min.js";
 
 let els = {};
@@ -95,9 +96,27 @@ export function initActionHUD({ mount = ".room-stage" } = {}) {
   els.enter.addEventListener("click", async () => {
     try {
       setBusy(true);
-      const out = await API.interact();
-      if (out?.poi) window.dispatchEvent(new CustomEvent("game:poi", { detail: out.poi }));
-      if (out?.log) window.dispatchEvent(new CustomEvent("game:log", { detail: out.log.map(t => ({ text: t, ts: Date.now() })) }));
+      // Prefer shardgate action when available; fallback to generic interact
+      if (currentInteractions?.can_enter_shardgate) {
+        const res = await fetch('/api/console/exec', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ line: 'enter shardgate' })
+        });
+        const json = await res.json().catch(() => null);
+        const frames = Array.isArray(json?.frames) ? json.frames : [];
+        for (const f of frames) {
+          if (f.type === 'text') {
+            window.dispatchEvent(new CustomEvent('game:log', { detail: [{ text: f.data, ts: Date.now() }] }));
+          } else if (f.type === 'event' && f.data?.name) {
+            window.dispatchEvent(new CustomEvent(f.data.name, { detail: f.data.payload || {} }));
+          }
+        }
+      } else {
+        const out = await API.interact();
+        if (out?.poi) window.dispatchEvent(new CustomEvent("game:poi", { detail: out.poi }));
+        if (out?.log) window.dispatchEvent(new CustomEvent("game:log", { detail: out.log.map(t => ({ text: t, ts: Date.now() })) }));
+      }
     } finally {
       setBusy(false);
     }
@@ -123,11 +142,18 @@ export function initActionHUD({ mount = ".room-stage" } = {}) {
 
 export function updateActionHUD({ interactions }) {
   if (!interactions) return;
-  currentInteractions = interactions;
-  toggle(els.search,  interactions.can_search);
-  toggle(els.gather,  interactions.can_gather);
-  toggle(els.attack,  interactions.can_attack);
-  toggle(els.talk,    interactions.can_talk);
+  const next = { ...currentInteractions, ...interactions };
+  currentInteractions = next;
+  toggle(els.search,  !!next.can_search);
+  toggle(els.gather,  !!next.can_gather);
+  toggle(els.attack,  !!next.can_attack);
+  toggle(els.talk,    !!next.can_talk);
+  // Optional: enter shardgate action
+  const canEnterGate = !!next.can_enter_shardgate;
+  if (els.enter) {
+    els.enter.textContent = canEnterGate ? "Enter Shardgate" : "Enter";
+    toggle(els.enter, canEnterGate);
+  }
 }
 
 export function setBusy(v) {
@@ -192,4 +218,26 @@ async function doAction(verb, payload = {}) {
 function toast(msg) {
   if (els.status) els.status.textContent = msg;
   setTimeout(() => (els.status.textContent = ""), 1200);
+}
+
+// ---- Local Search (client-side discovery) -----------------------------------
+async function doLocalSearch() {
+  try {
+    setBusy(true);
+    const shard = window.__lastShard || getRoomShard();
+    const pos = { x: window.currentRoom?.x|0, y: window.currentRoom?.y|0 };
+    let events = [];
+    let interactions = { ...currentInteractions };
+    const gate = findShardgateAt(shard, pos.x, pos.y);
+    if (gate) {
+      events.push({ type: 'log', text: 'There is a Shardgate here.' });
+      interactions.can_enter_shardgate = true;
+    }
+    if (events.length) window.dispatchEvent(new CustomEvent('game:log', { detail: events.map(e => ({ ...e, ts: Date.now() })) }));
+    if (interactions) updateActionHUD({ interactions });
+  } catch (e) {
+    console.error(e);
+  } finally {
+    setBusy(false);
+  }
 }

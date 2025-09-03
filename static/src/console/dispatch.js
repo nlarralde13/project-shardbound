@@ -16,6 +16,8 @@
  */
 
 import * as registry from './commandRegistry.js';
+import { findShardgateAt, getRoomShard } from '/static/js/roomLoader.js';
+import { updateActionHUD } from '/static/js/actionHud.js';
 
 /** Map of command -> executor function */
 const executors = new Map();
@@ -43,7 +45,7 @@ export async function dispatch(parsed = {}, { rpcExec } = {}) {
   const { line = '', chain = [], context } = parsed;
   for (const link of chain) {
     const def = registry.get(link.cmd);
-    const exec = executors.get(link.cmd);
+    const exec = executors.get(link.cmd) || (def ? executors.get(def.name) : undefined);
     if (exec) {
       const frames = await exec({ line, command: link, context, def, rpcExec });
       if (Array.isArray(frames)) out.push(...frames);
@@ -104,4 +106,35 @@ registerExecutor('help', async ({ command, rpcExec }) => {
 registerExecutor('clear', async () => [{ type: 'status', data: { clear: true } }]);
 
 export default { registerExecutor, dispatch };
+
+// ---- Game executors ---------------------------------------------------------
+
+async function localSearchOrLook() {
+  const shard = window.__lastShard || getRoomShard();
+  const pos = { x: (window.currentRoom?.x|0), y: (window.currentRoom?.y|0) };
+  const frames = [];
+  const gate = findShardgateAt(shard, pos.x, pos.y);
+  if (gate) {
+    const line = 'There is a Shardgate here.';
+    // Console output
+    frames.push({ type: 'text', data: line });
+    // Mirror to game log
+    try { window.dispatchEvent(new CustomEvent('game:log', { detail: [{ type: 'log', text: line, ts: Date.now() }] })); } catch {}
+    // Surface action in HUD
+    try { updateActionHUD({ interactions: { can_search: true, can_enter_shardgate: true } }); } catch {}
+  } else {
+    frames.push({ type: 'text', data: 'You find nothing of note.' });
+  }
+  return frames;
+}
+
+registerExecutor('search', async ({ rpcExec }) => {
+  if (rpcExec) return await rpcExec({ line: 'search' });
+  return await localSearchOrLook();
+});
+
+registerExecutor('look', async ({ rpcExec }) => {
+  if (rpcExec) return await rpcExec({ line: 'look' });
+  return await localSearchOrLook();
+});
 

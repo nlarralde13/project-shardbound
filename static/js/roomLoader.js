@@ -95,6 +95,8 @@ export function assertCanonicalTiles(tilesOrShard) {
 export function setRoomShard(shard) {
   if (!shard || typeof shard !== 'object') throw new Error('setRoomShard() requires a shard object');
   assertCanonicalTiles(shard);
+  // Optionally validate supported layers (non-fatal; sanitize if present)
+  try { _sanitizeLayers(shard); } catch {}
   _shard = shard;
 }
 
@@ -180,4 +182,39 @@ export function buildRoom(x, y, opts = {}) {
     color: tile.color,
     mode: opts.mode || 'idle'
   };
+}
+
+// ---- Optional Shard Layers Validation (non-fatal) ----
+function _sanitizeLayers(shard) {
+  const layers = shard.layers;
+  if (!layers || typeof layers !== 'object') return;
+  const gates = layers.shardgates;
+  if (!gates || typeof gates !== 'object') return;
+  const nodes = Array.isArray(gates.nodes) ? gates.nodes : [];
+  const cleaned = [];
+  for (const n of nodes) {
+    if (!n || typeof n !== 'object') continue;
+    const id = String(n.id ?? '').trim();
+    const link = String(n.link ?? '').trim();
+    const x = Number(n.x);
+    const y = Number(n.y);
+    if (!id || !link || !Number.isFinite(x) || !Number.isFinite(y)) continue;
+    cleaned.push({ id, link, x: x|0, y: y|0 });
+  }
+  if (!layers.shardgates) layers.shardgates = {};
+  layers.shardgates.nodes = cleaned;
+}
+
+// ---- Shardgate helpers ----
+export function findShardgateAt(shard, x, y) {
+  const nodes = shard?.layers?.shardgates?.nodes || [];
+  const found = nodes.find(n => (n.x|0) === (x|0) && (n.y|0) === (y|0));
+  return found ? { id: found.id, x: found.x, y: found.y, link: found.link } : null;
+}
+
+export function findShardgateById(shard, id) {
+  const nodes = shard?.layers?.shardgates?.nodes || [];
+  const key = String(id ?? '');
+  const found = nodes.find(n => n.id === key);
+  return found ? { id: found.id, x: found.x, y: found.y, link: found.link } : null;
 }

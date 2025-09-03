@@ -1016,6 +1016,12 @@
       ],
       "bridges": []
     },
+    "shardgates": {
+      "nodes": [
+        { "id": "gate_a", "x": 1, "y": 3, "link": "gate_b" },
+        { "id": "gate_b", "x": 3, "y": 9, "link": "gate_a" }
+      ]
+    },
     "elevation": [
       [
         60,

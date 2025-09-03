@@ -73,3 +73,10 @@ class EncounterTrigger(Model):
     world_x = db.Column(db.Integer, nullable=False)
     world_y = db.Column(db.Integer, nullable=False)
     script_id = db.Column(db.String(64), nullable=False)
+
+
+class CharacterDiscovery(Model):
+    __tablename__ = "character_discoveries"
+    character_id = db.Column(db.String(64), db.ForeignKey("character.character_id"), primary_key=True)
+    shardgate_id = db.Column(db.String(128), primary_key=True)
+    discovered_at = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
