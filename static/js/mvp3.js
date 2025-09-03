@@ -17,6 +17,9 @@ import {
   refreshInventoryOverlay
 } from '/static/src/ui/inventoryPanel.js';
 
+// Character panel overlay (paper-doll)
+import { initCharacterPanel, refreshCharacterPanel } from '/static/src/ui/characterPanel.js';
+
 // ==== CONSOLE V2 IMPORTS ====
 import {
   mountConsole,
@@ -51,7 +54,7 @@ const USER_TOKEN = (() => {
 // ==== DOM HOOKS ====
 const overlayMapEl = document.getElementById('overlayMap');
 const btnWorldMap   = document.getElementById('btnWorldMap');
-const overlayChar   = document.getElementById('overlayCharacter');
+const overlayChar   = document.getElementById('overlayChar');
 const overlayInv    = document.getElementById('overlayInventory');
 
 const btnCharacter  = document.getElementById('btnCharacter');
@@ -289,8 +292,10 @@ window.addEventListener('character:ready', async (ev) => {
   try {
     const c = ev?.detail || window.__activeCharacter || {};
     const characterId = c.character_id || c.id || window.SHARDBOUND?.characterId;
-    const mount = document.getElementById('invPanelMount');
-    if (mount && characterId) await initInventoryOverlay({ characterId, mountEl: mount });
+    const invMount = document.getElementById('invPanelMount');
+    if (invMount && characterId) await initInventoryOverlay({ characterId, mountEl: invMount });
+    const charPanel = document.querySelector('#overlayChar .panel');
+    if (charPanel && characterId) await initCharacterPanel({ characterId, mountEl: charPanel });
   } catch {}
 });
 
@@ -407,3 +412,15 @@ function startAutosave() {
 startAutosave();
 
 // No inline inventory demo; overlay-only
+
+// Refresh overlays after equipment changes
+window.addEventListener('equipment:changed', () => {
+  try { refreshInventoryOverlay(true); } catch {}
+  try { refreshCharacterPanel(true); } catch {}
+});
+
+// Refresh overlays after equipment changes
+window.addEventListener('equipment:changed', () => {
+  try { refreshInventoryOverlay(true); } catch {}
+  try { refreshCharacterPanel(true); } catch {}
+});

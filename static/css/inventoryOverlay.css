@@ -98,6 +98,24 @@
   box-shadow: 0 1px 2px rgba(0,0,0,0.4);
 }
 
+/* Small ellipsis button */
+#overlayInventory .slot .menu-btn {
+  position: absolute; right: 6px; top: 6px; color: #aab; font-weight: 700; cursor: pointer; user-select: none;
+}
+
+/* Context menu */
+.inv-menu {
+  position: absolute; z-index: 2000; background: #1a1c22; color: #e6e7ea; border: 1px solid #2a2c34; border-radius: 6px;
+  display: flex; flex-direction: column; min-width: 160px; padding: 6px;
+}
+.inv-menu > button { background: transparent; color: inherit; border: 0; text-align: left; padding: 6px 8px; cursor: pointer; border-radius: 4px; }
+.inv-menu > button:hover { background: #2a2c34; }
+.inv-menu > button:disabled { color: #778; cursor: default; }
+
+/* Separator label */
+#overlayInventory .inv-sep { padding: 6px 10px; font-size: 12px; color: #aab; }
+.equipped-grid .slot { opacity: 0.8; }
+
 /* Error state */
 #overlayInventory .inv-error {
   padding: 16px;

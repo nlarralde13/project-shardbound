@@ -1,0 +1,49 @@
+/* Character paper-doll layout */
+
+#overlayChar .panel {
+  max-width: 860px;
+  width: 92vw;
+}
+
+.character-root .char-panel {
+  padding: 10px;
+}
+
+.character-root .char-paperdoll {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.character-root .char-paperdoll .col {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.character-root .char-paperdoll .center {
+  display: flex; align-items: center; justify-content: center;
+}
+
+.character-root .char-art {
+  width: 220px; height: 280px; border: 1px dashed #555; border-radius: 8px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(0,0,0,0.06));
+}
+
+.character-root .char-paperdoll .row.bottom {
+  grid-column: 1 / 4;
+  display: flex; gap: 12px; justify-content: center; margin-top: 8px;
+}
+
+.character-root .slot { position: relative; display: flex; flex-direction: column; gap: 4px; }
+.character-root .slot-label { font-size: 12px; color: #aab; }
+.character-root .slot .slot-box {
+  position: relative; width: 96px; height: 96px; border-radius: 8px;
+  background: #0e0f13; border: 1px solid #2a2c34; display:flex; align-items:center; justify-content:center;
+}
+.character-root .slot .slot-box.drop-ok { border-color: #2b7a3d; background: #132017; }
+.character-root .slot .slot-box.drop-bad { border-color: #7a2b2b; background: #201313; }
+.character-root .slot .slot-box .icon { width: 64px; height: 64px; object-fit: contain; }
+.character-root .slot .unequip { position: absolute; top: -6px; right: -6px; width: 24px; height: 24px; border-radius: 50%;
+  border: 1px solid #2a2c34; background: #2a0f12; color: #f6d4d4; cursor: pointer; }
