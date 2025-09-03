@@ -32,12 +32,14 @@
 import * as history from './history.js';
 import { complete } from './completions.js';
 
-let rootEl, scrollEl, inputEl, statusEl, compEl;
+let rootEl, scrollEl, inputEl, statusEl, compEl, submitFn;
 
-// mountConsole(rootElement)
+// mountConsole(rootElement, { onSubmit })
 // Creates console structure inside rootElement
-export function mountConsole(root) {
-  if (!root) return;
+// Returns controller with console helpers
+export function mountConsole(root, { onSubmit } = {}) {
+  if (!root) return {};
+  submitFn = onSubmit;
   rootEl = root;
   rootEl.style.display = 'flex';
   rootEl.style.flexDirection = 'column';
@@ -82,14 +84,24 @@ export function mountConsole(root) {
 
   rootEl.style.position = 'relative';
   rootEl.replaceChildren(scrollEl, inputEl, compEl, statusEl);
+
+  return { print, setPrompt, setStatus, renderFrames, bindHotkeys };
 }
 
-function handleKey(ev) {
+async function handleKey(ev) {
   if (ev.key === 'Enter') {
     const val = inputEl.value;
     if (val.trim()) {
       print(val);
       history.push(val);
+      if (submitFn) {
+        try {
+          const frames = await submitFn(val, {});
+          renderFrames(frames);
+        } catch (err) {
+          print(String(err), { mode: 'system' });
+        }
+      }
     }
     inputEl.value = '';
     compEl.style.display = 'none';
