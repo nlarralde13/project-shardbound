@@ -6,6 +6,7 @@ import { setShard as setRoomShard, assertCanonicalTiles, buildRoom } from '/stat
 import { applyRoomDelta } from '/static/js/roomPatcher.js';
 import { API, autosaveCharacterState } from '/static/js/api.js';
 import { updateActionHUD } from '/static/js/actionHud.js';
+import { initInventoryPanel, addItem as addInvItem, removeItem as removeInvItem } from '../src/ui/inventoryPanel.js';
 
 const QS = new URLSearchParams(location.search);
 const DEV_MODE = QS.has('devmode');
@@ -389,3 +390,18 @@ setInterval(() => {
   if (window.__lastShard?.meta?.name) payload.shard_id = window.__lastShard.meta.name;
   autosaveCharacterState(payload).catch(() => { /* swallow in UI */ });
 }, 60_000);
+
+// Inventory panel demo wiring
+document.addEventListener('DOMContentLoaded', () => {
+  const characterId = window.SHARDBOUND?.characterId || 'demo-character-id';
+  const mount = document.getElementById('inventory-root');
+  if (mount) {
+    initInventoryPanel({ characterId, mountEl: mount });
+  }
+  document.getElementById('btn-add-potion')?.addEventListener('click', () => {
+    addInvItem(characterId, 'health-potion', 1);
+  });
+  document.getElementById('btn-remove-potion')?.addEventListener('click', () => {
+    removeInvItem(characterId, 'health-potion', 1);
+  });
+});

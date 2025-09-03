@@ -18,6 +18,7 @@ from .api_items import api as api_items_bp
 from .api_admin import admin_api
 from .security import admin_guard
 from .admin_panel import admin_ui
+from .api_inventory import bp as inventory_api_bp
 
 def _json_column_type_for(engine) -> str:
     return "TEXT" if engine.dialect.name == "sqlite" else "JSON"
@@ -138,6 +139,7 @@ def create_app():
     app.register_blueprint(api_items_bp, url_prefix="/api", name="items_api")
     app.register_blueprint(admin_api)
     app.register_blueprint(admin_ui)
+    app.register_blueprint(inventory_api_bp)
 
     # Gameplay API
     try:
