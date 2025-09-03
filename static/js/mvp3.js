@@ -12,9 +12,9 @@ import { applyRoomDelta } from '/static/js/roomPatcher.js';
 import { API, autosaveCharacterState } from '/static/js/api.js';
 import { updateActionHUD } from '/static/js/actionHud.js';
 import {
-  initInventoryPanel,
-  addItem as addInvItem,
-  removeItem as removeInvItem
+  initInventoryOverlay,
+  openInventoryOverlay,
+  refreshInventoryOverlay
 } from '/static/src/ui/inventoryPanel.js';
 
 // ==== CONSOLE V2 IMPORTS ====
@@ -236,7 +236,7 @@ window.addEventListener('keydown', (e) => {
   const k = e.key?.toLowerCase?.();
   if (k === 'm') { e.preventDefault(); toggleMap(); }
   if (k === 'c') { e.preventDefault(); toggle(overlayChar); }
-  if (k === 'i') { e.preventDefault(); toggle(overlayInv); }
+  if (k === 'i') { e.preventDefault(); const hidden = overlayInv?.classList.contains('hidden'); if (hidden) openInventoryOverlay(); else overlayInv?.classList.add('hidden'); }
   if (k === 'escape') { e.preventDefault(); closeMap(); overlayChar?.classList.add('hidden'); overlayInv?.classList.add('hidden'); }
 });
 
@@ -283,6 +283,16 @@ async function loadAvailableShards() {
     if (shardStatus) shardStatus.textContent = 'Error';
   }
 }
+
+// Initialize inventory overlay when character becomes available
+window.addEventListener('character:ready', async (ev) => {
+  try {
+    const c = ev?.detail || window.__activeCharacter || {};
+    const characterId = c.character_id || c.id || window.SHARDBOUND?.characterId;
+    const mount = document.getElementById('invPanelMount');
+    if (mount && characterId) await initInventoryOverlay({ characterId, mountEl: mount });
+  } catch {}
+});
 
 // SAFE shard loader
 async function loadShard(url) {
@@ -349,7 +359,10 @@ btnLoadShard?.addEventListener('click', async () => {
 shardSelect?.addEventListener('change', () => btnLoadShard?.click());
 btnWorldMap?.addEventListener('click', () => toggleMap());
 btnCharacter?.addEventListener('click', () => toggle(overlayChar));
-btnInventory?.addEventListener('click', () => toggle(overlayInv));
+btnInventory?.addEventListener('click', () => {
+  const hidden = overlayInv?.classList.contains('hidden');
+  if (hidden) openInventoryOverlay(); else overlayInv?.classList.add('hidden');
+});
 
 overlayChar?.querySelector('[data-close="char"]')
   ?.addEventListener('click', () => overlayChar.classList.add('hidden'));
@@ -375,6 +388,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       window.dispatchEvent(new CustomEvent('catalog:loaded', { detail: { count: Array.isArray(window.__itemCatalog) ? window.__itemCatalog.length : 0 } }));
     }
   } catch {}
+
+  // Inventory overlay will initialize once character is ready
+
   await loadAvailableShards();
   if (shardSelect?.value) { try { await loadShard(shardSelect.value); } catch {} }
 });
@@ -390,11 +406,4 @@ function startAutosave() {
 }
 startAutosave();
 
-// ==== INVENTORY PANEL QUICK DEMO ====
-document.addEventListener('DOMContentLoaded', () => {
-  const characterId = window.SHARDBOUND?.characterId || 'demo-character-id';
-  const mount = document.getElementById('inventory-root');
-  if (mount) initInventoryPanel({ characterId, mountEl: mount });
-  document.getElementById('btn-add-potion')?.addEventListener('click', () => { addInvItem(characterId, 'health-potion', 1); });
-  document.getElementById('btn-remove-potion')?.addEventListener('click', () => { removeInvItem(characterId, 'health-potion', 1); });
-});
+// No inline inventory demo; overlay-only

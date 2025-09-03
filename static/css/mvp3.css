@@ -186,7 +186,7 @@ a:hover{text-decoration:underline}
 
 /* ---------- Overlay shells (Map / Char / Inv) ----------
    The overlay internals (map frame contents) are styled & rendered by overlayMap.js. */
-#overlayMap, #overlayChar, #overlayInv{
+#overlayMap, #overlayChar, #overlayInv, #overlayInventory{
   position: fixed; inset: 0; display: none; place-items: center; padding: 28px;
   z-index: var(--z-overlay);
   background:
@@ -194,10 +194,10 @@ a:hover{text-decoration:underline}
     rgba(6, 10, 16, .62);
   backdrop-filter: blur(4px);
 }
-#overlayMap:not(.hidden), #overlayChar:not(.hidden), #overlayInv:not(.hidden){ display:grid; }
+#overlayMap:not(.hidden), #overlayChar:not(.hidden), #overlayInv:not(.hidden), #overlayInventory:not(.hidden){ display:grid; }
 
 /* Basic panels for Char/Inv content (map keeps its own style in overlayMap.js) */
-#overlayChar .panel, #overlayInv .panel{
+#overlayChar .panel, #overlayInv .panel, #overlayInventory .panel{
   border-radius: 14px;
   background: linear-gradient(180deg, #f4ecd8, #efe6cf);
   border: 1px solid rgba(0,0,0,.25);
@@ -321,8 +321,8 @@ a:hover{text-decoration:underline}
 #overlayChar .slots li:last-child,
 #overlayChar .stats li:last-child { border-bottom: 0; }
 
-/* Inventory body minor polish */
-#overlayInv .inv-body { padding: 10px; }
+/* Inventory body minor polish (legacy inv) */
+/* (overlayInventory uses its own CSS in inventoryOverlay.css) */
 
 /* Simple utility */
 .hidden { display: none !important; }

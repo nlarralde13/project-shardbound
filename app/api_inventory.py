@@ -8,8 +8,10 @@ from sqlalchemy import case
 
 from .models.base import db
 from .models.characters import Character
-from .models.item import Item
-from .models.inventory_item import InventoryItem
+from .models.item import Item  # v1 items (items_v1)
+from .models.inventory_item import InventoryItem  # v1 inventory rows
+from .models.items import Item as ItemV2  # v2 items (items)
+from .models.inventory_v2 import CharacterItem  # v2 character items
 
 
 bp = Blueprint("inventory_api", __name__, url_prefix="/api")
@@ -39,6 +41,27 @@ def _serialize_inventory(rows):
     return items
 
 
+def _serialize_inventory_v2(rows):
+    """Turn (CharacterItem, ItemV2) tuples into the unified JSON shape."""
+    out = []
+    for ci, itm in rows:
+        data = {
+                "item_id": getattr(itm, "item_id", None),
+                "slug": getattr(itm, "slug", None),
+                "display_name": getattr(itm, "name", None) or getattr(itm, "slug", ""),
+                "icon_url": getattr(itm, "icon_path", None) or getattr(itm, "icon_url", None),
+                "quantity": getattr(ci, "quantity", 1),
+                "stackable": getattr(itm, "stackable", True),
+                "max_stack": getattr(itm, "max_stack", None) or getattr(itm, "stack_size", None) or 99,
+                "rarity": getattr(itm, "rarity", "common"),
+                "description": getattr(itm, "description", None),
+                "slot": getattr(ci, "slot", None),
+            }
+        data["equipped"] = bool(data.get("slot"))
+        out.append(data)
+    return out
+
+
 def _rarity_sort():
     """Return a SQLAlchemy CASE expression for rarity ordering."""
     return case({r: i for i, r in enumerate(RARITY_ORDER)}, value=Item.rarity)
@@ -46,18 +69,33 @@ def _rarity_sort():
 
 @bp.get("/characters/<character_id>/inventory")
 def get_inventory(character_id: str):
-    """Return the character's inventory in JSON form."""
+    """Return the character's inventory in JSON form (v2 standard).
+
+    Uses v2 tables (character_items + items) to avoid version skew.
+    """
     char = db.session.get(Character, character_id)
     if not char:
         return jsonify(error="Character not found"), 404
 
-    rows = (
-        InventoryItem.query.join(Item)
-        .filter(InventoryItem.character_id == character_id)
-        .order_by(_rarity_sort(), Item.display_name)
+    # v2 rows only (standardize on v2)
+    rows_v2 = (
+        db.session.query(CharacterItem, ItemV2)
+        .join(ItemV2, CharacterItem.item_id == ItemV2.item_id)
+        .filter(CharacterItem.character_id == character_id)
         .all()
     )
-    return jsonify({"character_id": character_id, "items": _serialize_inventory(rows)})
+    merged = _serialize_inventory_v2(rows_v2)
+    def keyfn(it):
+        r = it.get("rarity") or "common"
+        name = it.get("display_name") or it.get("slug") or ""
+        try:
+            ri = RARITY_ORDER.index(r)
+        except ValueError:
+            ri = len(RARITY_ORDER)
+        return (ri, name)
+
+    merged.sort(key=keyfn)
+    return jsonify({"character_id": character_id, "items": merged})
 
 
 @bp.post("/characters/<character_id>/inventory/add")
