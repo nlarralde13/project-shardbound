@@ -1,7 +1,7 @@
 """Console look/where executors."""
 from __future__ import annotations
 
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from app.player_service import get_player
 from server.player_engine import can_enter
@@ -67,3 +67,13 @@ def where() -> List[Dict]:
         f"Region: {room_obj.biome}",
     ]
     return [{"type": "text", "data": line} for line in lines]
+
+
+def look_cmd(cmd: Dict[str, Any], ctx: Dict[str, Any]) -> List[Dict]:
+    """Wrapper so ``look`` can be used with :mod:`command_router`."""
+    return look()
+
+
+def where_cmd(cmd: Dict[str, Any], ctx: Dict[str, Any]) -> List[Dict]:
+    """Wrapper so ``where`` can be used with :mod:`command_router`."""
+    return where()
