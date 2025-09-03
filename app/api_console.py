@@ -72,3 +72,4 @@ def exec_command():
         frames.append({"type": "text", "data": "You look around. There is nothing of note."})
 
     return jsonify({"status": "ok", "frames": frames})
+
