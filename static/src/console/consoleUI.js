@@ -32,12 +32,14 @@
 import * as history from './history.js';
 import { complete } from './completions.js';
 
-let rootEl, scrollEl, inputEl, statusEl, compEl;
+let rootEl, scrollEl, inputEl, statusEl, compEl, submitFn;
 
-// mountConsole(rootElement)
+// mountConsole(rootElement, { onSubmit })
 // Creates console structure inside rootElement
-export function mountConsole(root) {
-  if (!root) return;
+// Returns controller with console helpers
+export function mountConsole(root, { onSubmit } = {}) {
+  if (!root) return {};
+  submitFn = onSubmit;
   rootEl = root;
   rootEl.style.display = 'flex';
   rootEl.style.flexDirection = 'column';
@@ -82,14 +84,24 @@ export function mountConsole(root) {
 
   rootEl.style.position = 'relative';
   rootEl.replaceChildren(scrollEl, inputEl, compEl, statusEl);
+
+  return { print, setPrompt, setStatus, renderFrames, bindHotkeys };
 }
 
-function handleKey(ev) {
+async function handleKey(ev) {
   if (ev.key === 'Enter') {
     const val = inputEl.value;
     if (val.trim()) {
       print(val);
       history.push(val);
+      if (submitFn) {
+        try {
+          const frames = await submitFn(val, {});
+          renderFrames(frames);
+        } catch (err) {
+          print(String(err), { mode: 'system' });
+        }
+      }
     }
     inputEl.value = '';
     compEl.style.display = 'none';
@@ -148,14 +160,49 @@ export function renderFrames(frames = []) {
   if (!Array.isArray(frames)) return;
   for (const f of frames) {
     if (f.type === 'status') {
-      setStatus(f.data);
+      if (f.data?.clear && scrollEl) {
+        scrollEl.innerHTML = '';
+      } else {
+        setStatus(f.data);
+      }
     } else if (f.type === 'text') {
       print(f.data);
     } else if (f.type === 'table') {
-      const rows = f.data || [];
-      for (const row of rows) print(Object.values(row).join(' '));
+      renderTable(f.data);
+    } else if (f.type === 'json') {
+      try {
+        const lines = JSON.stringify(f.data, null, 2).split('\n');
+        print(lines);
+      } catch (e) {
+        print(String(e));
+      }
     }
   }
+  if (scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight;
+}
+
+function renderTable(rows = []) {
+  if (!Array.isArray(rows) || !rows.length) return;
+  const cols = Object.keys(rows[0]);
+  const widths = {};
+  for (const c of cols) widths[c] = c.length;
+  for (const row of rows) {
+    for (const c of cols) {
+      const val = row[c] !== undefined ? String(row[c]) : '';
+      if (val.length > widths[c]) widths[c] = val.length;
+    }
+  }
+  const lines = [];
+  lines.push(cols.map(c => pad(c, widths[c])).join('  '));
+  lines.push(cols.map(c => '-'.repeat(widths[c])).join('  '));
+  for (const row of rows) {
+    lines.push(cols.map(c => pad(String(row[c] ?? ''), widths[c])).join('  '));
+  }
+  print(lines);
+}
+
+function pad(str, len) {
+  return str.padEnd(len);
 }
 
 // bindHotkeys() -> focus input on '/'

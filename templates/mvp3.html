@@ -67,7 +67,7 @@
         </div>
       </div>
 
-      <div id="console-root" class="console-wrap"></div>
+      <div id="console-root" aria-live="polite"></div>
     </section>
   </main>
 
@@ -138,7 +138,6 @@
 
   <!-- ES modules -->
   <script type="module" src="{{ url_for('static', filename='js/mvp3.js') }}"></script>
-  <script type="module" src="{{ url_for('static', filename='js/demoSlice.js') }}"></script>
 
   <!-- Boot HUD + auth + settings + autosave + active-char guard -->
   <script type="module">

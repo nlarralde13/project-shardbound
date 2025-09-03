@@ -36,13 +36,6 @@
     .chip button { border:none; background:transparent; color:#aebad0; cursor:pointer; }
     .btn.small { padding:6px 10px; font-size:12px; }
 
-    /* Console */
-    .console-wrap { margin-top:12px; }
-    .console-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
-    .console-box {
-      background:#0b1016; border:1px solid #213045; border-radius:10px;
-      padding:10px; max-height:220px; overflow:auto; white-space:pre-wrap; font-size:12px;
-    }
     .muted { opacity:0.85 }
   </style>
 </head>
@@ -207,19 +200,7 @@
         <button id="btnYank" class="btn ghost">Yank</button>
       </div>
 
-      <!-- Console -->
-      <div class="console-wrap subsection">
-        <div class="console-bar">
-          <div class="dim">Validation Console</div>
-          <div class="actions">
-            <button id="btnShowPayload" class="btn small ghost">Show Payload</button>
-            <button id="btnCopyConsole" class="btn small ghost">Copy</button>
-            <button id="btnClearConsole" class="btn small ghost">Clear</button>
-          </div>
-        </div>
-        <pre id="consoleBox" class="console-box"></pre>
-        <div class="dim muted" style="margin-top:4px;">Shows server validation details (message, JSON path, validator), raw responses, and recent actions.</div>
-      </div>
+      <!-- Validation console removed -->
 
       <div id="msg" class="dim" style="margin-top:8px; min-height:1.2em;">Ready.</div>
     </section>

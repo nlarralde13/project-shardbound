@@ -183,42 +183,6 @@ a:hover{text-decoration:underline}
   bottom:10px; width:calc(100% - 32px);
   display:flex; justify-content:center; pointer-events:none; z-index:50;
 }
-.action-overlay .console-actions{
-  pointer-events:auto; display:flex; align-items:center; gap:12px;
-  padding:8px 12px; border-radius:999px;
-  background: rgba(12,16,24,.38);
-  border: 1px solid rgba(0,0,0,.35);
-  backdrop-filter: blur(6px);
-  box-shadow: 0 8px 24px rgba(0,0,0,.35);
-}
-
-/* ---------- Console (journal footer) ---------- */
-.console-wrap{ width: var(--card-w); margin: 14px auto 0; }
-.console{
-  position: relative;
-  height: 156px; overflow: auto; resize: vertical;
-  padding: 10px 12px;
-  border-radius: 14px 14px 0 0;
-  border: 1px solid rgba(0,0,0,.25);
-  background:
-    linear-gradient(180deg, #f7efda, #efe6cf);
-  box-shadow: var(--glow), inset 0 0 0 1px rgba(255,255,255,.35);
-  color: var(--ink);
-  font-size: 14px; line-height: 1.3;
-}
-.console .line{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
-.console-input{
-  display:grid; grid-template-columns: 1fr auto; gap:8px;
-  padding:10px 12px; border-radius: 0 0 14px 14px;
-  border: 1px solid rgba(0,0,0,.25); border-top:none;
-  background: linear-gradient(180deg, #efe6cf, #e7dbbf);
-  box-shadow: var(--glow), inset 0 0 0 1px rgba(255,255,255,.35);
-}
-.console-input input{
-  min-height:36px; border-radius: 10px; border:1px solid rgba(0,0,0,.25);
-  padding: 8px 10px; background: #fffaf0; color:#2d2418;
-}
 
 /* ---------- Overlay shells (Map / Char / Inv) ----------
    The overlay internals (map frame contents) are styled & rendered by overlayMap.js. */
@@ -245,7 +209,6 @@ a:hover{text-decoration:underline}
 /* ---------- Responsiveness ---------- */
 @media (max-width: 900px){
   :root{ --card-w: 92vw; }
-  .console-wrap{ width: var(--card-w); }
 }
 @media (max-height: 840px){ :root{ --card-ratio: .46; } }
 @media (max-height: 760px){ :root{ --card-ratio: .41; } }

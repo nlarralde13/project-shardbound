@@ -142,6 +142,8 @@ registry.register({
   aliases: ['cls'],
   namespace: 'system',
   description: 'Clear console output.',
+  usage: 'clear',
+  examples: ['clear'],
   hidden: true
 });
 

@@ -17,18 +17,18 @@
 
 import * as registry from './commandRegistry.js';
 
-/** Map of namespace -> executor function */
+/** Map of command -> executor function */
 const executors = new Map();
 
 /**
- * registerExecutor(namespace, fn)
- * Stores an executor for a namespace.
- * @param {string} namespace
- * @param {(ctx: object) => Promise<Frame[]>} fn
+ * registerExecutor(cmd, fn)
+ * Stores an executor for a command name.
+ * @param {string} cmd command token
+ * @param {(ctx: object) => Promise<Frame[]>} fn executor
  */
-export function registerExecutor(namespace, fn) {
-  if (typeof namespace !== 'string' || typeof fn !== 'function') return;
-  executors.set(namespace, fn);
+export function registerExecutor(cmd, fn) {
+  if (typeof cmd !== 'string' || typeof fn !== 'function') return;
+  executors.set(cmd, fn);
 }
 
 /**
@@ -43,8 +43,8 @@ export async function dispatch(parsed = {}, { rpcExec } = {}) {
   const { line = '', chain = [], context } = parsed;
   for (const link of chain) {
     const def = registry.get(link.cmd);
-    if (def && executors.has(def.namespace)) {
-      const exec = executors.get(def.namespace);
+    const exec = executors.get(link.cmd);
+    if (exec) {
       const frames = await exec({ line, command: link, context, def, rpcExec });
       if (Array.isArray(frames)) out.push(...frames);
     } else if (rpcExec) {
@@ -73,39 +73,35 @@ function buildLine(link) {
   return s;
 }
 
-// Default system executor with built-in commands
-registerExecutor('system', async ({ command, rpcExec }) => {
-  if (command.cmd === 'help') {
-    const target = command.args?.[0];
-    if (!target) {
-      const cmds = registry.list().filter(c => !c.hidden);
-      return [
-        {
-          type: 'table',
-          data: cmds.map(c => ({ command: c.name, description: c.description || '' }))
-        }
-      ];
-    }
-    const def = registry.get(target);
-    if (def) {
-      const lines = [def.description || ''];
-      if (def.usage) lines.push(`Usage: ${def.usage}`);
-      if (def.examples?.length) {
-        lines.push('Examples:');
-        for (const ex of def.examples) lines.push(`  ${ex}`);
+// Default local executors
+registerExecutor('help', async ({ command, rpcExec }) => {
+  const target = command.args?.[0];
+  if (!target) {
+    const cmds = registry.list().filter(c => !c.hidden);
+    return [
+      {
+        type: 'table',
+        data: cmds.map(c => ({ command: c.name, description: c.description || '' }))
       }
-      return [{ type: 'text', data: lines.join('\n') }];
-    }
-    if (rpcExec) {
-      return await rpcExec({ line: `help ${target}` });
-    }
-    return [{ type: 'text', data: `No help available for ${target}` }];
+    ];
   }
-  if (command.cmd === 'clear') {
-    return [{ type: 'status', data: { clear: true } }];
+  const def = registry.get(target);
+  if (def) {
+    const lines = [def.description || ''];
+    if (def.usage) lines.push(`Usage: ${def.usage}`);
+    if (def.examples?.length) {
+      lines.push('Examples:');
+      for (const ex of def.examples) lines.push(`  ${ex}`);
+    }
+    return [{ type: 'text', data: lines.join('\n') }];
   }
-  return [{ type: 'text', data: `Unknown system command: ${command.cmd}` }];
+  if (rpcExec) {
+    return await rpcExec({ line: `help ${target}` });
+  }
+  return [{ type: 'text', data: `No help available for ${target}` }];
 });
+
+registerExecutor('clear', async () => [{ type: 'status', data: { clear: true } }]);
 
 export default { registerExecutor, dispatch };
 
