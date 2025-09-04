@@ -9,6 +9,9 @@
   border: 1px solid var(--line);
   border-radius: 10px;
   overflow: hidden;
+  /* Fixed map box size */
+  width: 720px;
+  height: 540px;
 }
 
 /* Both canvases: absolutely fill the wrap */
@@ -82,6 +85,4 @@
 }
 
 /* Allow the canvas wrap to maintain aspect without overflowing */
-.viewer .canvas-wrap {
-  min-height: 420px; /* reasonable default; grows with container */
-}
+.viewer .canvas-wrap { /* fixed size; keep as-is */ }

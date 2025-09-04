@@ -24,6 +24,13 @@
     .overlay-chip { font:600 10px/1 ui-sans-serif; padding:.2rem .35rem; border-radius:999px; background:#eee; color:#333; }
     .legend .chip { display:inline-flex; align-items:center; gap:.35rem; padding:.15rem .5rem; border-radius:999px; background:#f5f5f5; margin:.15rem; }
     .legend .swatch { width:10px; height:10px; border-radius:2px; background:#999; display:inline-block; }
+    .debug-badge { position:absolute; right:10px; top:10px; z-index:2500; background:rgba(17,24,39,.9); color:#cbd5e1; border:1px solid #334155; border-radius:8px; padding:6px 8px; font:12px ui-monospace,Menlo,Consolas; pointer-events:none; transition:opacity .2s ease; max-width:42ch; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    /* Context menu for v2 */
+    .ctx-menu, .ctx-submenu { position:fixed; background:#fff; color:#111; border:1px solid #cbd5e1; border-radius:8px; padding:6px; box-shadow:0 10px 30px rgba(0,0,0,.18); z-index:3000; min-width:180px; }
+    .ctx-submenu { min-width:220px; }
+    .ctx-item { display:block; width:100%; text-align:left; padding:8px 10px; border:none; background:transparent; border-radius:6px; font:13px system-ui; cursor:pointer; }
+    .ctx-item:hover, .ctx-item:focus { outline:none; background:#eef6ff; }
+    .ctx-sep { height:1px; margin:6px 2px; background:#e5e7eb; }
   </style>
 </head>
 <body>
@@ -42,6 +49,13 @@
         <div class="row">
           <label></label>
           <button id="btnLoad">Load</button>
+        </div>
+        <div class="row">
+          <label></label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button id="btnSaveDraft">Save Draft</button>
+            <button id="btnUndoToSave" class="secondary" title="Revert to the last load/save baseline">Undo to Save</button>
+          </div>
         </div>
 
         <div class="group">
@@ -72,18 +86,13 @@
           <h3>Layers <span class="overlay-chip">v2</span></h3>
           <div class="row inline-3">
             <div><label>Biomes</label><input id="layerBiomes" type="checkbox" checked /></div>
-            <div><label>Rivers</label><input id="layerRivers" type="checkbox" /></div>
-            <div><label>Lakes</label><input id="layerLakes" type="checkbox" /></div>
-          </div>
-          <div class="row inline-3">
-            <div><label>Roads</label><input id="layerRoads" type="checkbox" /></div>
-            <div><label>Bridges</label><input id="layerBridges" type="checkbox" /></div>
-            <div><label>POIs</label><input id="layerPOI" type="checkbox" /></div>
-          </div>
-          <div class="row inline-3">
+            <div><label>Infrastructure</label><input id="layerInfra" type="checkbox" checked /></div>
             <div><label>Settlements</label><input id="layerSettlements" type="checkbox" /></div>
-            <div><label>Ports</label><input id="layerPorts" type="checkbox" /></div>
-            <div><label>Resources</label><input id="layerResources" type="checkbox" /></div>
+          </div>
+          <div class="row inline-3">
+            <div style="display:flex;align-items:center;gap:6px"><label>Shardgates</label><input id="layerShardgates" type="checkbox" checked /></div>
+            <div></div>
+            <div></div>
           </div>
         </div>
 
@@ -118,6 +127,7 @@
       <section class="canvas-wrap" id="frame">
         <canvas id="canvas"></canvas>
         <div class="tooltip" id="tooltip"></div>
+        <div class="debug-badge" id="debugBadge" aria-live="polite" style="opacity:0"></div>
         <div class="zoomOverlay">
           <button class="zbtn" id="btnFit" title="Fit (refit)">⤢</button>
           <button class="zbtn" id="btnZoomIn" title="Zoom in">+</button>
@@ -172,8 +182,8 @@
     }
     btnPlanV2?.addEventListener('click', (e) => { e.preventDefault(); callPlan(); });
 
-    // Progressive enhancement: load v2 overlay code
-    import('/static/js/shard-viewer-v2.js').catch(() => {});
+    // Progressive enhancement: load v2 overlay code (cache-busted in dev)
+    import('/static/js/shard-viewer-v2.js?v=debug3').catch((e) => { console.error('[SV2] module import error', e); });
   </script>
 </body>
 </html>
