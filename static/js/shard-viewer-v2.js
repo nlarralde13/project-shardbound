@@ -10,8 +10,8 @@ import { hasAt, removeAt } from './removeHelpers.js';
   const setStatus = (m) => { const el = $('status'); if (el) el.textContent = m; logAction(m); };
   const setDebug = (m) => { const el = $('debugBadge'); if (!el) return; el.textContent = m || ''; el.style.opacity = m ? '1' : '0'; };
   function logAction(text, extra){ try{ const logEl=$('actionLog'); if(!logEl) return; const now=new Date(); const ts=now.toLocaleTimeString([], {hour12:false}); let line=`[${ts}] ${String(text||'').trim()}`; if (extra){ try{ line += ' ' + JSON.stringify(extra); }catch{} } logEl.textContent += (line + '\n'); logEl.scrollTop = logEl.scrollHeight; }catch{} }
-  function markUnsaved(){ const b=$('btnPushLive'); if(b){ b.disabled=true; b.classList.add('is-dim'); } const b2=$('btnTilePush'); if(b2){ b2.disabled=true; b2.classList.add('is-dim'); } }
-  function markReadyToPush(){ const b=$('btnPushLive'); if(b){ b.disabled=false; b.classList.remove('is-dim'); } const b2=$('btnTilePush'); if(b2){ b2.disabled=false; b2.classList.remove('is-dim'); }
+  function markUnsaved(){ const b=$('btnPushLive'); if(b){ b.disabled=true; b.classList.add('is-dim'); } const b2=$('btnTilePush'); if(b2){ b2.disabled=true; b2.classList.add('is-dim'); } ST.pushReady=false; }
+  function markReadyToPush(){ const b=$('btnPushLive'); if(b){ b.disabled=false; b.classList.remove('is-dim'); } const b2=$('btnTilePush'); if(b2){ b2.disabled=false; b2.classList.remove('is-dim'); } ST.pushReady=true;
     setStatus('Draft saved. Push Live enabled.'); }
 
   let raf=0;
@@ -63,7 +63,9 @@ import { hasAt, removeAt } from './removeHelpers.js';
   function hideLinkBanner(){ linkBanner.style.display='none'; }
 
   // State
-  const ST = { shard:null, grid:null, previews: [], focus:{ x:-1, y:-1 }, baseline: null, panX: 0, panY: 0, currentBiome:'plains', rectPreview:null, draft:{ settlements:[], pois:[], tiles:{} }, linkSource:null, linkSourceId:null, hoverGateId:null, moving:null };
+
+  const ST = { shard:null, grid:null, previews: [], focus:{ x:-1, y:-1 }, baseline: null, pushReady:false, panX: 0, panY: 0, currentBiome:'plains', rectPreview:null, draft:{ settlements:[], pois:[], tiles:{} }, linkSource:null, linkSourceId:null, hoverGateId:null, moving:null };
+
 
   // Fetch JSON
   async function getJSON(url){ trace('fetch', url); const r=await fetch(url); if(!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }
@@ -239,12 +241,11 @@ import { hasAt, removeAt } from './removeHelpers.js';
         };
       }
     }
+    markUnsaved();
     scheduleDraw();
     setStatus(`Placed Tier ${tier.tier} at (${x},${y})`);
 
     return true;
-
-
 
   }
   function applyDraftToShard(){
@@ -694,7 +695,7 @@ function drawPreviews(){
 
   // Load list
 
-  async function loadShard(path,label){ try{ setDebug(`GET ${path}`); const shard=await getJSON(path); if(!shard) throw new Error('invalid JSON'); const lbl=label || shard?.meta?.displayName || path; setStatus(`Loaded: ${lbl}`); setDebug(`loaded ${path}`); ST.baseline=clone(shard); ensureTilesFromAny(ST.baseline); ST.previews=[]; ST.focus={x:-1,y:-1}; renderAll(shard); }catch(e){ setStatus(`Failed to load shard: ${e.message}`); setDebug(`error ${e.message} · ${path}`); trace('loadShard:error', e?.message||e); }}
+  async function loadShard(path,label){ try{ setDebug(`GET ${path}`); const shard=await getJSON(path); if(!shard) throw new Error('invalid JSON'); const lbl=label || shard?.meta?.displayName || path; setStatus(`Loaded: ${lbl}`); setDebug(`loaded ${path}`); ST.baseline=clone(shard); ensureTilesFromAny(ST.baseline); ST.draft={settlements:[],pois:[],tiles:{}}; ST.pushReady=false; markUnsaved(); ST.previews=[]; ST.focus={x:-1,y:-1}; renderAll(shard); }catch(e){ setStatus(`Failed to load shard: ${e.message}`); setDebug(`error ${e.message} · ${path}`); trace('loadShard:error', e?.message||e); }}
   async function loadSelectedShard(){ const opt=els.select?.selectedOptions?.[0]; if(!opt){ trace('loadSelectedShard:no-selection'); return; } const path=opt.getAttribute('data-path')||`/static/public/shards/${opt.value}`; await loadShard(path,opt.textContent); }
 
   function renderAll(shard){ if(!shard){ return; } trace('renderAll:start'); ST.shard=shard; canonicalizeGates(ST.shard); ensureTilesFromAny(ST.shard); ST.grid=deriveGridFromTiles(ST.shard); const H=ST.grid.length, W=H?ST.grid[0].length:0; ensureSizes(W,H); centerInFrame(); drawBase(); drawOverlay(); trace('renderAll:complete', {W,H}); }
@@ -760,6 +761,7 @@ function drawPreviews(){
       const res = mod.validateShard(canon);
       if (!res.ok){ setStatus('Save Draft failed: schema issues'); setDebug(String((res.errors||[]).join(', '))); markUnsaved(); return; }
       saveDraft2();
+      ST.baseline = clone(ST.shard);
       markReadyToPush();
     } catch(err){ setStatus('Save Draft failed'); setDebug(String(err?.message||err)); markUnsaved(); }
   });
@@ -896,11 +898,13 @@ function drawPreviews(){
       const d = pickLatestDraft2();
       if (d && confirm(`Load draft for ${d.id}${d.savedAt?` (saved ${new Date(d.savedAt).toLocaleString()})`:''}?`)) {
         ST.baseline = clone(d.shard);
+        ST.draft = {settlements:[],pois:[],tiles:{}};
         ST.previews = Array.isArray(d.previews) ? d.previews : [];
         ST.focus = d.focus || { x:-1, y:-1 };
-        setStatus('Draft loaded'); setDebug(`draft loaded: ${d.id}`);
         renderAll(d.shard);
+        markReadyToPush();
         scheduleDraw();
+        setStatus('Draft loaded'); setDebug(`draft loaded: ${d.id}`);
         return;
       }
     }catch(e){ trace('boot:error', e?.message||e); }
@@ -985,6 +989,9 @@ function drawPreviews(){
       const chk = await fetch(url, { headers:{'Accept':'application/json'} });
       if (chk.ok){ setDebug(`saved: ${url}`); logAction('Push Live OK', { url }); }
       ST.baseline = clone(canon);
+      ST.draft = {settlements:[],pois:[],tiles:{}};
+      ST.pushReady = false;
+      try{ localStorage.removeItem(draftKey2()); }catch{}
       setStatus(`Pushed live → ${id}.json`);
       $('btnPushLive')?.classList.add('is-dim'); $('btnPushLive') && ($('btnPushLive').disabled=true); if(els.btnTilePush){ els.btnTilePush.disabled=true; els.btnTilePush.classList.add('is-dim'); }
     }catch(err){ setStatus('Push failed'); setDebug(String(err?.message||err)); }
@@ -996,7 +1003,7 @@ function drawPreviews(){
   function clone(obj){ try { return structuredClone(obj); } catch { return JSON.parse(JSON.stringify(obj)); } }
   function draftKey2(){ const id = ST.shard?.shard_id || ST.shard?.meta?.name || els.select?.value || 'unknown'; return `sv2:draft:${id}`; }
   function saveDraft2(){ if(!ST.shard){ setStatus('No shard loaded'); return; } try { const payload={ savedAt:new Date().toISOString(), shard: ST.shard, previews: ST.previews||[], focus: ST.focus||{x:-1,y:-1} }; localStorage.setItem(draftKey2(), JSON.stringify(payload)); setStatus('Draft saved'); setDebug(`draft saved: ${draftKey2()}`); } catch(e){ setStatus('Draft save failed'); setDebug(String(e?.message||e)); } }
-  function revertToBaseline2(){ if(!ST.baseline){ setStatus('No baseline to revert'); return; } const snap = clone(ST.baseline); ST.previews=[]; ST.focus={x:-1,y:-1}; setStatus('Reverted to last save'); setDebug('undo to baseline'); renderAll(snap); }
+  function revertToBaseline2(){ if(!ST.baseline){ setStatus('No baseline to revert'); return; } const snap = clone(ST.baseline); ST.draft={settlements:[],pois:[],tiles:{}}; ST.previews=[]; ST.focus={x:-1,y:-1}; renderAll(snap); if(ST.pushReady) markReadyToPush(); else markUnsaved(); setStatus('Reverted to last save'); setDebug('undo to baseline'); }
   function pickLatestDraft2(){ try{ const out=[]; for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(!k||!k.startsWith('sv2:draft:')) continue; const id=k.slice('sv2:draft:'.length); let parsed=null; try{ parsed=JSON.parse(localStorage.getItem(k)||'null'); }catch{}; if(!parsed) continue; const shard=parsed.shard||parsed; const savedAt=parsed.savedAt||null; const previews=parsed.previews||[]; const focus=parsed.focus||{x:-1,y:-1}; if (shard) out.push({ id, shard, savedAt, previews, focus }); } if(!out.length) return null; out.sort((a,b)=> new Date(b.savedAt||0)-new Date(a.savedAt||0)); return out[0]; }catch{ return null; } }
   function ensureSelect2(){
     if (els.select) return;
