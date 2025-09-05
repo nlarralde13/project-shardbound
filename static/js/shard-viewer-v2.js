@@ -97,9 +97,11 @@ import { hasAt, removeAt } from './removeHelpers.js';
     if(Array.isArray(S?.pois)){
       for(const p of S.pois){ if(p?.type==='shardgate' && eq(p)) return p; }
     }
+
     if(Array.isArray(ST.draft?.pois)){
       for(const p of ST.draft.pois){ if(p?.type==='shardgate' && eq(p)) return p; }
     }
+
     return null;
   }
   function ensureGateId(g){ if(!g) return ''; if(!g.id){ const x=(g.x??g[0])|0, y=(g.y??g[1])|0; g.id=`gate_${x}_${y}_${Date.now()}`; } return String(g.id); }
@@ -189,10 +191,12 @@ import { hasAt, removeAt } from './removeHelpers.js';
       const bridges=ST.shard?.layers?.roads?.bridges||[]; octx.fillStyle='#cbd5e1'; for(const b of bridges){ const x=(b.x??b[0])|0,y=(b.y??b[1])|0; const px=(x+0.5)*s, py=(y+0.5)*s; const r=Math.max(2,Math.round(s*0.18)); octx.beginPath(); octx.arc(px,py,r,0,Math.PI*2); octx.fill(); }
       octx.restore(); }
     // shardgates from layers or pois
+
     if(els.layerShardgates?.checked){ const gates=(ST.shard?.layers?.shardgates?.nodes||[])
         .concat(ST.shard?.shardgates?.nodes||[])
         .concat((ST.shard?.pois||[]).filter(p=>p?.type==='shardgate'))
         .concat((ST.draft?.pois||[]).filter(p=>p?.type==='shardgate'));
+
       octx.save();
       const gateMap=new Map(); for(const g of gates){ if(g?.id) gateMap.set(String(g.id), g); }
       // links
