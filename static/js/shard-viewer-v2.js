@@ -14,6 +14,12 @@ import { hasAt, removeAt } from './removeHelpers.js';
   function markReadyToPush(){ const b=$('btnPushLive'); if(b){ b.disabled=false; b.classList.remove('is-dim'); } const b2=$('btnTilePush'); if(b2){ b2.disabled=false; b2.classList.remove('is-dim'); }
     setStatus('Draft saved. Push Live enabled.'); }
 
+  let raf=0;
+  function scheduleDraw(){
+    if(raf) return;
+    raf=requestAnimationFrame(()=>{ raf=0; drawBase(); drawOverlay(); updateLegend(); });
+  }
+
   // Elements
   const els = {
     frame: $('frame'),
@@ -104,7 +110,7 @@ import { hasAt, removeAt } from './removeHelpers.js';
         };
       }
     }
-    drawOverlay();
+    scheduleDraw();
     setStatus(`Drafted ${tier.label} at (${x},${y})`);
   }
   function applyDraftToShard(){
@@ -130,7 +136,7 @@ import { hasAt, removeAt } from './removeHelpers.js';
     const pc = (ST.shard.pois||[]).length;
     ST.draft = { settlements:[], pois:[], tiles:{} };
     ST.grid = deriveGridFromTiles(ST.shard);
-    drawBase(); drawOverlay(); setStatus(`Draft applied: settlements=${sc}, pois=${pc}. Now Push Live to persist.`);
+    scheduleDraw(); setStatus(`Draft applied: settlements=${sc}, pois=${pc}. Now Push Live to persist.`);
   }
 
   // Canvas sizing
@@ -142,14 +148,18 @@ import { hasAt, removeAt } from './removeHelpers.js';
   function centerInFrame(){ const fw = els.frame?.clientWidth||0, fh = els.frame?.clientHeight||0; const cw = els.base?.width||0, ch = els.base?.height||0; ST.panX = Math.round((fw - cw)/2); ST.panY = Math.round((fh - ch)/2); applyPan(); }
 
   // Draw base biomes
-  function biomeColor(id){ const m={
+  const BASE_COLORS={
     ocean:'#0b3a74', river:'#3B90B8', lake:'#2D7DA6', reef:'#1EA3A8',
     coast:'#d9c38c', beach:'#d9c38c',
     plains:'#91c36e', forest:'#2e7d32', savanna:'#C2B33C', shrubland:'#9A8F44', taiga:'#2D6248', jungle:'#1C6B46',
     hills:'#97b06b', mountains:'#8e3c3c', alpine:'#BFCADD', glacier:'#A7D3E9',
     tundra:'#b2c2c2', desert:'#e0c067', volcano:'#A14034', lavafield:'#5B2320',
     urban:'#555555', wetland:'#2E5D4E'
-  }; return m[String(id).toLowerCase()]||'#889'; }
+  };
+  const PALETTES={ classic:BASE_COLORS, contrast:BASE_COLORS, pastel:BASE_COLORS, noir:BASE_COLORS };
+  function biomeColor(id){ const pal=PALETTES[els.palette?.value||'classic']||PALETTES.classic; return pal[String(id).toLowerCase()]||'#889'; }
+
+  function updateLegend(){ const targets=[document.getElementById('legend'),document.getElementById('legend2')]; const set=new Set(); if(Array.isArray(ST.grid)){ for(const row of ST.grid){ for(const b of row){ set.add(b); } } } const arr=Array.from(set).sort(); for(const t of targets){ if(!t) continue; t.innerHTML=''; for(const b of arr){ const chip=document.createElement('div'); chip.className='chip'; const sw=document.createElement('span'); sw.className='swatch'; sw.style.background=biomeColor(b); chip.appendChild(sw); chip.appendChild(document.createTextNode(b)); t.appendChild(chip); } } }
   function drawBase(){ const g=ST.grid; if(!g) return; const s=scale(); const ctx=els.base.getContext('2d'); ctx.clearRect(0,0,els.base.width,els.base.height); if(els.layerBiomes && !els.layerBiomes.checked){ return; } for(let y=0;y<g.length;y++){ const row=g[y]; for(let x=0;x<row.length;x++){ ctx.fillStyle=biomeColor(row[x]); ctx.fillRect(x*s,y*s,s,s); } } }
 
   // Draw overlay: grid + shardgates
@@ -189,6 +199,7 @@ import { hasAt, removeAt } from './removeHelpers.js';
     t.biome = b; ST.shard.tiles[y][x] = t;
     ST.grid = deriveGridFromTiles(ST.shard);
     markUnsaved();
+    scheduleDraw();
     return true;
   }
   function floodFillCategoryFrom(x0,y0, predicate, toBiome){
@@ -200,6 +211,7 @@ import { hasAt, removeAt } from './removeHelpers.js';
     for(const [x,y] of coords){ const t=ST.shard.tiles[y][x]; if(t) t.biome=to; }
     ST.grid = deriveGridFromTiles(ST.shard);
     markUnsaved();
+    scheduleDraw();
     return coords.length;
   }
 
@@ -303,25 +315,52 @@ import { hasAt, removeAt } from './removeHelpers.js';
     return 1;
   }
 
+  function removeDraftAt(x,y){
+    let removed=false;
+    const key=`${x},${y}`;
+    if(ST.draft?.tiles && ST.draft.tiles[key]){ delete ST.draft.tiles[key]; removed=true; }
+    if(Array.isArray(ST.draft?.pois)){
+      const before=ST.draft.pois.length;
+      ST.draft.pois=ST.draft.pois.filter(p=>!(p.x===x && p.y===y));
+      if(ST.draft.pois.length!==before) removed=true;
+    }
+    if(Array.isArray(ST.draft?.settlements)){
+      const before=ST.draft.settlements.length;
+      ST.draft.settlements=ST.draft.settlements.filter(s=>{
+        const b=s.bounds||{};
+        const hit=x>=b.x&&x<b.x+b.w&&y>=b.y&&y<b.y+b.h;
+        if(hit){
+          for(let yy=b.y; yy<b.y+b.h; yy++){ for(let xx=b.x; xx<b.x+b.w; xx++){ delete ST.draft.tiles[`${xx},${yy}`]; } }
+        }
+        return !hit;
+      });
+      if(ST.draft.settlements.length!==before) removed=true;
+    }
+    if(removed){ markUnsaved(); scheduleDraw(); }
+    return removed;
+  }
+
   // Load list
 
-  async function loadSelectedShard(){ const opt=els.select?.selectedOptions?.[0]; if(!opt){ trace('loadSelectedShard:no-selection'); return; } const path=opt.getAttribute('data-path')||`/static/public/shards/${opt.value}`; try{ setDebug(`GET ${path}`); const shard=await getJSON(path); if(!shard) throw new Error('invalid JSON'); setStatus(`Loaded: ${shard?.meta?.displayName || opt.textContent}`); setDebug(`loaded ${path}`); ST.baseline = clone(shard); ensureTilesFromAny(ST.baseline); ST.previews=[]; ST.focus={x:-1,y:-1}; renderAll(shard); }catch(e){ setStatus(`Failed to load shard: ${e.message}`); setDebug(`error ${e.message} · ${path}`); trace('loadSelectedShard:error', e?.message||e); } }
+  async function loadShard(path,label){ try{ setDebug(`GET ${path}`); const shard=await getJSON(path); if(!shard) throw new Error('invalid JSON'); const lbl=label || shard?.meta?.displayName || path; setStatus(`Loaded: ${lbl}`); setDebug(`loaded ${path}`); ST.baseline=clone(shard); ensureTilesFromAny(ST.baseline); ST.previews=[]; ST.focus={x:-1,y:-1}; renderAll(shard); }catch(e){ setStatus(`Failed to load shard: ${e.message}`); setDebug(`error ${e.message} · ${path}`); trace('loadShard:error', e?.message||e); }}
+  async function loadSelectedShard(){ const opt=els.select?.selectedOptions?.[0]; if(!opt){ trace('loadSelectedShard:no-selection'); return; } const path=opt.getAttribute('data-path')||`/static/public/shards/${opt.value}`; await loadShard(path,opt.textContent); }
 
-  function renderAll(shard){ if(!shard){ return; } trace('renderAll:start'); ST.shard=shard; ensureTilesFromAny(ST.shard); ST.grid=deriveGridFromTiles(ST.shard); const H=ST.grid.length, W=H?ST.grid[0].length:0; ensureSizes(W,H); centerInFrame(); drawBase(); drawOverlay(); trace('renderAll:complete', {W,H}); }
+  function renderAll(shard){ if(!shard){ return; } trace('renderAll:start'); ST.shard=shard; ensureTilesFromAny(ST.shard); ST.grid=deriveGridFromTiles(ST.shard); const H=ST.grid.length, W=H?ST.grid[0].length:0; ensureSizes(W,H); centerInFrame(); drawBase(); drawOverlay(); updateLegend(); trace('renderAll:complete', {W,H}); }
 
   // Event wiring
   els.loadBtn?.addEventListener('click', (e)=>{ e?.preventDefault?.(); loadSelectedShard(); });
   els.select?.addEventListener('change', ()=> loadSelectedShard());
-  els.scale?.addEventListener('input', ()=> { if(!ST.grid) return; ensureSizes(ST.grid[0]?.length||0, ST.grid.length||0); drawBase(); drawOverlay(); });
-  els.grid?.addEventListener('change', ()=> drawOverlay());
-  els.opacity?.addEventListener('input', ()=> drawOverlay());
-  els.layerBiomes?.addEventListener('change', ()=> { drawBase(); drawOverlay(); });
-  els.layerInfra?.addEventListener('change', ()=> drawOverlay());
-  els.layerSettlements?.addEventListener('change', ()=> drawOverlay());
-  els.layerShardgates?.addEventListener('change', ()=> drawOverlay());
+  els.scale?.addEventListener('input', ()=> { if(!ST.grid) return; ensureSizes(ST.grid[0]?.length||0, ST.grid.length||0); scheduleDraw(); });
+  els.grid?.addEventListener('change', ()=> scheduleDraw());
+  els.opacity?.addEventListener('input', ()=> scheduleDraw());
+  els.layerBiomes?.addEventListener('change', ()=> { scheduleDraw(); });
+  els.layerInfra?.addEventListener('change', ()=> scheduleDraw());
+  els.layerSettlements?.addEventListener('change', ()=> scheduleDraw());
+  els.layerShardgates?.addEventListener('change', ()=> scheduleDraw());
+  els.palette?.addEventListener('change', ()=> scheduleDraw());
 
   // Zoom and pan controls
-  function setScalePx(px){ px=Math.max(4, Math.min(64, Math.round(px))); if(els.scale){ els.scale.value=String(px); } if(ST.grid){ ensureSizes(ST.grid[0]?.length||0, ST.grid.length||0); drawBase(); drawOverlay(); } }
+  function setScalePx(px){ px=Math.max(4, Math.min(64, Math.round(px))); if(els.scale){ els.scale.value=String(px); } if(ST.grid){ ensureSizes(ST.grid[0]?.length||0, ST.grid.length||0); scheduleDraw(); } }
   function zoomAt(fx, fy, factor){ const s1=scale(); const s2=Math.max(4, Math.min(64, Math.round(s1*factor))); if(s2===s1) return; const k=s2/s1; const panX=ST.panX||0, panY=ST.panY||0; ST.panX = Math.round(fx - (fx - panX)*k); ST.panY = Math.round(fy - (fy - panY)*k); setScalePx(s2); applyPan(); }
   els.frame?.addEventListener('wheel', (e)=>{ e?.preventDefault?.(); const fx=e.clientX - (els.frame.getBoundingClientRect().left); const fy=e.clientY - (els.frame.getBoundingClientRect().top); const factor = (e.deltaY>0)? 0.9 : 1.1; zoomAt(fx, fy, factor); }, { passive:false });
   let dragging=false, dragStartX=0, dragStartY=0, startPanX=0, startPanY=0;
@@ -330,19 +369,19 @@ import { hasAt, removeAt } from './removeHelpers.js';
   els.frame?.addEventListener('mousedown', (e)=>{
     if(e.button!==0) return;
     const {x,y}=tileAtClient(e);
-    if (e.shiftKey){ recting=true; rectStart={x,y}; ST.rectPreview={x0:x,y0:y,x1:x,y1:y}; drawOverlay(); return; }
+    if (e.shiftKey){ recting=true; rectStart={x,y}; ST.rectPreview={x0:x,y0:y,x1:x,y1:y}; scheduleDraw(); return; }
     if (e.ctrlKey){ brushing=true; setTileBiome(x,y, ST.currentBiome||'plains'); return; }
     dragging=true; dragStartX=e.clientX; dragStartY=e.clientY; startPanX=ST.panX||0; startPanY=ST.panY||0; els.frame.style.cursor='grabbing';
   });
   window.addEventListener('mousemove', (e)=>{
-    if (recting){ const {x,y}=tileAtClient(e); if(!ST.grid) return; ST.rectPreview={x0:rectStart.x,y0:rectStart.y,x1:x,y1:y}; drawOverlay(); return; }
+    if (recting){ const {x,y}=tileAtClient(e); if(!ST.grid) return; ST.rectPreview={x0:rectStart.x,y0:rectStart.y,x1:x,y1:y}; scheduleDraw(); return; }
     if (brushing){ const {x,y}=tileAtClient(e); setTileBiome(x,y, ST.currentBiome||'plains'); return; }
     if(!dragging) return; const dx=e.clientX-dragStartX, dy=e.clientY-dragStartY; ST.panX=startPanX+dx; ST.panY=startPanY+dy; applyPan();
   });
   window.addEventListener('mouseup', (e)=>{
-    if (recting){ const {x,y}=tileAtClient(e); const x0=Math.min(rectStart.x,x), y0=Math.min(rectStart.y,y), x1=Math.max(rectStart.x,x), y1=Math.max(rectStart.y,y); for(let yy=y0; yy<=y1; yy++){ for(let xx=x0; xx<=x1; xx++){ setTileBiome(xx,yy, ST.currentBiome||'plains'); } } recting=false; ST.rectPreview=null; drawBase(); drawOverlay(); return; }
+    if (recting){ const {x,y}=tileAtClient(e); const x0=Math.min(rectStart.x,x), y0=Math.min(rectStart.y,y), x1=Math.max(rectStart.x,x), y1=Math.max(rectStart.y,y); for(let yy=y0; yy<=y1; yy++){ for(let xx=x0; xx<=x1; xx++){ setTileBiome(xx,yy, ST.currentBiome||'plains'); } } recting=false; ST.rectPreview=null; scheduleDraw(); return; }
     if (brushing){ brushing=false; return; }
-    if(dragging){ const moved=Math.abs((e?.clientX||0)-dragStartX)+Math.abs((e?.clientY||0)-dragStartY); dragging=false; els.frame.style.cursor='default'; if (moved<4){ const {x,y}=tileAtClient(e); if(x>=0&&y>=0&&ST.grid&&y<ST.grid.length&&x<ST.grid[0].length){ ST.focus={x,y}; drawOverlay(); updateTilePanel(x,y); } } }
+    if(dragging){ const moved=Math.abs((e?.clientX||0)-dragStartX)+Math.abs((e?.clientY||0)-dragStartY); dragging=false; els.frame.style.cursor='default'; if (moved<4){ const {x,y}=tileAtClient(e); if(x>=0&&y>=0&&ST.grid&&y<ST.grid.length&&x<ST.grid[0].length){ ST.focus={x,y}; scheduleDraw(); updateTilePanel(x,y); } } }
   });
   $('btnZoomIn')?.addEventListener('click', (e)=>{ e?.preventDefault?.(); const rect=els.frame.getBoundingClientRect(); zoomAt(rect.width/2, rect.height/2, 1.2); });
   $('btnZoomOut')?.addEventListener('click', (e)=>{ e?.preventDefault?.(); const rect=els.frame.getBoundingClientRect(); zoomAt(rect.width/2, rect.height/2, 0.8); });
@@ -369,10 +408,10 @@ import { hasAt, removeAt } from './removeHelpers.js';
   // Context menu for placement
   const ctx = createContextMenuV2({ onSelect: onPlaceSelect });
   els.frame?.addEventListener('contextmenu', (e)=>{
-    if(!ST.grid) return; e?.preventDefault?.(); const rect=els.base.getBoundingClientRect(); const s=scale(); const x=Math.floor((e.clientX-rect.left)/s), y=Math.floor((e.clientY-rect.top)/s); if(x<0||y<0||y>=ST.grid.length||x>=ST.grid[0].length) return; ST.focus={x,y}; drawOverlay(); ctx.open({ tile:{x,y}, screen:{ left:e.clientX, top:e.clientY } });
+    if(!ST.grid) return; e?.preventDefault?.(); const rect=els.base.getBoundingClientRect(); const s=scale(); const x=Math.floor((e.clientX-rect.left)/s), y=Math.floor((e.clientY-rect.top)/s); if(x<0||y<0||y>=ST.grid.length||x>=ST.grid[0].length) return; ST.focus={x,y}; scheduleDraw(); ctx.open({ tile:{x,y}, screen:{ left:e.clientX, top:e.clientY } });
   });
 
-  function onPlaceSelect(sel){ const detail={ shard_id: ST.shard?.shard_id || ST.shard?.meta?.name || 'unknown', tile:{ x: sel.tile.x, y: sel.tile.y }, place:{ type: sel.type, defaults: sel.defaults||{} }, source:'contextMenu' }; document.dispatchEvent(new CustomEvent('editor:placeRequested', { detail })); ST.previews.push({ x: sel.tile.x, y: sel.tile.y, type: sel.type, defaults: sel.defaults||{} }); drawOverlay(); }
+  function onPlaceSelect(sel){ const detail={ shard_id: ST.shard?.shard_id || ST.shard?.meta?.name || 'unknown', tile:{ x: sel.tile.x, y: sel.tile.y }, place:{ type: sel.type, defaults: sel.defaults||{} }, source:'contextMenu' }; document.dispatchEvent(new CustomEvent('editor:placeRequested', { detail })); ST.previews.push({ x: sel.tile.x, y: sel.tile.y, type: sel.type, defaults: sel.defaults||{} }); scheduleDraw(); }
   // Intercept POI placements to queue into draft
   document.addEventListener('editor:placeRequested', (e)=>{
     const d = e?.detail; if(!d) return; const { tile, place } = d; const x = tile?.x|0, y = tile?.y|0; const t = String(place?.type||'');
@@ -382,8 +421,8 @@ import { hasAt, removeAt } from './removeHelpers.js';
       if (!Array.isArray(ST.draft.pois)) ST.draft.pois = [];
       ST.draft.pois.push({ id, type: t, x, y, name, icon: t, description:'', meta:{} });
       setStatus(`Drafted ${t.replace('_',' ')} at (${x},${y}). Click Save All to apply.`);
-      drawOverlay();
       markUnsaved();
+      scheduleDraw();
     }
   });
 
@@ -413,35 +452,37 @@ import { hasAt, removeAt } from './removeHelpers.js';
             if (isWaterBiome(start)) setTileBiome(x,y,'plains');
             const n=floodFillCategoryFrom(x,y,(b)=>!isWaterBiome(b), key);
             setStatus(n?`Filled ${n} land tile(s) as ${key}`:`No land region filled`);
-            drawBase(); drawOverlay(); close();
+            scheduleDraw(); close();
           } else {
             ST.currentBiome = key;
-            if (!isWaterBiome(start)) { setStatus('Pick an ocean tile to fill'); setTileBiome(x,y,key); drawBase(); drawOverlay(); close(); return; }
+            if (!isWaterBiome(start)) { setStatus('Pick an ocean tile to fill'); setTileBiome(x,y,key); scheduleDraw(); close(); return; }
             const n=floodFillCategoryFrom(x,y,(b)=>isWaterBiome(b), key);
             setStatus(n?`Filled ${n} ocean tile(s) as ${key}`:`No ocean region filled`);
-            drawBase(); drawOverlay(); close();
+            scheduleDraw(); close();
           }
         });
         submenu3.appendChild(b);
       }
       const rb=submenu2.getBoundingClientRect(); const sbw=220, sbh=list.length*30+12; const left=(rb.right+sbw<innerWidth)?rb.right:Math.max(0,rb.left-sbw); const top=(rb.top+sbh<innerHeight)?rb.top:Math.max(0,innerHeight-sbh); submenu3.style.left=left+'px'; submenu3.style.top=top+'px';
     }
-    const openBgMenu=(anchor)=>{ removeSub3(); const bg=document.createElement('div'); bg.className='ctx-submenu'; document.body.appendChild(bg); const options=[['Fill All: Bedrock','bedrock'],['Fill All: Ocean','ocean'],['Fill All: Plains','plains']]; for(const [lbl,val] of options){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent=lbl; b.addEventListener('click',()=>{ const n=fillAll(val); setStatus(`Filled ${n} tiles as ${val}`); drawBase(); drawOverlay(); close(); }); bg.appendChild(b);} const ab=anchor.getBoundingClientRect(); const sbw=240, sbh=options.length*30+12; const left=(ab.right+sbw<innerWidth)?ab.right:Math.max(0,ab.left-sbw); const top=(ab.top+sbh<innerHeight)?ab.top:Math.max(0,innerHeight-sbh); bg.style.left=left+'px'; bg.style.top=top+'px'; submenu3=bg; };
-    const openSub=()=>{ removeSub(); submenu=document.createElement('div'); submenu.className='ctx-submenu'; document.body.appendChild(submenu); const entries=[['Shardgate','shardgate'],['Settlement ▶','settlement'],['Dungeon Entrance','dungeon_entrance'],['Place Land Tile','land_tile'],['Biome','biome'],['Background','background'],['Infrastructure','infrastructure']]; for(const [lbl,t] of entries){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent=lbl; if(t==='biome'){ b.addEventListener('mouseenter',()=>openBiomeCascade(b)); b.addEventListener('click',()=>openBiomeCascade(b)); } else if (t==='background'){ b.addEventListener('mouseenter',()=>openBgMenu(b)); b.addEventListener('click',()=>openBgMenu(b)); } else if (t==='settlement'){ const openSettle=()=>{ removeSub3(); submenu3=document.createElement('div'); submenu3.className='ctx-submenu'; document.body.appendChild(submenu3); const tiers=[{key:'CAMP',label:'Camp',size:{w:1,h:1}},{key:'HAMLET',label:'Hamlet',size:{w:2,h:2}},{key:'VILLAGE',label:'Village',size:{w:4,h:4}},{key:'CITY',label:'City',size:{w:8,h:8}},{key:'KINGDOM',label:'Kingdom',size:{w:16,h:16}}]; for(const tt of tiers){ const bb=document.createElement('button'); bb.className='ctx-item'; bb.textContent=tt.label; bb.addEventListener('click',()=>{ const chk=canPlaceSettlementAt(current.x,current.y,tt); if(!chk.ok){ setStatus(`Cannot place ${tt.label}: ${chk.reason}`); close(); return; } draftPlaceSettlementAt(current.x,current.y,tt); close(); }); submenu3.appendChild(bb);} const rb=submenu.getBoundingClientRect(); const sbw=220, sbh=tiers.length*30+12; const left=(rb.right+sbw<innerWidth)?rb.right:Math.max(0,rb.left-sbw); const top=(rb.top+sbh<innerHeight)?rb.top:Math.max(0,innerHeight-sbh); submenu3.style.left=left+'px'; submenu3.style.top=top+'px'; }; b.addEventListener('mouseenter',openSettle); b.addEventListener('click',openSettle); } else if (t==='land_tile'){ b.addEventListener('click',()=>{ const n=setTileBiome(current.x,current.y,'plains'); setStatus(n?'Placed land tile (plains)':'Failed to place'); drawBase(); drawOverlay(); close(); }); } else { b.addEventListener('click',()=>emit(t)); } submenu.appendChild(b);} const rb=root.getBoundingClientRect(); const sbw=220,sbh=entries.length*30+12; const left=(rb.right+sbw<innerWidth)?rb.right:Math.max(0,rb.left-sbw); const top=(rb.top+sbh<innerHeight)?rb.top:Math.max(0,innerHeight-sbh); submenu.style.left=left+'px'; submenu.style.top=top+'px'; };
+    const openBgMenu=(anchor)=>{ removeSub3(); const bg=document.createElement('div'); bg.className='ctx-submenu'; document.body.appendChild(bg); const options=[['Fill All: Bedrock','bedrock'],['Fill All: Ocean','ocean'],['Fill All: Plains','plains']]; for(const [lbl,val] of options){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent=lbl; b.addEventListener('click',()=>{ const n=fillAll(val); setStatus(`Filled ${n} tiles as ${val}`); scheduleDraw(); close(); }); bg.appendChild(b);} const ab=anchor.getBoundingClientRect(); const sbw=240, sbh=options.length*30+12; const left=(ab.right+sbw<innerWidth)?ab.right:Math.max(0,ab.left-sbw); const top=(ab.top+sbh<innerHeight)?ab.top:Math.max(0,innerHeight-sbh); bg.style.left=left+'px'; bg.style.top=top+'px'; submenu3=bg; };
+    const openSub=()=>{ removeSub(); submenu=document.createElement('div'); submenu.className='ctx-submenu'; document.body.appendChild(submenu); const entries=[['Shardgate','shardgate'],['Settlement ▶','settlement'],['Dungeon Entrance','dungeon_entrance'],['Place Land Tile','land_tile'],['Biome','biome'],['Background','background'],['Infrastructure','infrastructure']]; for(const [lbl,t] of entries){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent=lbl; if(t==='biome'){ b.addEventListener('mouseenter',()=>openBiomeCascade(b)); b.addEventListener('click',()=>openBiomeCascade(b)); } else if (t==='background'){ b.addEventListener('mouseenter',()=>openBgMenu(b)); b.addEventListener('click',()=>openBgMenu(b)); } else if (t==='settlement'){ const openSettle=()=>{ removeSub3(); submenu3=document.createElement('div'); submenu3.className='ctx-submenu'; document.body.appendChild(submenu3); const tiers=[{key:'CAMP',label:'Camp',size:{w:1,h:1}},{key:'HAMLET',label:'Hamlet',size:{w:2,h:2}},{key:'VILLAGE',label:'Village',size:{w:4,h:4}},{key:'CITY',label:'City',size:{w:8,h:8}},{key:'KINGDOM',label:'Kingdom',size:{w:16,h:16}}]; for(const tt of tiers){ const bb=document.createElement('button'); bb.className='ctx-item'; bb.textContent=tt.label; bb.addEventListener('click',()=>{ const chk=canPlaceSettlementAt(current.x,current.y,tt); if(!chk.ok){ setStatus(`Cannot place ${tt.label}: ${chk.reason}`); close(); return; } draftPlaceSettlementAt(current.x,current.y,tt); close(); }); submenu3.appendChild(bb);} const rb=submenu.getBoundingClientRect(); const sbw=220, sbh=tiers.length*30+12; const left=(rb.right+sbw<innerWidth)?rb.right:Math.max(0,rb.left-sbw); const top=(rb.top+sbh<innerHeight)?rb.top:Math.max(0,innerHeight-sbh); submenu3.style.left=left+'px'; submenu3.style.top=top+'px'; }; b.addEventListener('mouseenter',openSettle); b.addEventListener('click',openSettle); } else if (t==='land_tile'){ b.addEventListener('click',()=>{ const n=setTileBiome(current.x,current.y,'plains'); setStatus(n?'Placed land tile (plains)':'Failed to place'); scheduleDraw(); close(); }); } else { b.addEventListener('click',()=>emit(t)); } submenu.appendChild(b);} const rb=root.getBoundingClientRect(); const sbw=220,sbh=entries.length*30+12; const left=(rb.right+sbw<innerWidth)?rb.right:Math.max(0,rb.left-sbw); const top=(rb.top+sbh<innerHeight)?rb.top:Math.max(0,innerHeight-sbh); submenu.style.left=left+'px'; submenu.style.top=top+'px'; };
     const build=(screen)=>{ root.innerHTML='';
       const m=document.createElement('button'); m.textContent='Place …'; m.className='ctx-item'; m.setAttribute('aria-haspopup','true');
       const sep=document.createElement('div'); sep.className='ctx-sep';
       const list=[];
       // Remove group
       const flags=hasAt(ST,current.x,current.y,normBiome);
-      if (flags.any){
+      const dk=`${current.x},${current.y}`;
+      const hasDraft=(ST.draft?.tiles&&ST.draft.tiles[dk]) || (ST.draft?.pois||[]).some(p=>p.x===current.x&&p.y===current.y) || (ST.draft?.settlements||[]).some(s=>{const b=s.bounds||{};return current.x>=b.x&&current.x<b.x+b.w&&current.y>=b.y&&current.y<b.y+b.h;});
+      if (flags.any||hasDraft){
         const rmh=document.createElement('div'); rmh.className='ctx-item'; rmh.style.fontWeight='600'; rmh.textContent='Remove at tile'; rmh.tabIndex=-1; rmh.style.cursor='default';
         root.appendChild(rmh);
-        if(flags.settlement){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove Settlements'; b.addEventListener('click',()=>{ const n=removeAt(ST,current.x,current.y,'settlement'); setStatus(n?`Removed ${n} settlement(s)`: 'No settlements here'); drawOverlay(); close(); }); root.appendChild(b); list.push(b); }
-        if(flags.poi){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove POIs'; b.addEventListener('click',()=>{ const n=removeAt(ST,current.x,current.y,'poi'); setStatus(n?`Removed ${n} POI(s)`: 'No POIs here'); drawOverlay(); close(); }); root.appendChild(b); list.push(b); }
-        if(flags.shardgate){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove Shardgates'; b.addEventListener('click',()=>{ const n=removeAt(ST,current.x,current.y,'shardgate'); setStatus(n?`Removed ${n} shardgate(s)`: 'No shardgates here'); drawOverlay(); close(); }); root.appendChild(b); list.push(b); }
-        if(flags.biome){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove Biome (reset to baseline)'; b.addEventListener('click',()=>{ const n=resetBiomeAt(current.x,current.y); setStatus(n?'Biome reset to baseline':'Biome already baseline'); drawBase(); drawOverlay(); close(); }); root.appendChild(b); list.push(b); }
-
+        if(flags.settlement){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove Settlements'; b.addEventListener('click',()=>{ const n=removeAt(ST,current.x,current.y,'settlement'); setStatus(n?`Removed ${n} settlement(s)`: 'No settlements here'); scheduleDraw(); markUnsaved(); close(); }); root.appendChild(b); list.push(b); }
+        if(flags.poi){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove POIs'; b.addEventListener('click',()=>{ const n=removeAt(ST,current.x,current.y,'poi'); setStatus(n?`Removed ${n} POI(s)`: 'No POIs here'); scheduleDraw(); markUnsaved(); close(); }); root.appendChild(b); list.push(b); }
+        if(flags.shardgate){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove Shardgates'; b.addEventListener('click',()=>{ const n=removeAt(ST,current.x,current.y,'shardgate'); setStatus(n?`Removed ${n} shardgate(s)`: 'No shardgates here'); scheduleDraw(); markUnsaved(); close(); }); root.appendChild(b); list.push(b); }
+        if(flags.biome){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove Biome (reset to baseline)'; b.addEventListener('click',()=>{ const n=resetBiomeAt(current.x,current.y); setStatus(n?'Biome reset to baseline':'Biome already baseline'); scheduleDraw(); markUnsaved(); close(); }); root.appendChild(b); list.push(b); }
+        if(hasDraft){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove Draft Markers'; b.addEventListener('click',()=>{ const removed=removeDraftAt(current.x,current.y); setStatus(removed?'Draft markers removed':'No draft markers'); close(); }); root.appendChild(b); list.push(b); }
         root.appendChild(sep.cloneNode());
       }
       const c=document.createElement('button'); c.textContent='Cancel'; c.className='ctx-item';
@@ -466,7 +507,7 @@ import { hasAt, removeAt } from './removeHelpers.js';
     try{
       // Query param ?shard=/static/public/shards/<file>.json
       const qp = new URLSearchParams(location.search).get('shard');
-      if (qp) { const s = await getJSON(qp); setStatus('Loaded via URL'); ST.baseline = clone(s); renderAll(s); return; }
+      if (qp) { await loadShard(qp,'URL'); return; }
       await populateList2();
       // Offer to auto-load latest draft, if any
       const d = pickLatestDraft2();
@@ -476,7 +517,7 @@ import { hasAt, removeAt } from './removeHelpers.js';
         ST.focus = d.focus || { x:-1, y:-1 };
         setStatus('Draft loaded'); setDebug(`draft loaded: ${d.id}`);
         renderAll(d.shard);
-        drawOverlay();
+        scheduleDraw();
         return;
       }
     }catch(e){ trace('boot:error', e?.message||e); }
@@ -531,7 +572,7 @@ import { hasAt, removeAt } from './removeHelpers.js';
       }
       // Re-derive grid strictly from tiles
       ST.grid = deriveGridFromTiles(ST.shard);
-      setStatus('Applied tile changes to draft'); drawBase(); drawOverlay();
+      setStatus('Applied tile changes to draft'); scheduleDraw();
     }catch(err){ setStatus('Invalid tile JSON'); setDebug(`Apply error: ${String(err?.message||err)}`); }
   });
   els.btnTileValidate?.addEventListener('click', async (e)=>{
