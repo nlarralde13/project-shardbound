@@ -6,6 +6,10 @@ export function hasAt(ST, x, y, normBiome) {
   if (Array.isArray(S?.pois) && S.pois.some(eq)) flags.poi = true;
   if (Array.isArray(S?.sites) && S.sites.some(eq)) flags.poi = true;
   if (Array.isArray(L?.shardgates?.nodes) && L.shardgates.nodes.some(eq)) flags.shardgate = true;
+  if (Array.isArray(ST?.draft?.pois)) {
+    if (ST.draft.pois.some(eq)) flags.poi = true;
+    if (ST.draft.pois.some(p => p?.type === 'shardgate' && eq(p))) flags.shardgate = true;
+  }
   const SS = L?.settlements || {};
   for (const k of ['cities','towns','villages','ports']) {
     const arr = SS?.[k];
@@ -43,6 +47,11 @@ export function removeAt(ST, x, y, kind) {
       S.pois = S.pois.filter(eq);
       removed += before - S.pois.length;
     }
+    if (Array.isArray(ST?.draft?.pois)) {
+      const before = ST.draft.pois.length;
+      ST.draft.pois = ST.draft.pois.filter(eq);
+      removed += before - ST.draft.pois.length;
+    }
   }
   if (!kind || kind === 'site') {
     if (Array.isArray(S?.sites)) {
@@ -56,6 +65,11 @@ export function removeAt(ST, x, y, kind) {
       const before = L.shardgates.nodes.length;
       L.shardgates.nodes = L.shardgates.nodes.filter(eq);
       removed += before - L.shardgates.nodes.length;
+    }
+    if (Array.isArray(ST?.draft?.pois)) {
+      const before = ST.draft.pois.length;
+      ST.draft.pois = ST.draft.pois.filter(p => p?.type !== 'shardgate' || eq(p));
+      removed += before - ST.draft.pois.length;
     }
   }
   if (!kind || kind === 'settlement') {
