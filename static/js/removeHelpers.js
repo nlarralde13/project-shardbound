@@ -3,7 +3,10 @@ export function hasAt(ST, x, y, normBiome) {
   const S = ST?.shard;
   const L = S?.layers;
   const eq = (e) => ((e?.x ?? e?.[0])|0) === x && ((e?.y ?? e?.[1])|0) === y;
-  if (Array.isArray(S?.pois) && S.pois.some(eq)) flags.poi = true;
+  if (Array.isArray(S?.pois)) {
+    if (S.pois.some(eq)) flags.poi = true;
+    if (S.pois.some(p => p?.type === 'shardgate' && eq(p))) flags.shardgate = true;
+  }
   if (Array.isArray(S?.sites) && S.sites.some(eq)) flags.poi = true;
   if (Array.isArray(L?.shardgates?.nodes) && L.shardgates.nodes.some(eq)) flags.shardgate = true;
   if (Array.isArray(ST?.draft?.pois)) {
@@ -61,6 +64,11 @@ export function removeAt(ST, x, y, kind) {
     }
   }
   if (!kind || kind === 'shardgate') {
+    if (Array.isArray(S?.pois)) {
+      const before = S.pois.length;
+      S.pois = S.pois.filter(p => p?.type !== 'shardgate' || eq(p));
+      removed += before - S.pois.length;
+    }
     if (Array.isArray(L?.shardgates?.nodes)) {
       const before = L.shardgates.nodes.length;
       L.shardgates.nodes = L.shardgates.nodes.filter(eq);
