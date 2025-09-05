@@ -63,7 +63,7 @@ import { hasAt, removeAt } from './removeHelpers.js';
   function hideLinkBanner(){ linkBanner.style.display='none'; }
 
   // State
-  const ST = { shard:null, grid:null, previews: [], focus:{ x:-1, y:-1 }, baseline: null, panX: 0, panY: 0, currentBiome:'plains', rectPreview:null, draft:{ settlements:[], pois:[], tiles:{} }, linkSource:null, linkSourceId:null, hoverGateId:null };
+  const ST = { shard:null, grid:null, previews: [], focus:{ x:-1, y:-1 }, baseline: null, panX: 0, panY: 0, currentBiome:'plains', rectPreview:null, draft:{ settlements:[], pois:[], tiles:{} }, linkSource:null, linkSourceId:null, hoverGateId:null, moving:null };
 
   // Fetch JSON
   async function getJSON(url){ trace('fetch', url); const r=await fetch(url); if(!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }
@@ -180,8 +180,13 @@ import { hasAt, removeAt } from './removeHelpers.js';
     const g=ST.grid; if(!g) return {ok:false,reason:'no grid'};
     const H=g.length,W=g[0]?.length||0; const w=tier.size.w,h=tier.size.h;
     if(!rectWithin(x,y,w,h,W,H)) return {ok:false,reason:'Out of bounds'};
-    const existing=(Array.isArray(ST.shard?.settlements)?ST.shard.settlements:[]).map(settlementBounds);
-    const pending=(ST.draft?.settlements||[]).map(settlementBounds);
+
+    const ignore=opts.ignoreId;
+    const existing=(Array.isArray(ST.shard?.settlements)?ST.shard.settlements:[])
+      .filter(s=>s.id!==ignore).map(settlementBounds);
+    const pending=(ST.draft?.settlements||[])
+      .filter(s=>s.id!==ignore).map(settlementBounds);
+
     if(overlaps(x,y,w,h,[...existing,...pending])) return {ok:false,reason:'Overlaps existing'};
     if(!opts.allowRestricted){
       for(let yy=y; yy<y+h; yy++){
@@ -239,6 +244,8 @@ import { hasAt, removeAt } from './removeHelpers.js';
 
     return true;
 
+
+
   }
   function applyDraftToShard(){
     if(!ST.shard) return;
@@ -264,6 +271,85 @@ import { hasAt, removeAt } from './removeHelpers.js';
     ST.draft = { settlements:[], pois:[], tiles:{} };
     ST.grid = deriveGridFromTiles(ST.shard);
     scheduleDraw(); setStatus(`Draft applied: settlements=${sc}, pois=${pc}. Now Push Live to persist.`);
+  }
+
+  // --- Settlement edit helpers ---
+  function findSettlementAt(x,y){
+    const hitDraft=(ST.draft?.settlements||[]).find(s=>{ const b=settlementBounds(s); return x>=b.x&&x<b.x+b.w&&y>=b.y&&y<b.y+b.h; });
+    if(hitDraft) return {settlement:hitDraft, source:'draft'};
+    const hitLive=(ST.shard?.settlements||[]).find(s=>{ const b=settlementBounds(s); return x>=b.x&&x<b.x+b.w&&y>=b.y&&y<b.y+b.h; });
+    if(hitLive) return {settlement:hitLive, source:'live'};
+    return null;
+  }
+  function clearSettlementTiles(s,src){
+    const b=settlementBounds(s);
+    for(let yy=b.y; yy<b.y+b.h; yy++){
+      for(let xx=b.x; xx<b.x+b.w; xx++){
+        if(src==='draft'){
+          const k=`${xx},${yy}`;
+          if(ST.draft?.tiles?.[k]?.settlementId===s.id) delete ST.draft.tiles[k];
+        } else {
+          const t=ST.shard?.tiles?.[yy]?.[xx];
+          if(t){ if(t.settlementId===s.id) delete t.settlementId; if(Array.isArray(t.tags)) t.tags=t.tags.filter(tg=>tg!=='settlement_area'); }
+        }
+      }
+    }
+  }
+  function applySettlementTiles(s,src){
+    const b=settlementBounds(s);
+    for(let yy=b.y; yy<b.y+b.h; yy++){
+      for(let xx=b.x; xx<b.x+b.w; xx++){
+        if(src==='draft'){
+          if(!ST.draft) ST.draft={settlements:[],pois:[],tiles:{}};
+          if(!ST.draft.tiles) ST.draft.tiles={};
+          const k=`${xx},${yy}`;
+          const prev=ST.draft.tiles[k]||{};
+          const baseTags=ST.shard?.tiles?.[yy]?.[xx]?.tags||[];
+          const prevTags=Array.isArray(prev.tags)?prev.tags:[];
+          ST.draft.tiles[k]={...prev,settlementId:s.id,tags:Array.from(new Set([...baseTags,...prevTags,'settlement_area']))};
+        } else {
+          const t=ST.shard?.tiles?.[yy]?.[xx];
+          if(t){ t.settlementId=s.id; t.tags=Array.from(new Set([...(t.tags||[]),'settlement_area'])); }
+        }
+      }
+    }
+  }
+  function removeSettlementObj(s,src){
+    clearSettlementTiles(s,src);
+    const arr=src==='draft'?ST.draft?.settlements:ST.shard?.settlements;
+    if(Array.isArray(arr)){
+      const idx=arr.indexOf(s); if(idx>=0) arr.splice(idx,1);
+    }
+    markUnsaved(); scheduleDraw(); setStatus('Settlement removed');
+  }
+  function changeSettlementTier(s,src,tt){
+    const chk=canPlaceSettlementAt(s.anchor.x,s.anchor.y,tt,{ignoreId:s.id});
+    previewSettlementAt(s.anchor.x,s.anchor.y,tt,chk.ok);
+    if(!chk.ok){ setStatus(`Tier ${tt.tier} invalid: ${chk.reason}`); return; }
+    clearSettlementTiles(s,src);
+    s.tier=tt.tier; s.footprint={w:tt.size.w,h:tt.size.h}; s.bounds={x:s.anchor.x,y:s.anchor.y,w:tt.size.w,h:tt.size.h};
+    applySettlementTiles(s,src);
+    markUnsaved(); scheduleDraw(); setStatus(`Changed to Tier ${tt.tier}`);
+  }
+  function beginMoveSettlement(s,src){
+    ST.moving={settlement:s,source:src,preview:null};
+    setStatus('Select new anchor (Esc to cancel)');
+  }
+  function commitMoveSettlement(x,y){
+    const mv=ST.moving; if(!mv) return;
+    const tier={tier:mv.settlement.tier,size:{w:mv.settlement.footprint?.w||1,h:mv.settlement.footprint?.h||1}};
+    const chk=canPlaceSettlementAt(x,y,tier,{ignoreId:mv.settlement.id});
+    if(!chk.ok){ setStatus(`Move invalid: ${chk.reason}`); return; }
+    clearSettlementTiles(mv.settlement,mv.source);
+    mv.settlement.anchor={x,y}; mv.settlement.bounds={x,y,w:tier.size.w,h:tier.size.h};
+    applySettlementTiles(mv.settlement,mv.source);
+    ST.moving=null; ST.previews=ST.previews.filter(p=>p!==mv.preview);
+    markUnsaved(); scheduleDraw(); setStatus(`Moved to (${x},${y})`);
+  }
+  function cancelMoveSettlement(){ if(ST.moving){ ST.previews=ST.previews.filter(p=>p!==ST.moving.preview); ST.moving=null; scheduleDraw(); setStatus('Move cancelled'); } }
+  function inspectSettlement(s){
+    const info={name:s.name||'',tier:s.tier,footprint:`${s.footprint?.w}x${s.footprint?.h}`,id:s.id,faction:s.faction_id||'',population:s.population||0,discovered:!!s.discovered,links:s.links||{}};
+    setStatus(JSON.stringify(info));
   }
 
   // Canvas sizing
@@ -633,6 +719,7 @@ function drawPreviews(){
   function tileAtClient(e){ const rect=els.base.getBoundingClientRect(); const s=scale(); const x=Math.floor((e.clientX-rect.left)/s), y=Math.floor((e.clientY-rect.top)/s); return {x,y}; }
   let brushing=false, recting=false, rectStart=null;
   els.frame?.addEventListener('mousedown', (e)=>{
+    if(ST.moving){ e.preventDefault(); const {x,y}=tileAtClient(e); if(e.button===0){ commitMoveSettlement(x,y); } else { cancelMoveSettlement(); } return; }
     if(e.button!==0) return;
     const {x,y}=tileAtClient(e);
     if (e.shiftKey){ recting=true; rectStart={x,y}; ST.rectPreview={x0:x,y0:y,x1:x,y1:y}; scheduleDraw(); return; }
@@ -641,6 +728,7 @@ function drawPreviews(){
   });
   window.addEventListener('mousemove', (e)=>{
     if(ST.linkSource){ const {x,y}=tileAtClient(e); const t=findGateAt(x,y); const id=t?ensureGateId(t):null; if(id!==ST.hoverGateId){ ST.hoverGateId=id; scheduleDraw(); } return; }
+    if(ST.moving){ const {x,y}=tileAtClient(e); const mv=ST.moving; const tier={tier:mv.settlement.tier,size:{w:mv.settlement.footprint?.w||1,h:mv.settlement.footprint?.h||1}}; const chk=canPlaceSettlementAt(x,y,tier,{ignoreId:mv.settlement.id}); if(mv.preview){ ST.previews=ST.previews.filter(p=>p!==mv.preview); } mv.preview={type:'settlement',x,y,w:tier.size.w,h:tier.size.h,ok:chk.ok}; ST.previews.push(mv.preview); scheduleDraw(); setStatus(chk.ok?`Move to (${x},${y})`:`Move invalid: ${chk.reason}`); return; }
     if (recting){ const {x,y}=tileAtClient(e); if(!ST.grid) return; ST.rectPreview={x0:rectStart.x,y0:rectStart.y,x1:x,y1:y}; scheduleDraw(); return; }
     if (brushing){ const {x,y}=tileAtClient(e); setTileBiome(x,y, ST.currentBiome||'plains'); return; }
     if(!dragging) return; const dx=e.clientX-dragStartX, dy=e.clientY-dragStartY; ST.panX=startPanX+dx; ST.panY=startPanY+dy; applyPan();
@@ -652,7 +740,12 @@ function drawPreviews(){
     if (brushing){ brushing=false; return; }
     if(dragging){ const moved=Math.abs((e?.clientX||0)-dragStartX)+Math.abs((e?.clientY||0)-dragStartY); dragging=false; els.frame.style.cursor='default'; if (moved<4){ const {x,y}=tileAtClient(e); if(x>=0&&y>=0&&ST.grid&&y<ST.grid.length&&x<ST.grid[0].length){ ST.focus={x,y}; scheduleDraw(); updateTilePanel(x,y); } } }
   });
-  window.addEventListener('keydown',(e)=>{ if(e.key==='Escape' && ST.linkSource){ ST.linkSource=null; ST.linkSourceId=null; ST.hoverGateId=null; hideLinkBanner(); setStatus('Linking cancelled'); scheduleDraw(); } });
+  window.addEventListener('keydown',(e)=>{
+    if(e.key==='Escape'){
+      if(ST.linkSource){ ST.linkSource=null; ST.linkSourceId=null; ST.hoverGateId=null; hideLinkBanner(); setStatus('Linking cancelled'); scheduleDraw(); return; }
+      if(ST.moving){ cancelMoveSettlement(); return; }
+    }
+  });
   $('btnZoomIn')?.addEventListener('click', (e)=>{ e?.preventDefault?.(); const rect=els.frame.getBoundingClientRect(); zoomAt(rect.width/2, rect.height/2, 1.2); });
   $('btnZoomOut')?.addEventListener('click', (e)=>{ e?.preventDefault?.(); const rect=els.frame.getBoundingClientRect(); zoomAt(rect.width/2, rect.height/2, 0.8); });
   $('btnFit')?.addEventListener('click', (e)=>{ e?.preventDefault?.(); centerInFrame(); });
@@ -678,6 +771,7 @@ function drawPreviews(){
   // Context menu for placement
   const ctx = createContextMenuV2({ onSelect: onPlaceSelect });
   els.frame?.addEventListener('contextmenu', (e)=>{
+    if(ST.moving){ e.preventDefault(); cancelMoveSettlement(); return; }
     if(!ST.grid) return; e?.preventDefault?.(); const rect=els.base.getBoundingClientRect(); const s=scale(); const x=Math.floor((e.clientX-rect.left)/s), y=Math.floor((e.clientY-rect.top)/s); if(x<0||y<0||y>=ST.grid.length||x>=ST.grid[0].length) return; ST.focus={x,y}; scheduleDraw(); ctx.open({ tile:{x,y}, screen:{ left:e.clientX, top:e.clientY } });
   });
 
@@ -743,6 +837,19 @@ function drawPreviews(){
       const m=document.createElement('button'); m.textContent='Place …'; m.className='ctx-item'; m.setAttribute('aria-haspopup','true');
       const sep=document.createElement('div'); sep.className='ctx-sep';
       const list=[];
+      const hit=findSettlementAt(current.x,current.y);
+      if(hit){
+        const s=hit.settlement;
+        const hdr=document.createElement('div'); hdr.className='ctx-item'; hdr.style.fontWeight='600'; hdr.textContent=s.name||s.id; hdr.tabIndex=-1; hdr.style.cursor='default';
+        root.appendChild(hdr);
+        const bInspect=document.createElement('button'); bInspect.className='ctx-item'; bInspect.textContent='Inspect Settlement'; bInspect.addEventListener('click',()=>{ inspectSettlement(s); close(); }); root.appendChild(bInspect); list.push(bInspect);
+        const bMove=document.createElement('button'); bMove.className='ctx-item'; bMove.textContent='Move Settlement'; bMove.addEventListener('click',()=>{ beginMoveSettlement(s,hit.source); close(); }); root.appendChild(bMove); list.push(bMove);
+        const bTier=document.createElement('button'); bTier.className='ctx-item'; bTier.textContent='Change Tier ▶';
+        const openTier=()=>{ removeSub(); submenu=document.createElement('div'); submenu.className='ctx-submenu'; document.body.appendChild(submenu); const tiers=[{tier:1,label:'Tier 1',size:{w:1,h:1}},{tier:2,label:'Tier 2',size:{w:1,h:1}},{tier:3,label:'Tier 3',size:{w:2,h:2}},{tier:4,label:'Tier 4',size:{w:2,h:2}},{tier:5,label:'Tier 5',size:{w:4,h:4}}]; for(const tt of tiers){ const bb=document.createElement('button'); bb.className='ctx-item'; bb.textContent=tt.label; bb.addEventListener('click',()=>{ changeSettlementTier(s,hit.source,tt); close(); }); submenu.appendChild(bb);} const rb=bTier.getBoundingClientRect(); const sbw=220,sbh=tiers.length*30+12; const left=(rb.right+sbw<innerWidth)?rb.right:Math.max(0,rb.left-sbw); const top=(rb.top+sbh<innerHeight)?rb.top:Math.max(0,innerHeight-sbh); submenu.style.left=left+'px'; submenu.style.top=top+'px'; };
+        bTier.addEventListener('mouseenter',openTier); bTier.addEventListener('click',openTier); root.appendChild(bTier); list.push(bTier);
+        const bRemove=document.createElement('button'); bRemove.className='ctx-item'; bRemove.textContent='Remove Settlement'; bRemove.addEventListener('click',()=>{ removeSettlementObj(s,hit.source); close(); }); root.appendChild(bRemove); list.push(bRemove);
+        root.appendChild(sep.cloneNode());
+      }
       // Remove group
       const flags=hasAt(ST,current.x,current.y,normBiome);
       const dk=`${current.x},${current.y}`;
