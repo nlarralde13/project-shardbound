@@ -270,16 +270,38 @@
 
   // --- Remove helpers ---
   function hasAt(x,y){
-    let has=false;
+    const flags = { settlement:false, poi:false, shardgate:false, biome:false };
     const S=ST.shard;
     const L=S?.layers;
     const eq=(e)=> ((e?.x??e?.[0])|0)===x && ((e?.y??e?.[1])|0)===y;
-    if (Array.isArray(S?.pois) && S.pois.some(eq)) has=true;
-    if (Array.isArray(S?.sites) && S.sites.some(eq)) has=true;
-    if (Array.isArray(L?.shardgates?.nodes) && L.shardgates.nodes.some(eq)) has=true;
+    if (Array.isArray(S?.pois) && S.pois.some(eq)) flags.poi=true;
+    if (Array.isArray(S?.sites) && S.sites.some(eq)) flags.poi=true;
+    if (Array.isArray(L?.shardgates?.nodes) && L.shardgates.nodes.some(eq)) flags.shardgate=true;
     const SS=L?.settlements||{}; const keys=['cities','towns','villages','ports'];
-    for(const k of keys){ const arr=SS?.[k]; if(Array.isArray(arr) && arr.some(eq)){ has=true; break; } }
-    return has;
+    for(const k of keys){ const arr=SS?.[k]; if(Array.isArray(arr) && arr.some(eq)){ flags.settlement=true; break; } }
+    // biome diff vs baseline
+    if(ST.baseline && Array.isArray(ST.baseline.tiles) && Array.isArray(S?.tiles)){
+      ensureTilesFromAny(ST.baseline);
+      const bt=ST.baseline.tiles?.[y]?.[x];
+      const ct=S.tiles?.[y]?.[x];
+      const bb=bt? normBiome(bt.biome) : null;
+      const cb=ct? normBiome(ct.biome) : null;
+      if(bb && cb && bb!==cb) flags.biome=true;
+    }
+    flags.any = flags.settlement || flags.poi || flags.shardgate || flags.biome;
+    return flags;
+  }
+
+  function resetBiomeAt(x,y){
+    if(!ST.baseline || !Array.isArray(ST.baseline.tiles)) return 0;
+    const base=ST.baseline; ensureTilesFromAny(base);
+    const bt=base.tiles?.[y]?.[x];
+    const current=ST.shard?.tiles?.[y]?.[x];
+    const bb=bt? normBiome(bt.biome) : null;
+    const cb=current? normBiome(current.biome) : null;
+    if(!bb || !cb || bb===cb) return 0;
+    setTileBiome(x,y,bb);
+    return 1;
   }
   function removeAt(x,y, kind){
     const S=ST.shard; const L=S?.layers; const eq=(e)=> ((e?.x??e?.[0])|0)!==x || ((e?.y??e?.[1])|0)!==y; // keep non-matching
@@ -422,16 +444,16 @@
       const sep=document.createElement('div'); sep.className='ctx-sep';
       const list=[];
       // Remove group
-      let r1=null, r2=null, r3=null; const anyAt=hasAt(current.x,current.y);
-      if (anyAt){
+      const flags=hasAt(current.x,current.y);
+      if (flags.any){
         const rmh=document.createElement('div'); rmh.className='ctx-item'; rmh.style.fontWeight='600'; rmh.textContent='Remove at tile'; rmh.tabIndex=-1; rmh.style.cursor='default';
-        r1=document.createElement('button'); r1.className='ctx-item'; r1.textContent='Remove Settlements'; r1.addEventListener('click',()=>{ const n=removeAt(current.x,current.y,'settlement'); setStatus(n?`Removed ${n} settlement(s)`: 'No settlements here'); drawOverlay(); close(); });
-        r2=document.createElement('button'); r2.className='ctx-item'; r2.textContent='Remove POIs'; r2.addEventListener('click',()=>{ const n=removeAt(current.x,current.y,'poi'); setStatus(n?`Removed ${n} POI(s)`: 'No POIs here'); drawOverlay(); close(); });
-        r3=document.createElement('button'); r3.className='ctx-item'; r3.textContent='Remove Shardgates'; r3.addEventListener('click',()=>{ const n=removeAt(current.x,current.y,'shardgate'); setStatus(n?`Removed ${n} shardgate(s)`: 'No shardgates here'); drawOverlay(); close(); });
+
         root.appendChild(rmh);
-        root.appendChild(r1); list.push(r1);
-        root.appendChild(r2); list.push(r2);
-        root.appendChild(r3); list.push(r3);
+        if(flags.settlement){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove Settlements'; b.addEventListener('click',()=>{ const n=removeAt(current.x,current.y,'settlement'); setStatus(n?`Removed ${n} settlement(s)`: 'No settlements here'); drawOverlay(); close(); }); root.appendChild(b); list.push(b); }
+        if(flags.poi){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove POIs'; b.addEventListener('click',()=>{ const n=removeAt(current.x,current.y,'poi'); setStatus(n?`Removed ${n} POI(s)`: 'No POIs here'); drawOverlay(); close(); }); root.appendChild(b); list.push(b); }
+        if(flags.shardgate){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove Shardgates'; b.addEventListener('click',()=>{ const n=removeAt(current.x,current.y,'shardgate'); setStatus(n?`Removed ${n} shardgate(s)`: 'No shardgates here'); drawOverlay(); close(); }); root.appendChild(b); list.push(b); }
+        if(flags.biome){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove Biome (reset to baseline)'; b.addEventListener('click',()=>{ const n=resetBiomeAt(current.x,current.y); setStatus(n?'Biome reset to baseline':'Biome already baseline'); drawBase(); drawOverlay(); close(); }); root.appendChild(b); list.push(b); }
+
         root.appendChild(sep.cloneNode());
       }
       const c=document.createElement('button'); c.textContent='Cancel'; c.className='ctx-item';
