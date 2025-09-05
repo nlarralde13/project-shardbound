@@ -420,6 +420,7 @@
     const build=(screen)=>{ root.innerHTML='';
       const m=document.createElement('button'); m.textContent='Place …'; m.className='ctx-item'; m.setAttribute('aria-haspopup','true');
       const sep=document.createElement('div'); sep.className='ctx-sep';
+      const list=[];
       // Remove group
       let r1=null, r2=null, r3=null; const anyAt=hasAt(current.x,current.y);
       if (anyAt){
@@ -427,12 +428,17 @@
         r1=document.createElement('button'); r1.className='ctx-item'; r1.textContent='Remove Settlements'; r1.addEventListener('click',()=>{ const n=removeAt(current.x,current.y,'settlement'); setStatus(n?`Removed ${n} settlement(s)`: 'No settlements here'); drawOverlay(); close(); });
         r2=document.createElement('button'); r2.className='ctx-item'; r2.textContent='Remove POIs'; r2.addEventListener('click',()=>{ const n=removeAt(current.x,current.y,'poi'); setStatus(n?`Removed ${n} POI(s)`: 'No POIs here'); drawOverlay(); close(); });
         r3=document.createElement('button'); r3.className='ctx-item'; r3.textContent='Remove Shardgates'; r3.addEventListener('click',()=>{ const n=removeAt(current.x,current.y,'shardgate'); setStatus(n?`Removed ${n} shardgate(s)`: 'No shardgates here'); drawOverlay(); close(); });
-        root.appendChild(rmh); root.appendChild(r1); root.appendChild(r2); root.appendChild(r3);
+        root.appendChild(rmh);
+        root.appendChild(r1); list.push(r1);
+        root.appendChild(r2); list.push(r2);
+        root.appendChild(r3); list.push(r3);
         root.appendChild(sep.cloneNode());
       }
       const c=document.createElement('button'); c.textContent='Cancel'; c.className='ctx-item';
-      root.appendChild(m); root.appendChild(sep); root.appendChild(c);
-      items=[m, ...(anyAt?[r1,r2,r3]:[]), c].filter(Boolean);
+      root.appendChild(m); list.push(m);
+      root.appendChild(sep);
+      root.appendChild(c); list.push(c);
+      items=list.filter(Boolean);
       focus(0);
       m.addEventListener('mouseenter',openSub); m.addEventListener('click',openSub); c.addEventListener('click',close);
       root.onkeydown=(e)=>{ if(e.key==='Escape'){e?.preventDefault?.();close();} else if(e.key==='ArrowDown'){e?.preventDefault?.();focus(focusIdx+1);} else if(e.key==='ArrowUp'){e?.preventDefault?.();focus(focusIdx-1);} else if(e.key==='ArrowRight'){e?.preventDefault?.();openSub(); submenu?.querySelector('button')?.focus();} else if(e.key==='ArrowLeft'){e?.preventDefault?.(); removeSub(); } else if(e.key==='Enter'){e?.preventDefault?.(); items[focusIdx]?.click?.(); } };
