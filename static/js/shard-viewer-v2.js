@@ -63,7 +63,9 @@ import { hasAt, removeAt } from './removeHelpers.js';
   function hideLinkBanner(){ linkBanner.style.display='none'; }
 
   // State
+
   const ST = { shard:null, grid:null, previews: [], focus:{ x:-1, y:-1 }, baseline: null, pushReady:false, panX: 0, panY: 0, currentBiome:'plains', rectPreview:null, draft:{ settlements:[], pois:[], tiles:{} }, linkSource:null, linkSourceId:null, hoverGateId:null, moving:null };
+
 
   // Fetch JSON
   async function getJSON(url){ trace('fetch', url); const r=await fetch(url); if(!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }
@@ -167,6 +169,7 @@ import { hasAt, removeAt } from './removeHelpers.js';
   // --- Settlement placement (draft) ---
   function rectWithin(x,y,w,h,maxW,maxH){ return x>=0&&y>=0&&(x+w)<=maxW&&(y+h)<=maxH; }
   function overlaps(x,y,w,h,arr){ return (arr||[]).some(r=> !(x+w<=r.x||r.x+r.w<=x||y+h<=r.y||r.y+r.h<=y)); }
+
   function settlementBounds(s){
     if(!s) return {x:0,y:0,w:0,h:0};
     if(s.bounds && typeof s.bounds.x==='number') return s.bounds;
@@ -179,11 +182,13 @@ import { hasAt, removeAt } from './removeHelpers.js';
     const g=ST.grid; if(!g) return {ok:false,reason:'no grid'};
     const H=g.length,W=g[0]?.length||0; const w=tier.size.w,h=tier.size.h;
     if(!rectWithin(x,y,w,h,W,H)) return {ok:false,reason:'Out of bounds'};
+
     const ignore=opts.ignoreId;
     const existing=(Array.isArray(ST.shard?.settlements)?ST.shard.settlements:[])
       .filter(s=>s.id!==ignore).map(settlementBounds);
     const pending=(ST.draft?.settlements||[])
       .filter(s=>s.id!==ignore).map(settlementBounds);
+
     if(overlaps(x,y,w,h,[...existing,...pending])) return {ok:false,reason:'Overlaps existing'};
     if(!opts.allowRestricted){
       for(let yy=y; yy<y+h; yy++){
@@ -195,6 +200,7 @@ import { hasAt, removeAt } from './removeHelpers.js';
     }
     return {ok:true};
   }
+
   function previewSettlementAt(x,y,tier,ok){
     ST.previews = (ST.previews||[]).filter(p=>p.type!=='settlement');
     const pv={ type:'settlement', x, y, w:tier.size.w, h:tier.size.h, ok };
@@ -202,6 +208,7 @@ import { hasAt, removeAt } from './removeHelpers.js';
     scheduleDraw();
     setTimeout(()=>{ ST.previews = ST.previews.filter(p=>p!==pv); scheduleDraw(); },1000);
   }
+
   function deriveSettlementId(x,y){
     const base=`sett_${x}_${y}`;
     const ids=new Set();
@@ -217,6 +224,7 @@ import { hasAt, removeAt } from './removeHelpers.js';
     if(!Array.isArray(ST.draft.settlements)) ST.draft.settlements=[];
     if(!ST.draft.tiles) ST.draft.tiles={};
     const id=deriveSettlementId(x,y);
+
     const b={x,y,w:tier.size.w,h:tier.size.h};
     const sd={ id, name:`Tier ${tier.tier}`, tier:tier.tier, anchor:{x,y}, footprint:{w:b.w,h:b.h}, bounds:b, links:{roads:[],shardgates:[]}, discovered:false, meta:{} };
     ST.draft.settlements.push(sd);
@@ -236,7 +244,9 @@ import { hasAt, removeAt } from './removeHelpers.js';
     markUnsaved();
     scheduleDraw();
     setStatus(`Placed Tier ${tier.tier} at (${x},${y})`);
+
     return true;
+
   }
   function applyDraftToShard(){
     if(!ST.shard) return;
@@ -822,7 +832,9 @@ function drawPreviews(){
       const rb=submenu2.getBoundingClientRect(); const sbw=220, sbh=list.length*30+12; const left=(rb.right+sbw<innerWidth)?rb.right:Math.max(0,rb.left-sbw); const top=(rb.top+sbh<innerHeight)?rb.top:Math.max(0,innerHeight-sbh); submenu3.style.left=left+'px'; submenu3.style.top=top+'px';
     }
     const openBgMenu=(anchor)=>{ removeSub3(); const bg=document.createElement('div'); bg.className='ctx-submenu'; document.body.appendChild(bg); const options=[['Fill All: Bedrock','bedrock'],['Fill All: Ocean','ocean'],['Fill All: Plains','plains']]; for(const [lbl,val] of options){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent=lbl; b.addEventListener('click',()=>{ const n=fillAll(val); setStatus(`Filled ${n} tiles as ${val}`); scheduleDraw(); close(); }); bg.appendChild(b);} const ab=anchor.getBoundingClientRect(); const sbw=240, sbh=options.length*30+12; const left=(ab.right+sbw<innerWidth)?ab.right:Math.max(0,ab.left-sbw); const top=(ab.top+sbh<innerHeight)?ab.top:Math.max(0,innerHeight-sbh); bg.style.left=left+'px'; bg.style.top=top+'px'; submenu3=bg; };
+
       const openSub=()=>{ removeSub(); submenu=document.createElement('div'); submenu.className='ctx-submenu'; document.body.appendChild(submenu); const entries=[['Shardgate','shardgate'],['Settlement ▶','settlement'],['Dungeon Entrance','dungeon_entrance'],['Place Land Tile','land_tile'],['Biome','biome'],['Background','background'],['Infrastructure','infrastructure']]; for(const [lbl,t] of entries){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent=lbl; if(t==='biome'){ b.addEventListener('mouseenter',()=>openBiomeCascade(b)); b.addEventListener('click',()=>openBiomeCascade(b)); } else if (t==='background'){ b.addEventListener('mouseenter',()=>openBgMenu(b)); b.addEventListener('click',()=>openBgMenu(b)); } else if (t==='settlement'){ const openSettle=()=>{ removeSub3(); submenu3=document.createElement('div'); submenu3.className='ctx-submenu'; document.body.appendChild(submenu3); const tiers=[{tier:1,label:'Tier 1',size:{w:1,h:1}},{tier:2,label:'Tier 2',size:{w:1,h:1}},{tier:3,label:'Tier 3',size:{w:2,h:2}},{tier:4,label:'Tier 4',size:{w:2,h:2}},{tier:5,label:'Tier 5',size:{w:4,h:4}}]; for(const tt of tiers){ const bb=document.createElement('button'); bb.className='ctx-item'; bb.textContent=tt.label; bb.addEventListener('click',()=>{ const chk=canPlaceSettlementAt(current.x,current.y,tt); previewSettlementAt(current.x,current.y,tt,chk.ok); if(chk.ok){ draftPlaceSettlementAt(current.x,current.y,tt); } else { setStatus(`Tier ${tt.tier} invalid: ${chk.reason}`); } close(); }); submenu3.appendChild(bb);} const rb=submenu.getBoundingClientRect(); const sbw=220, sbh=tiers.length*30+12; const left=(rb.right+sbw<innerWidth)?rb.right:Math.max(0,rb.left-sbw); const top=(rb.top+sbh<innerHeight)?rb.top:Math.max(0,innerHeight-sbh); submenu3.style.left=left+'px'; submenu3.style.top=top+'px'; }; b.addEventListener('mouseenter',openSettle); b.addEventListener('click',openSettle); } else if (t==='land_tile'){ b.addEventListener('click',()=>{ const n=setTileBiome(current.x,current.y,'plains'); setStatus(n?'Placed land tile (plains)':'Failed to place'); scheduleDraw(); close(); }); } else { b.addEventListener('click',()=>emit(t)); } submenu.appendChild(b);} const rb=root.getBoundingClientRect(); const sbw=220,sbh=entries.length*30+12; const left=(rb.right+sbw<innerWidth)?rb.right:Math.max(0,rb.left-sbw); const top=(rb.top+sbh<innerHeight)?rb.top:Math.max(0,innerHeight-sbh); submenu.style.left=left+'px'; submenu.style.top=top+'px'; };
+
     const build=(screen)=>{ root.innerHTML='';
       const m=document.createElement('button'); m.textContent='Place …'; m.className='ctx-item'; m.setAttribute('aria-haspopup','true');
       const sep=document.createElement('div'); sep.className='ctx-sep';
