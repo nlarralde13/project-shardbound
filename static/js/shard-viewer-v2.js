@@ -51,8 +51,19 @@ import { hasAt, removeAt } from './removeHelpers.js';
   const scale = () => Math.max(1, parseInt(els.scale?.value||'8',10));
   const alpha = () => Math.max(0, Math.min(1,(parseInt(els.opacity?.value||'85',10)||85)/100));
 
+  const linkBanner=document.createElement('div');
+  linkBanner.id='linkBanner';
+  Object.assign(linkBanner.style,{position:'absolute',top:'0',left:'0',right:'0',background:'rgba(0,0,0,0.7)',color:'#fff',padding:'4px',textAlign:'center',display:'none',zIndex:'1000'});
+  const cancelLink=document.createElement('button'); cancelLink.textContent='Cancel'; cancelLink.style.marginLeft='8px';
+  linkBanner.appendChild(document.createTextNode('Link mode: select target'));
+  linkBanner.appendChild(cancelLink);
+  document.body.appendChild(linkBanner);
+  cancelLink.addEventListener('click',()=>{ ST.linkSource=null; ST.linkSourceId=null; ST.hoverGateId=null; hideLinkBanner(); setStatus('Linking cancelled'); scheduleDraw(); });
+  function showLinkBanner(){ linkBanner.style.display='block'; }
+  function hideLinkBanner(){ linkBanner.style.display='none'; }
+
   // State
-  const ST = { shard:null, grid:null, previews: [], focus:{ x:-1, y:-1 }, baseline: null, panX: 0, panY: 0, currentBiome:'plains', rectPreview:null, draft:{ settlements:[], pois:[], tiles:{} }, linkSource:null };
+  const ST = { shard:null, grid:null, previews: [], focus:{ x:-1, y:-1 }, baseline: null, panX: 0, panY: 0, currentBiome:'plains', rectPreview:null, draft:{ settlements:[], pois:[], tiles:{} }, linkSource:null, linkSourceId:null, hoverGateId:null };
 
   // Fetch JSON
   async function getJSON(url){ trace('fetch', url); const r=await fetch(url); if(!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }
@@ -89,22 +100,23 @@ import { hasAt, removeAt } from './removeHelpers.js';
   }
 
   // --- Shardgate helpers ---
+  function allGates(){
+    const arr=[];
+    if(Array.isArray(ST.shard?.pois)) arr.push(...ST.shard.pois.filter(p=>p?.type==='shardgate'));
+    if(Array.isArray(ST.draft?.pois)) arr.push(...ST.draft.pois.filter(p=>p?.type==='shardgate'));
+    return arr;
+  }
+  function findGateById(id){ return allGates().find(g=>ensureGateId(g)===id)||null; }
   function findGateAt(x,y){
-    const S=ST.shard, L=S?.layers;
     const eq=(g)=>(((g?.x??g?.[0])|0)===x && ((g?.y??g?.[1])|0)===y);
-    const fromLayer=L?.shardgates?.nodes; if(Array.isArray(fromLayer)){ const g=fromLayer.find(eq); if(g) return g; }
-    const fromTop=S?.shardgates?.nodes; if(Array.isArray(fromTop)){ const g=fromTop.find(eq); if(g) return g; }
-    if(Array.isArray(S?.pois)){
-      for(const p of S.pois){ if(p?.type==='shardgate' && eq(p)) return p; }
-    }
-
-    if(Array.isArray(ST.draft?.pois)){
-      for(const p of ST.draft.pois){ if(p?.type==='shardgate' && eq(p)) return p; }
-    }
-
+    for(const p of allGates()){ if(eq(p)) return p; }
     return null;
   }
-  function ensureGateId(g){ if(!g) return ''; if(!g.id){ const x=(g.x??g[0])|0, y=(g.y??g[1])|0; g.id=`gate_${x}_${y}_${Date.now()}`; } return String(g.id); }
+  function ensureGateId(g){
+    if(!g) return '';
+    if(!g.id){ const x=(g.x??g[0])|0, y=(g.y??g[1])|0; g.id=`gate_${x}_${y}`; }
+    return String(g.id);
+  }
   function getGateLinks(g){
     if(!g) return [];
     const arr = Array.isArray(g.linked_gates) ? g.linked_gates : g.meta?.linked_gates;
@@ -116,6 +128,41 @@ import { hasAt, removeAt } from './removeHelpers.js';
   function addGateLink(g,id){ const links=getGateLinks(g); if(!links.includes(id)){ setGateLinks(g, links.concat(id)); } }
   function getAllowReturn(g){ return g?.allow_return ?? g?.meta?.allow_return; }
   function setAllowReturn(g,val){ if(!g) return; if('allow_return' in g){ g.allow_return=val; } else { g.meta=g.meta||{}; g.meta.allow_return=val; } }
+  function pruneOrphanLinks(){
+    const all=allGates();
+    const ids=new Set(all.map(g=>ensureGateId(g)));
+    for(const g of all){
+      const filtered=getGateLinks(g).filter(id=>ids.has(id) && id!==ensureGateId(g));
+      setGateLinks(g, filtered);
+    }
+  }
+  function openLinkEditor(g){
+    if(!g) return;
+    const dlg=document.createElement('div');
+    Object.assign(dlg.style,{position:'fixed',top:'20%',left:'50%',transform:'translateX(-50%)',background:'#222',color:'#fff',padding:'10px',border:'1px solid #555',zIndex:1001});
+    const form=document.createElement('div');
+    const others=allGates().filter(gg=>gg!==g);
+    const current=new Set(getGateLinks(g));
+    for(const gg of others){ const id=ensureGateId(gg); const label=document.createElement('label'); const cb=document.createElement('input'); cb.type='checkbox'; cb.value=id; if(current.has(id)) cb.checked=true; label.appendChild(cb); label.appendChild(document.createTextNode(` ${gg.name||id} (${id})`)); form.appendChild(label); form.appendChild(document.createElement('br')); }
+    const twoLbl=document.createElement('label'); const two=document.createElement('input'); two.type='checkbox'; twoLbl.appendChild(two); twoLbl.appendChild(document.createTextNode(' two-way')); form.appendChild(twoLbl); form.appendChild(document.createElement('br'));
+    const btnSave=document.createElement('button'); btnSave.textContent='Save'; const btnCancel=document.createElement('button'); btnCancel.textContent='Cancel'; form.appendChild(btnSave); form.appendChild(btnCancel);
+    dlg.appendChild(form); document.body.appendChild(dlg);
+    btnCancel.addEventListener('click',()=>{ document.body.removeChild(dlg); });
+    btnSave.addEventListener('click',()=>{ const selected=[...form.querySelectorAll('input[type=checkbox]')].filter(i=>i!==two&&i.checked).map(i=>i.value); setGateLinks(g,selected); const gId=ensureGateId(g); if(two.checked){ for(const gg of allGates()){ const id=ensureGateId(gg); if(id===gId) continue; const links=getGateLinks(gg); if(selected.includes(id)){ if(!links.includes(gId)) addGateLink(gg,gId); } else { setGateLinks(gg, links.filter(l=>l!==gId)); } } } pruneOrphanLinks(); markUnsaved(); scheduleDraw(); setStatus('Shardgate links updated'); document.body.removeChild(dlg); });
+  }
+  function canonicalizeGates(shard){
+    if(!shard) return;
+    const others = Array.isArray(shard.pois) ? shard.pois.filter(p=>p?.type!=='shardgate') : [];
+    const gateSrc = [];
+    if(Array.isArray(shard.pois)) gateSrc.push(...shard.pois.filter(p=>p?.type==='shardgate'));
+    const layer = shard?.layers?.shardgates?.nodes; if(Array.isArray(layer)) gateSrc.push(...layer);
+    const top = shard?.shardgates?.nodes; if(Array.isArray(top)) gateSrc.push(...top);
+    const map=new Map();
+    for(const g of gateSrc){ const x=(g.x??g[0])|0, y=(g.y??g[1])|0; const key=`${x},${y}`; if(map.has(key)) continue; const id=ensureGateId(g); map.set(key,{id,type:'shardgate',x,y,name:g.name||id,linked_gates:getGateLinks(g)}); }
+    shard.pois=[...others, ...map.values()];
+    if(shard?.layers?.shardgates) shard.layers.shardgates.nodes=[];
+    if(shard?.shardgates) shard.shardgates.nodes=[];
+  }
 
   // --- Settlement placement (draft) ---
   function rectWithin(x,y,w,h,maxW,maxH){ return x>=0&&y>=0&&(x+w)<=maxW&&(y+h)<=maxH; }
@@ -224,7 +271,9 @@ import { hasAt, removeAt } from './removeHelpers.js';
       }
       // gates
       octx.globalAlpha=Math.max(.9,alpha()); octx.fillStyle='#7b5cff'; octx.strokeStyle='#000'; octx.lineWidth=1;
-      for(const g1 of gates){ const x=(g1.x??g1[0])|0, y=(g1.y??g1[1])|0; const cx=(x+.5)*s, cy=(y+.5)*s, R=Math.max(3,Math.round(s*.36)); octx.beginPath(); octx.moveTo(cx,cy-R); octx.lineTo(cx+R,cy); octx.lineTo(cx,cy+R); octx.lineTo(cx-R,cy); octx.closePath(); octx.fill(); octx.stroke(); octx.beginPath(); octx.strokeStyle='rgba(255,255,255,.9)'; octx.arc(cx,cy,Math.max(2,Math.round(R*.55)),0,Math.PI*2); octx.stroke(); if(ST.linkSource===g1){ octx.beginPath(); octx.strokeStyle='#ffd60a'; octx.lineWidth=2; octx.arc(cx,cy,R+2,0,Math.PI*2); octx.stroke(); } const name=(g1.name||g1.id||'Gate'); drawLabel(cx, cy, name, true); }
+      const srcId = ST.linkSourceId;
+      const hovId = ST.hoverGateId;
+      for(const g1 of gates){ const x=(g1.x??g1[0])|0, y=(g1.y??g1[1])|0; const id=ensureGateId(g1); const cx=(x+.5)*s, cy=(y+.5)*s, R=Math.max(3,Math.round(s*.36)); octx.beginPath(); octx.moveTo(cx,cy-R); octx.lineTo(cx+R,cy); octx.lineTo(cx,cy+R); octx.lineTo(cx-R,cy); octx.closePath(); octx.fill(); octx.stroke(); octx.beginPath(); octx.strokeStyle='rgba(255,255,255,.9)'; octx.arc(cx,cy,Math.max(2,Math.round(R*.55)),0,Math.PI*2); octx.stroke(); if(srcId&&id===srcId){ octx.beginPath(); octx.strokeStyle='#ffd60a'; octx.lineWidth=2; octx.arc(cx,cy,R+2,0,Math.PI*2); octx.stroke(); } else if(hovId&&id===hovId){ octx.beginPath(); octx.strokeStyle='#ffe66d'; octx.lineWidth=2; octx.arc(cx,cy,R+2,0,Math.PI*2); octx.stroke(); } const name=(g1.name||g1.id||'Gate'); drawLabel(cx, cy, name, true); }
       octx.restore(); }
     // settlements + POIs
     if(els.layerSettlements?.checked){ drawSettlementsAndPOIs(); }
@@ -395,7 +444,7 @@ import { hasAt, removeAt } from './removeHelpers.js';
   async function loadShard(path,label){ try{ setDebug(`GET ${path}`); const shard=await getJSON(path); if(!shard) throw new Error('invalid JSON'); const lbl=label || shard?.meta?.displayName || path; setStatus(`Loaded: ${lbl}`); setDebug(`loaded ${path}`); ST.baseline=clone(shard); ensureTilesFromAny(ST.baseline); ST.previews=[]; ST.focus={x:-1,y:-1}; renderAll(shard); }catch(e){ setStatus(`Failed to load shard: ${e.message}`); setDebug(`error ${e.message} · ${path}`); trace('loadShard:error', e?.message||e); }}
   async function loadSelectedShard(){ const opt=els.select?.selectedOptions?.[0]; if(!opt){ trace('loadSelectedShard:no-selection'); return; } const path=opt.getAttribute('data-path')||`/static/public/shards/${opt.value}`; await loadShard(path,opt.textContent); }
 
-  function renderAll(shard){ if(!shard){ return; } trace('renderAll:start'); ST.shard=shard; ensureTilesFromAny(ST.shard); ST.grid=deriveGridFromTiles(ST.shard); const H=ST.grid.length, W=H?ST.grid[0].length:0; ensureSizes(W,H); centerInFrame(); drawBase(); drawOverlay(); trace('renderAll:complete', {W,H}); }
+  function renderAll(shard){ if(!shard){ return; } trace('renderAll:start'); ST.shard=shard; canonicalizeGates(ST.shard); ensureTilesFromAny(ST.shard); ST.grid=deriveGridFromTiles(ST.shard); const H=ST.grid.length, W=H?ST.grid[0].length:0; ensureSizes(W,H); centerInFrame(); drawBase(); drawOverlay(); trace('renderAll:complete', {W,H}); }
 
   // Event wiring
   els.loadBtn?.addEventListener('click', (e)=>{ e?.preventDefault?.(); loadSelectedShard(); });
@@ -424,16 +473,19 @@ import { hasAt, removeAt } from './removeHelpers.js';
     dragging=true; dragStartX=e.clientX; dragStartY=e.clientY; startPanX=ST.panX||0; startPanY=ST.panY||0; els.frame.style.cursor='grabbing';
   });
   window.addEventListener('mousemove', (e)=>{
+    if(ST.linkSource){ const {x,y}=tileAtClient(e); const t=findGateAt(x,y); const id=t?ensureGateId(t):null; if(id!==ST.hoverGateId){ ST.hoverGateId=id; scheduleDraw(); } return; }
     if (recting){ const {x,y}=tileAtClient(e); if(!ST.grid) return; ST.rectPreview={x0:rectStart.x,y0:rectStart.y,x1:x,y1:y}; scheduleDraw(); return; }
     if (brushing){ const {x,y}=tileAtClient(e); setTileBiome(x,y, ST.currentBiome||'plains'); return; }
     if(!dragging) return; const dx=e.clientX-dragStartX, dy=e.clientY-dragStartY; ST.panX=startPanX+dx; ST.panY=startPanY+dy; applyPan();
   });
   window.addEventListener('mouseup', (e)=>{
-    if(ST.linkSource){ const {x,y}=tileAtClient(e); const target=findGateAt(x,y); if(target && target!==ST.linkSource){ const idA=ensureGateId(ST.linkSource); const idB=ensureGateId(target); addGateLink(ST.linkSource,idB); addGateLink(target,idA); setAllowReturn(ST.linkSource,1); setAllowReturn(target,1); setStatus(`Linked ${idA} ↔ ${idB}`); markUnsaved(); scheduleDraw(); } else { setStatus('Linking cancelled'); } ST.linkSource=null; return; }
+    if(ST.linkSource){ let linked=false; if(e.button===0 && els.frame.contains(e.target)){ const {x,y}=tileAtClient(e); const target=findGateAt(x,y); if(target && ensureGateId(target)!==ST.linkSourceId){ const idA=ST.linkSourceId; const idB=ensureGateId(target); const src=findGateById(idA); addGateLink(src,idB); addGateLink(target,idA); setAllowReturn(src,1); setAllowReturn(target,1); setStatus(`Linked ${idA} ↔ ${idB}`); markUnsaved(); scheduleDraw(); linked=true; } }
+      if(!linked) setStatus('Linking cancelled'); ST.linkSource=null; ST.linkSourceId=null; ST.hoverGateId=null; hideLinkBanner(); return; }
     if (recting){ const {x,y}=tileAtClient(e); const x0=Math.min(rectStart.x,x), y0=Math.min(rectStart.y,y), x1=Math.max(rectStart.x,x), y1=Math.max(rectStart.y,y); for(let yy=y0; yy<=y1; yy++){ for(let xx=x0; xx<=x1; xx++){ setTileBiome(xx,yy, ST.currentBiome||'plains'); } } recting=false; ST.rectPreview=null; scheduleDraw(); return; }
     if (brushing){ brushing=false; return; }
     if(dragging){ const moved=Math.abs((e?.clientX||0)-dragStartX)+Math.abs((e?.clientY||0)-dragStartY); dragging=false; els.frame.style.cursor='default'; if (moved<4){ const {x,y}=tileAtClient(e); if(x>=0&&y>=0&&ST.grid&&y<ST.grid.length&&x<ST.grid[0].length){ ST.focus={x,y}; scheduleDraw(); updateTilePanel(x,y); } } }
   });
+  window.addEventListener('keydown',(e)=>{ if(e.key==='Escape' && ST.linkSource){ ST.linkSource=null; ST.linkSourceId=null; ST.hoverGateId=null; hideLinkBanner(); setStatus('Linking cancelled'); scheduleDraw(); } });
   $('btnZoomIn')?.addEventListener('click', (e)=>{ e?.preventDefault?.(); const rect=els.frame.getBoundingClientRect(); zoomAt(rect.width/2, rect.height/2, 1.2); });
   $('btnZoomOut')?.addEventListener('click', (e)=>{ e?.preventDefault?.(); const rect=els.frame.getBoundingClientRect(); zoomAt(rect.width/2, rect.height/2, 0.8); });
   $('btnFit')?.addEventListener('click', (e)=>{ e?.preventDefault?.(); centerInFrame(); });
@@ -531,9 +583,9 @@ import { hasAt, removeAt } from './removeHelpers.js';
         root.appendChild(rmh);
         if(flags.settlement){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove Settlements'; b.addEventListener('click',()=>{ const n=removeAt(ST,current.x,current.y,'settlement'); setStatus(n?`Removed ${n} settlement(s)`: 'No settlements here'); scheduleDraw(); markUnsaved(); close(); }); root.appendChild(b); list.push(b); }
         if(flags.poi){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove POIs'; b.addEventListener('click',()=>{ const n=removeAt(ST,current.x,current.y,'poi'); setStatus(n?`Removed ${n} POI(s)`: 'No POIs here'); scheduleDraw(); markUnsaved(); close(); }); root.appendChild(b); list.push(b); }
-        if(flags.shardgate){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove Shardgates'; b.addEventListener('click',()=>{ const n=removeAt(ST,current.x,current.y,'shardgate'); setStatus(n?`Removed ${n} shardgate(s)`: 'No shardgates here'); scheduleDraw(); markUnsaved(); close(); }); root.appendChild(b); list.push(b);
-          const bEdit=document.createElement('button'); bEdit.className='ctx-item'; bEdit.textContent='Edit Shardgate Links'; bEdit.addEventListener('click',()=>{ const g=findGateAt(current.x,current.y); if(!g){ setStatus('No shardgate here'); close(); return; } const existing=getGateLinks(g).join(', '); const input=prompt('Linked gate IDs (comma separated):', existing); if(input!==null){ const list=input.split(',').map(s=>s.trim()).filter(Boolean); setGateLinks(g,list); const allow=confirm('Allow return travel?'); setAllowReturn(g, allow?1:0); setStatus('Shardgate links updated'); markUnsaved(); scheduleDraw(); } close(); }); root.appendChild(bEdit); list.push(bEdit);
-          const b2=document.createElement('button'); b2.className='ctx-item'; b2.textContent=ST.linkSource?'Select Link Target':'Link Shardgate'; b2.addEventListener('click',()=>{ const g=findGateAt(current.x,current.y); if(ST.linkSource){ ST.linkSource=null; setStatus('Linking cancelled'); } else if(g){ ST.linkSource=g; setStatus('Select destination shardgate'); } else { setStatus('No shardgate here'); } close(); }); root.appendChild(b2); list.push(b2); }
+        if(flags.shardgate){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove Shardgates'; b.addEventListener('click',()=>{ const n=removeAt(ST,current.x,current.y,'shardgate'); pruneOrphanLinks(); setStatus(n?`Removed ${n} shardgate(s)`: 'No shardgates here'); scheduleDraw(); markUnsaved(); close(); }); root.appendChild(b); list.push(b);
+          const bEdit=document.createElement('button'); bEdit.className='ctx-item'; bEdit.textContent='Edit Shardgate Links'; bEdit.addEventListener('click',()=>{ const g=findGateAt(current.x,current.y); if(!g){ setStatus('No shardgate here'); close(); return; } openLinkEditor(g); close(); }); root.appendChild(bEdit); list.push(bEdit);
+          const b2=document.createElement('button'); b2.className='ctx-item'; b2.textContent=ST.linkSource?'Select Link Target':'Link Shardgate'; b2.addEventListener('click',()=>{ const g=findGateAt(current.x,current.y); if(ST.linkSource){ ST.linkSource=null; ST.linkSourceId=null; ST.hoverGateId=null; hideLinkBanner(); setStatus('Linking cancelled'); } else if(g){ ST.linkSource=g; ST.linkSourceId=ensureGateId(g); ST.hoverGateId=null; showLinkBanner(); setStatus('Select destination shardgate'); } else { setStatus('No shardgate here'); } close(); }); root.appendChild(b2); list.push(b2); }
         if(flags.biome){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove Biome (reset to baseline)'; b.addEventListener('click',()=>{ const n=resetBiomeAt(current.x,current.y); setStatus(n?'Biome reset to baseline':'Biome already baseline'); scheduleDraw(); markUnsaved(); close(); }); root.appendChild(b); list.push(b); }
         if(hasDraft){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove Draft Markers'; b.addEventListener('click',()=>{ const removed=removeDraftAt(current.x,current.y); setStatus(removed?'Draft markers removed':'No draft markers'); close(); }); root.appendChild(b); list.push(b); }
         root.appendChild(sep.cloneNode());
