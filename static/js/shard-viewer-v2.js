@@ -286,9 +286,10 @@ import { hasAt, removeAt } from './removeHelpers.js';
       for(const g1 of gates){ const x=(g1.x??g1[0])|0, y=(g1.y??g1[1])|0; const id=ensureGateId(g1); const cx=(x+.5)*s, cy=(y+.5)*s, R=Math.max(3,Math.round(s*.36)); octx.beginPath(); octx.moveTo(cx,cy-R); octx.lineTo(cx+R,cy); octx.lineTo(cx,cy+R); octx.lineTo(cx-R,cy); octx.closePath(); octx.fill(); octx.stroke(); octx.beginPath(); octx.strokeStyle='rgba(255,255,255,.9)'; octx.arc(cx,cy,Math.max(2,Math.round(R*.55)),0,Math.PI*2); octx.stroke(); if(srcId&&id===srcId){ octx.beginPath(); octx.strokeStyle='#ffd60a'; octx.lineWidth=2; octx.arc(cx,cy,R+2,0,Math.PI*2); octx.stroke(); } else if(hovId&&id===hovId){ octx.beginPath(); octx.strokeStyle='#ffe66d'; octx.lineWidth=2; octx.arc(cx,cy,R+2,0,Math.PI*2); octx.stroke(); } const name=(g1.name||g1.id||'Gate'); drawLabel(cx, cy, name, true); }
       octx.restore(); }
     // settlements + POIs
-    if(els.layerSettlements?.checked){ drawSettlementsAndPOIs(); }
-    // Draft settlements overlay (always visible)
-    drawDraftSettlements(s);
+    // Non-settlement POIs (gates handled elsewhere)
+    if(els.layerSettlements?.checked){ drawPOIs(); }
+    // Settlements (live + draft)
+    drawSettlements(s);
     // focus border
     if (ST.focus && ST.focus.x>=0 && ST.focus.y>=0){ const fx=ST.focus.x, fy=ST.focus.y; const fpx=fx*s, fpy=fy*s; octx.save(); octx.globalAlpha=1; octx.strokeStyle='rgba(255,214,10,0.95)'; octx.fillStyle='rgba(255,214,10,0.12)'; octx.lineWidth=2; octx.fillRect(fpx,fpy,s,s); octx.strokeRect(fpx+0.5,fpy+0.5,s-1,s-1); octx.restore(); }
     // rect preview
@@ -412,7 +413,7 @@ function drawPreviews(){
   function labelText(text){ return String(text||'').trim(); }
   function drawLabel(cx, cy, text, above=true){ const s=scale(); if(s<12) return; const t=labelText(text); if(!t) return; const y=cy+(above? -Math.max(8,Math.round(s*0.4)) : (Math.max(8,Math.round(s*0.4)))); octx.save(); octx.font=`${Math.max(10,Math.round(s*.5))}px system-ui, ui-sans-serif`; octx.textAlign='center'; octx.textBaseline='bottom'; octx.lineWidth=3; octx.strokeStyle='rgba(0,0,0,.65)'; octx.strokeText(t,cx,y); octx.fillStyle='#fff'; octx.fillText(t,cx,y); octx.restore(); }
 
-  function drawSettlementsAndPOIs(){
+  function drawPOIs(){
     const s=scale();
     const setts = [];
     const L = ST.shard?.layers?.settlements || {};
@@ -454,12 +455,48 @@ function drawPreviews(){
     // Draft POIs overlay (purple outline)
     const dpois = Array.isArray(ST.draft?.pois) ? ST.draft.pois : [];
     if (dpois.length){ const t=scale(); octx.save(); for(const p of dpois){ const cx=(p.x+.5)*t, cy=(p.y+.5)*t; const R=Math.max(3,Math.round(t*.26)); octx.globalAlpha=1; octx.lineWidth=2; octx.strokeStyle='#a855f7'; octx.beginPath(); octx.arc(cx,cy,Math.max(2,Math.round(R*.8)),0,Math.PI*2); octx.stroke(); const label=(p.type||'poi').replace('_',' '); drawLabel(cx, cy, `draft ${label}`, false); } octx.restore(); }
-    // persisted rectangles (top-level settlements)
-    const pers = Array.isArray(ST.shard?.settlements) ? ST.shard.settlements : [];
-    if (pers.length){ const t=scale(); octx.save(); for(const s1 of pers){ const b=s1.bounds||{}; const sx=b.x*t, sy=b.y*t, sw=b.w*t, sh=b.h*t; octx.globalAlpha=0.18; octx.fillStyle='#22c55e'; octx.fillRect(sx,sy,sw,sh); octx.globalAlpha=1; octx.strokeStyle='#16a34a'; octx.lineWidth=2; octx.strokeRect(sx+0.5,sy+0.5,sw-1,sh-1); const label=((s1.tier||'').toString())+(s1.name?` ${s1.name}`:''); drawLabel(sx+sw/2, sy, label, true);} octx.restore(); }
   }
 
-  function drawDraftSettlements(tileSize){ const list = Array.isArray(ST.draft?.settlements)? ST.draft.settlements : []; if(!list.length) return; octx.save(); for(const s1 of list){ const b=s1.bounds||{}; const sx=b.x*tileSize, sy=b.y*tileSize, sw=b.w*tileSize, sh=b.h*tileSize; octx.globalAlpha=0.22; octx.fillStyle='#fbbf24'; octx.fillRect(sx,sy,sw,sh); octx.globalAlpha=1; octx.strokeStyle='#f59e0b'; octx.lineWidth=2; octx.strokeRect(sx+0.5,sy+0.5,sw-1,sh-1); } octx.restore(); }
+  function drawSettlements(tileSize){
+    const live = Array.isArray(ST.shard?.settlements) ? ST.shard.settlements : [];
+    const draft = Array.isArray(ST.draft?.settlements) ? ST.draft.settlements : [];
+    const all = live.map(s=>({s,isDraft:false})).concat(draft.map(s=>({s,isDraft:true})));
+    if(!all.length) return;
+    octx.save();
+    const fill='rgba(181, 136, 99, 0.35)';
+    for(const {s,isDraft} of all){
+      const b = s.bounds || { x: s.anchor?.x||0, y: s.anchor?.y||0, w: s.footprint?.w||1, h: s.footprint?.h||1 };
+      const sx=b.x*tileSize, sy=b.y*tileSize, sw=b.w*tileSize, sh=b.h*tileSize;
+      octx.globalAlpha=1;
+      octx.fillStyle=fill;
+      octx.fillRect(sx,sy,sw,sh);
+      octx.strokeStyle='#3b82f6';
+      octx.lineWidth=2;
+      octx.setLineDash(isDraft?[4,4]:[]);
+      octx.strokeRect(sx+0.5,sy+0.5,sw-1,sh-1);
+      const tier = Number(s.tier)||1;
+      if(tier===1 || tier===2){
+        const cx=(b.x+0.5)*tileSize, cy=(b.y+0.5)*tileSize;
+        const r=Math.max(2,Math.round(tileSize*0.2));
+        if(tier===1){
+          octx.fillStyle='#dc2626';
+          octx.beginPath();
+          octx.arc(cx,cy,r,0,Math.PI*2);
+          octx.fill();
+        } else {
+          octx.fillStyle='#f59e0b';
+          octx.beginPath();
+          octx.moveTo(cx,cy-r);
+          octx.lineTo(cx+r,cy);
+          octx.lineTo(cx,cy+r);
+          octx.lineTo(cx-r,cy);
+          octx.closePath();
+          octx.fill();
+        }
+      }
+    }
+    octx.restore();
+  }
 
   // --- Tile Info Panel ---
   function rawTileAt(x,y){
