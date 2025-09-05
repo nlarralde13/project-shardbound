@@ -4,6 +4,22 @@
 export const CANONICAL_VERSION = '1.0.0';
 export const POI_TYPES = ['shardgate','site','dungeon','town','resource','spawn','note'];
 
+// Robust UUID generator for browsers without crypto.randomUUID
+export function safeUUID(){
+  try { if (globalThis?.crypto?.randomUUID) return globalThis.crypto.randomUUID(); } catch {}
+  try {
+    const g = globalThis?.crypto?.getRandomValues?.(new Uint8Array(16));
+    if (g) {
+      g[6] = (g[6] & 0x0f) | 0x40; // version 4
+      g[8] = (g[8] & 0x3f) | 0x80; // variant 10
+      const h = Array.from(g, b => b.toString(16).padStart(2,'0')).join('');
+      return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;
+    }
+  } catch {}
+  const rnd = () => Math.floor(Math.random()*16).toString(16);
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => c==='x' ? rnd() : ((parseInt(rnd(),16)&0x3)|0x8).toString(16));
+}
+
 /** Return a color for a biome key. */
 export function biomeColor(b) {
   const map = {
@@ -45,6 +61,17 @@ export function validateShard(json) {
 /** Migrate older shard shapes to canonical. */
 export function migrateToCanonicalShard(src) {
   if (!src) return null;
+  const looks2D = (a) => Array.isArray(a) && a.length && Array.isArray(a[0]);
+  const normCell = (cell, x, y) => {
+    if (typeof cell === 'string') return normalizeTile({ biome: cell }, x, y);
+    if (cell && typeof cell === 'object') {
+      // Support legacy { tile: 'plains' } shape as alias
+      const b = (typeof cell.biome === 'string') ? cell.biome : (typeof cell.tile === 'string' ? cell.tile : undefined);
+      return normalizeTile(b ? { ...cell, biome: b } : cell, x, y);
+    }
+    return normalizeTile({}, x, y);
+  };
+  // Prefer explicit 2D arrays: tiles, else grid
   // If tiles are in flat list, convert to 2D
   let tiles2d = src.tiles;
   if (Array.isArray(src.tiles) && src.tiles.length && !Array.isArray(src.tiles[0])) {
@@ -55,13 +82,23 @@ export function migrateToCanonicalShard(src) {
     }));
   }
   else if (Array.isArray(src.tiles)) {
-    tiles2d = src.tiles.map((row,y) => row.map((t,x) => normalizeTile(t,x,y)));
+    if (looks2D(src.tiles)) tiles2d = src.tiles.map((row,y) => row.map((t,x) => normCell(t,x,y)));
+    else tiles2d = src.tiles; // handled above or below
+  }
+  // If no tiles but grid exists as 2D string/object matrix, use that
+  if ((!tiles2d || !Array.isArray(tiles2d)) && looks2D(src.grid)) {
+    const W = src.grid[0].length; const H = src.grid.length;
+    tiles2d = Array.from({length:H}, (_,y)=> Array.from({length:W}, (_,x)=> normCell(src.grid[y][x], x, y)));
   }
   // Build tiles grid if missing or malformed
   const W = (src.size?.width|0) || (tiles2d?.[0]?.length || 0);
   const H = (src.size?.height|0) || (tiles2d?.length || 0);
   if (!tiles2d || !Array.isArray(tiles2d) || tiles2d.length !== H || (tiles2d[0] && tiles2d[0].length !== W)) {
-    tiles2d = Array.from({ length: H }, (_, y) => Array.from({ length: W }, (_, x) => normalizeTile(src.tiles?.find?.(tt=>tt.x===x&&tt.y===y) || {}, x, y)));
+    tiles2d = Array.from({ length: H }, (_, y) => Array.from({ length: W }, (_, x) => {
+      const t = src.tiles?.find?.(tt=>tt.x===x&&tt.y===y) || {};
+      const b = (typeof t?.biome==='string') ? t.biome : (typeof t?.tile==='string' ? t.tile : undefined);
+      return normalizeTile(b? { ...t, biome:b } : t, x, y);
+    }));
   }
   // Merge POIs with shardgate nodes from layers/top-level
   const fromPOIs = Array.isArray(src.pois) ? src.pois.slice() : [];
@@ -88,9 +125,13 @@ export function migrateToCanonicalShard(src) {
 }
 
 function normalizeTile(t, x, y){
+  // Map legacy aliases and synonyms
+  const biome = (typeof t?.biome === 'string') ? t.biome
+              : (typeof t?.tile === 'string') ? t.tile
+              : 'bedrock';
   return {
     x, y,
-    biome: t?.biome || 'bedrock',
+    biome,
     elevation: Number.isFinite(t?.elevation) ? t.elevation : 0,
     tags: Array.isArray(t?.tags) ? t.tags : [],
     resources: Array.isArray(t?.resources) ? t.resources : [],
@@ -99,7 +140,7 @@ function normalizeTile(t, x, y){
 }
 function normalizePOI(p){
   return {
-    id: p?.id || crypto.randomUUID(),
+    id: p?.id || safeUUID(),
     type: POI_TYPES.includes(p?.type) ? p.type : 'note',
     x: p?.x|0, y: p?.y|0,
     name: p?.name || '', icon: p?.icon || p?.type || 'note', description: p?.description || '',

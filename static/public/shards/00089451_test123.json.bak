@@ -3697,16 +3697,6 @@
       "icon": "shardgate",
       "description": "",
       "meta": {}
-    },
-    {
-      "id": "poi_dungeon_entrance_1757042094555_60126",
-      "type": "note",
-      "x": 8,
-      "y": 3,
-      "name": "New Dungeon Entrance",
-      "icon": "dungeon_entrance",
-      "description": "",
-      "meta": {}
     }
   ],
   "meta": {

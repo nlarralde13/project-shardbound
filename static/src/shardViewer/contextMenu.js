@@ -2,8 +2,12 @@
  * Lightweight context menu with keyboard navigation and a Place submenu.
  * Exposes open/close and onSelect callback.
  *
+ * Also supports nested Settlement tiers (Camp/Hamlet/Village/City/Kingdom)
+ * and drafts a placement immediately (no disk writes).
+ *
  * @param {{ onSelect?: (selection: { type: string, tile: {x:number,y:number}, defaults:any }) => void }} opts
  */
+import { SETTLEMENT_TIERS, canPlaceSettlement, draftPlaceSettlement } from './world/settlementManager.js';
 export function createContextMenu(opts = {}) {
   const onSelect = opts.onSelect;
   const root = document.createElement('div');
@@ -11,10 +15,11 @@ export function createContextMenu(opts = {}) {
   root.style.display = 'none';
   document.body.appendChild(root);
 
-  let active = false; let submenu = null; let items = []; let focusIdx = 0; let currentTile = { x:0, y:0 };
+  let active = false; let submenu = null; let submenu2 = null; let items = []; let focusIdx = 0; let currentTile = { x:0, y:0 };
 
   function close(){ active=false; root.style.display='none'; root.innerHTML=''; removeSubmenu(); }
-  function removeSubmenu(){ submenu?.remove?.(); submenu=null; }
+  function removeSubmenu(){ submenu?.remove?.(); submenu=null; removeSubmenu2(); }
+  function removeSubmenu2(){ submenu2?.remove?.(); submenu2=null; }
   function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
   function focusItem(i){ focusIdx = clamp(i, 0, items.length-1); items[focusIdx]?.focus?.(); }
 
@@ -31,14 +36,20 @@ export function createContextMenu(opts = {}) {
       submenu = document.createElement('div'); submenu.className='ctx-submenu'; document.body.appendChild(submenu);
       const entries = [
         { label:'Shardgate', type:'shardgate' },
-        { label:'Settlement', type:'settlement' },
+        { label:'Settlement ▶', type:'settlement' },
         { label:'Dungeon Entrance', type:'dungeon_entrance' },
         { label:'Biome', type:'biome' },
         { label:'Infrastructure', type:'infrastructure' },
       ];
       for (const e of entries){
         const b = document.createElement('button'); b.className='ctx-item'; b.textContent=e.label; b.tabIndex=0;
-        b.addEventListener('click', () => { emit(e.type); });
+        if (e.type === 'settlement') {
+          const openTier = () => openSettlementSub(b);
+          b.addEventListener('mouseenter', openTier);
+          b.addEventListener('click', openTier);
+        } else {
+          b.addEventListener('click', () => { emit(e.type); });
+        }
         submenu.appendChild(b);
       }
       const rb = root.getBoundingClientRect();
@@ -48,6 +59,31 @@ export function createContextMenu(opts = {}) {
       submenu.style.left = left + 'px'; submenu.style.top = top + 'px';
     };
     const closeSub = () => removeSubmenu();
+
+    function openSettlementSub(anchorBtn){
+      removeSubmenu2();
+      submenu2 = document.createElement('div'); submenu2.className='ctx-submenu'; document.body.appendChild(submenu2);
+      const tiers = Object.values(SETTLEMENT_TIERS);
+      for (const t of tiers){
+        const bb = document.createElement('button'); bb.className='ctx-item'; bb.textContent=t.label; bb.tabIndex=0;
+        bb.addEventListener('click', () => {
+          try {
+            const shard = window.__SV_SHARD__ || null;
+            const check = canPlaceSettlement({ shard, startX: currentTile.x, startY: currentTile.y, tierKey: t.key });
+            if (!check.ok) { alert(`Cannot place ${t.label}: ${check.reason}`); return; }
+            draftPlaceSettlement({ shard, startX: currentTile.x, startY: currentTile.y, tierKey: t.key });
+            document.dispatchEvent(new CustomEvent('editor:redraw', { detail:{ reason:'draft-settlement' } }));
+          } catch (e) { console.error('settlement placement error', e); }
+          close();
+        });
+        submenu2.appendChild(bb);
+      }
+      const rb = submenu.getBoundingClientRect();
+      const sbw = 220; const sbh = tiers.length*30 + 12;
+      const left = (rb.right + sbw < window.innerWidth) ? rb.right : Math.max(0, rb.left - sbw);
+      const top = (rb.top + sbh < window.innerHeight) ? rb.top : Math.max(0, window.innerHeight - sbh);
+      submenu2.style.left = left + 'px'; submenu2.style.top = top + 'px';
+    }
 
     mPlace.addEventListener('mouseenter', openSub);
     mPlace.addEventListener('click', openSub);

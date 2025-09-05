@@ -2,7 +2,7 @@
   /* Blue retro theme */
   --bg:#0d1220; --panel:#111829; --line:#1c2640; --text:#e7eefc; --muted:#9ab0d8;
   --accent:#65d2ff; --chip:#0e1530; --radius:12px;
-  --zoom-size:30px; --map-height:680px; --left-col: 500px;
+  --zoom-size:30px; --map-height:680px; --left-col: 500px; --right-col: 420px;
 }
 *{box-sizing:border-box} html,body{height:100%}
 body{
@@ -22,7 +22,7 @@ header{
 header h1{ margin:0; font-size:16px; font-weight:700; color:#aee6ff; letter-spacing:.02em }
 
 /* Split grid: left | gutter | right */
-.wrap{ display:grid; grid-template-columns: var(--left-col) 8px 1fr; gap:16px; padding:16px; }
+.wrap{ display:grid; grid-template-columns: var(--left-col) 8px 1fr var(--right-col); gap:16px; padding:16px; }
 
 /* Cards */
 .card{ background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; }
@@ -80,6 +80,9 @@ select, input, button{
 input[type="range"]{ height:32px; padding:0 }
 button{ cursor:pointer; background:var(--accent); color:#02283a; border-color:#2aa9db; font-weight:700; }
 .secondary{ background:#0b1228; color:var(--text); border-color:#2a3a62 }
+.btn-warning{ background:#fbbf24; color:#1f2937; border-color:#b45309 }
+.btn-success{ background:#22c55e; color:#052e1a; border-color:#15803d }
+.is-dim{ filter: saturate(0.3) brightness(0.9); opacity: 0.7 }
 .muted{ color:var(--muted) }
 .row{ display:grid; grid-template-columns:130px 1fr; gap:8px; align-items:center }
 .row.auto{ grid-template-columns:1fr }
@@ -99,4 +102,8 @@ button{ cursor:pointer; background:var(--accent); color:#02283a; border-color:#2
 @media (max-width:1024px){
   .wrap{ grid-template-columns: 1fr; }
   .gutter{ display:none; }
+  .pane-right{ order:3; }
+/* Far-right tile info panel */
+.pane-right{ min-width:320px; }
+.pane-right textarea{ resize: vertical; }
 }

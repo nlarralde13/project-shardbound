@@ -1,0 +1,67 @@
+{
+  "$id": "https://example.com/world.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Shard",
+  "type": "object",
+  "required": ["shard_id", "size", "tiles"],
+  "properties": {
+    "shard_id": { "type": "string" },
+    "meta": { "type": "object", "additionalProperties": true },
+    "size": {
+      "type": "object",
+      "required": ["width", "height"],
+      "properties": { "width": { "type": "integer", "minimum": 1 }, "height": { "type": "integer", "minimum": 1 } },
+      "additionalProperties": false
+    },
+    "tiles": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "array",
+        "minItems": 1,
+        "items": { "$ref": "#/$defs/Tile" }
+      }
+    },
+    "settlements": { "type": "array", "items": { "$ref": "#/$defs/Settlement" }, "default": [] }
+  },
+  "$defs": {
+    "Tile": {
+      "type": "object",
+      "required": ["x", "y", "biome"],
+      "properties": {
+        "x": { "type": "integer", "minimum": 0 },
+        "y": { "type": "integer", "minimum": 0 },
+        "biome": { "type": "string" },
+        "elevation": { "type": "number" },
+        "resources": { "type": "array", "items": { "$ref": "#/$defs/ResourceNode" }, "default": [] },
+        "tags": { "type": "array", "items": { "type": "string" }, "default": [] },
+        "settlementId": { "type": "string" },
+        "poi": { "type": "array", "items": { "$ref": "#/$defs/POI" }, "default": [] },
+        "actions": { "type": "array", "items": { "type": "string" }, "default": [] }
+      },
+      "additionalProperties": false
+    },
+    "Settlement": {
+      "type": "object",
+      "required": ["id", "tier", "bounds"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "tier": { "type": "string", "enum": ["CAMP","HAMLET","VILLAGE","CITY","KINGDOM"] },
+        "bounds": { "$ref": "#/$defs/Rect" },
+        "services": { "type": "array", "items": { "type": "string" }, "default": [] },
+        "shops": { "type": "array", "items": { "type": "string" }, "default": [] },
+        "walls": { "oneOf": [ { "type": "boolean" }, { "type": "string", "enum": ["palisade","stone","fortified"] } ] },
+        "npcs_est": { "type": "object", "properties": { "min": { "type": "integer", "minimum": 0 }, "max": { "type": "integer", "minimum": 0 } }, "required": ["min","max"] },
+        "interiors": { "type": "array", "items": { "$ref": "#/$defs/InteriorRef" }, "default": [] },
+        "meta": { "type": "object", "additionalProperties": true }
+      },
+      "additionalProperties": false
+    },
+    "Rect": { "type": "object", "required": ["x","y","w","h"], "properties": { "x": { "type": "integer" }, "y": { "type": "integer" }, "w": { "type": "integer", "minimum": 1 }, "h": { "type": "integer", "minimum": 1 } }, "additionalProperties": false },
+    "ResourceNode": { "type": "object", "required": ["type"], "properties": { "type": { "type": "string" }, "rarity": { "type": "string" }, "yield": { "type": "integer" }, "respawn": { "type": "string" } }, "additionalProperties": true },
+    "POI": { "type": "object", "required": ["kind"], "properties": { "kind": { "type": "string" }, "name": { "type": "string" }, "meta": { "type": "object", "additionalProperties": true } }, "additionalProperties": false },
+    "InteriorRef": { "type": "object", "required": ["id","kind"], "properties": { "id": { "type": "string" }, "kind": { "type": "string" }, "entry": { "type": "object", "properties": { "x": { "type":"integer" }, "y": { "type":"integer" } }, "additionalProperties": false } }, "additionalProperties": false }
+  }
+}
+

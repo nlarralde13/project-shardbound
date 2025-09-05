@@ -52,8 +52,9 @@
         </div>
         <div class="row">
           <label></label>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button id="btnSaveDraft">Save Draft</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <button id="btnSaveDraft" class="btn-warning" title="Apply draft, validate, and save local snapshot">Save Draft</button>
+            <button id="btnPushLive" class="btn-success is-dim" title="Persist current shard to disk via API" disabled>Push Live</button>
             <button id="btnUndoToSave" class="secondary" title="Revert to the last load/save baseline">Undo to Save</button>
           </div>
         </div>
@@ -137,7 +138,33 @@
       <section>
         <div class="legend" id="legend2"></div>
       </section>
+      <section>
+        <h3>Activity Log</h3>
+        <pre id="actionLog" class="muted small" style="max-height:220px; overflow:auto; background:#0b1228; color:#dbeafe; border:1px solid #2a3a62; border-radius:8px; padding:8px; white-space:pre-wrap"></pre>
+        <div style="display:flex; gap:8px; margin-top:6px">
+          <button id="btnClearLog" class="secondary">Clear Log</button>
+        </div>
+      </section>
     </section>
+
+    <!-- FAR RIGHT: Tile Info Panel -->
+    <aside class="card pane-right" id="tileInfoPanel">
+      <h2>Tile Info</h2>
+      <section>
+        <div class="row"><label>Coords</label><input id="tileCoord" type="text" readonly value="-,-" /></div>
+        <div class="row auto">
+          <label class="muted">Raw Tile JSON</label>
+          <textarea id="tileJson" style="width:100%; min-height:260px; font:12px ui-monospace,Menlo,Consolas; background:#0b1228; color:#dbeafe; border:1px solid #2a3a62; border-radius:8px; padding:8px;" placeholder="Click a tile to view/edit raw JSON" ></textarea>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center">
+          <button id="btnTileApply" class="secondary" title="Apply edits to the in‑memory draft">Apply</button>
+          <button id="btnTileValidate">Validate</button>
+          <button id="btnTilePush" class="primary" disabled>Push Live</button>
+        </div>
+        <pre id="tileContext" class="muted small" style="max-height:160px; overflow:auto; border:1px dashed #2a3a62; padding:8px; border-radius:8px; background:#081021"></pre>
+        <pre id="tileValidateOut" class="muted small" style="white-space:pre-wrap"></pre>
+      </section>
+    </aside>
   </main>
 
   <!-- Minimal bootstrap (seed toggle + quick plan preview) -->

@@ -2,6 +2,7 @@
  * Overlays: grid, region borders, selection box and UI layer drawings.
  */
 import { drawIcon } from './icons.js';
+import { getDraft } from './state/draftBuffer.js';
 
 export function createOverlay({ overlayCanvas, uiCanvas, getState }) {
   const octx = overlayCanvas.getContext('2d');
@@ -15,6 +16,8 @@ export function createOverlay({ overlayCanvas, uiCanvas, getState }) {
     if (show.grid) drawGrid(octx, cam);
     if (show.regions) drawRegions(octx, cam, shard);
     if (show.poi) drawPOIIcons(octx, cam, shard);
+    // Draft settlements (dev preview)
+    drawDraftSettlements(octx, cam);
     // ui
     uctx.clearRect(0, 0, uiCanvas.width, uiCanvas.height);
     drawSelection(uctx, cam, tools.selection);
@@ -111,6 +114,28 @@ export function createOverlay({ overlayCanvas, uiCanvas, getState }) {
         ctx.restore();
       }
     }
+  }
+
+  function drawDraftSettlements(ctx, cam){
+    const draft = getDraft();
+    const list = Object.values(draft?.settlements || {});
+    if (!list.length) return;
+    const t = cam.tileSize();
+    ctx.save();
+    for (const s of list){
+      const { x, y, w, h } = s.bounds || {};
+      if (typeof x !== 'number') continue;
+      const sx = x * t + cam.offsetX, sy = y * t + cam.offsetY; const sw = w * t, sh = h * t;
+      ctx.globalAlpha = 0.22; ctx.fillStyle = '#fbbf24'; ctx.fillRect(sx, sy, sw, sh);
+      ctx.globalAlpha = 1; ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 2; ctx.strokeRect(sx+0.5, sy+0.5, sw-1, sh-1);
+      if (t >= 14) {
+        ctx.font = `${Math.max(10, Math.floor(t*0.45))}px system-ui`;
+        ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        const label = `${s.tier || ''} ${s.name || ''}`.trim();
+        ctx.fillStyle = '#111'; ctx.fillText(label, sx + 4, sy + 4);
+      }
+    }
+    ctx.restore();
   }
 
   return { draw };

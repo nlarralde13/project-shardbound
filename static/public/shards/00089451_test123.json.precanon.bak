@@ -1,5 +1,5 @@
 {
-  "shard_id": "shard_jjutei11iv",
+  "shard_id": "shard_xbu7gfx2s98",
   "version": "1.0.0",
   "size": {
     "width": 16,
@@ -574,7 +574,7 @@
       {
         "x": 8,
         "y": 2,
-        "biome": "plains",
+        "biome": "ocean",
         "elevation": 0,
         "tags": [],
         "resources": [],
@@ -588,7 +588,7 @@
       {
         "x": 9,
         "y": 2,
-        "biome": "plains",
+        "biome": "ocean",
         "elevation": 0,
         "tags": [],
         "resources": [],
@@ -800,7 +800,7 @@
       {
         "x": 8,
         "y": 3,
-        "biome": "plains",
+        "biome": "ocean",
         "elevation": 0,
         "tags": [],
         "resources": [],
@@ -814,7 +814,7 @@
       {
         "x": 9,
         "y": 3,
-        "biome": "plains",
+        "biome": "ocean",
         "elevation": 0,
         "tags": [],
         "resources": [],
@@ -3625,7 +3625,7 @@
   ],
   "pois": [
     {
-      "id": "e9771c26-ed3d-4859-a828-c58f596ad0bd",
+      "id": "01b85b68-1571-4970-b323-8d15f2bcd983",
       "type": "note",
       "x": 15,
       "y": 10,
@@ -3635,7 +3635,7 @@
       "meta": {}
     },
     {
-      "id": "e4aaf6d7-da00-4b05-9641-77319c78e4ba",
+      "id": "9f2d9c39-e9c9-4876-b6fc-13cd7f0a96a7",
       "type": "town",
       "x": 11,
       "y": 11,
@@ -3645,7 +3645,7 @@
       "meta": {}
     },
     {
-      "id": "4e035f2a-ab72-4dca-814b-e7075d23ab63",
+      "id": "25e7b608-cd25-4b7b-920b-e13eac680ac8",
       "type": "note",
       "x": 12,
       "y": 15,
@@ -3655,7 +3655,7 @@
       "meta": {}
     },
     {
-      "id": "a8f084a0-637c-4271-a825-767557a85c7c",
+      "id": "2abf784f-3462-42d1-8ffd-a00bfa0f3e7b",
       "type": "note",
       "x": 14,
       "y": 9,
@@ -3687,26 +3687,6 @@
       "meta": {
         "link": "gate_a"
       }
-    },
-    {
-      "id": "poi_shardgate_1757042008892_22435",
-      "type": "shardgate",
-      "x": 9,
-      "y": 3,
-      "name": "New Shardgate",
-      "icon": "shardgate",
-      "description": "",
-      "meta": {}
-    },
-    {
-      "id": "poi_dungeon_entrance_1757042094555_60126",
-      "type": "note",
-      "x": 8,
-      "y": 3,
-      "name": "New Dungeon Entrance",
-      "icon": "dungeon_entrance",
-      "description": "",
-      "meta": {}
     }
   ],
   "meta": {

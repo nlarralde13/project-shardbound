@@ -165,6 +165,13 @@ def create_app():
     except Exception as e:
         app.logger.warning("shardEngine endpoints not registered: %s", e)
 
+    # Simple filesystem-backed shard CRUD for editor (/api/shards)
+    try:
+        from .api_shards import bp as shards_fs_bp
+        app.register_blueprint(shards_fs_bp)
+    except Exception as e:
+        app.logger.warning("/api/shards not registered: %s", e)
+
     # UI routes (unchanged)
     @app.route("/")
     def index():

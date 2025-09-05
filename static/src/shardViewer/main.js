@@ -214,8 +214,7 @@ function loadShard(json) {
   // center camera
   cam.setWorldSize(migrated.size.width, migrated.size.height);
   cam.centerOn(Math.floor(migrated.size.width / 2), Math.floor(migrated.size.height / 2));
-  inspector.showWelcome();
-  scheduleDraw();
+  inspector.showWelcome();\n  try { window.__SV_SHARD__ = state.shard; } catch {}\n  scheduleDraw();
 }
 
 async function saveShard() {
@@ -252,8 +251,7 @@ function revertAll() {
   state.shard = structuredClone(state.baseline);
   undo.clear();
   state.shardDirty = false;
-  inspector.showWelcome();
-  scheduleDraw();
+  inspector.showWelcome();\n  try { window.__SV_SHARD__ = state.shard; } catch {}\n  scheduleDraw();
   toast('Reverted to last load/save');
 }
 
@@ -460,3 +458,7 @@ function logTile(x, y, tile) {
 if (state.devMode && !state.shard) {
   fetch('/static/src/shardViewer/dev/mockShard.json').then(r => r.json()).then(loadShard).catch(()=>{});
 }
+
+
+// Allow external modules (e.g., context menu tier placement) to request redraw
+document.addEventListener('editor:redraw', () => scheduleDraw());
