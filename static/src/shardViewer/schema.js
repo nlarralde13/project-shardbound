@@ -3,6 +3,24 @@
  */
 export const CANONICAL_VERSION = '1.0.0';
 export const POI_TYPES = ['shardgate','site','dungeon','town','resource','spawn','note'];
+export const SETTLEMENT_SCHEMA_VERSION = 1;
+
+const TIER_FOOTPRINT = {1:{w:1,h:1},2:{w:1,h:1},3:{w:2,h:2},4:{w:2,h:2},5:{w:4,h:4}};
+const DEFAULT_SETTLEMENT = {
+  id: null,
+  name: null,
+  tier: 1,
+  anchor: {x:0,y:0},
+  footprint: {w:1,h:1},
+  faction_id: null,
+  population: null,
+  links: { roads: [], shardgates: [] },
+  discovered: false,
+  template_slug: null,
+  variant: null,
+  meta: {},
+  style: {},
+};
 
 // Robust UUID generator for browsers without crypto.randomUUID
 export function safeUUID(){
@@ -119,7 +137,9 @@ export function migrateToCanonicalShard(src) {
     size: { width: W, height: H },
     tiles: tiles2d || [],
     pois: Array.isArray(fromPOIs) ? fromPOIs.map(n => normalizePOI(n)) : [],
+    settlements: Array.isArray(src.settlements) ? src.settlements.map(s => normalizeSettlement(s)) : [],
     meta: src.meta || { created_at: new Date().toISOString(), updated_at: new Date().toISOString(), author: 'unknown' },
+    settlements_schema_version: SETTLEMENT_SCHEMA_VERSION,
   };
   return canonical;
 }
@@ -145,5 +165,27 @@ function normalizePOI(p){
     x: p?.x|0, y: p?.y|0,
     name: p?.name || '', icon: p?.icon || p?.type || 'note', description: p?.description || '',
     meta: p?.meta || {},
+  };
+}
+function normalizeSettlement(s){
+  const tier = Number.isInteger(s?.tier) ? s.tier : 1;
+  const anchor = { x: s?.anchor?.x|0, y: s?.anchor?.y|0 };
+  const exp = TIER_FOOTPRINT[tier] || {w:1,h:1};
+  const footprint = { w: s?.footprint?.w||exp.w, h: s?.footprint?.h||exp.h };
+  if (footprint.w !== exp.w || footprint.h !== exp.h) { footprint.w = exp.w; footprint.h = exp.h; }
+  return {
+    ...DEFAULT_SETTLEMENT,
+    ...s,
+    id: s?.id || `sett_${anchor.x}_${anchor.y}`,
+    tier,
+    anchor,
+    footprint,
+    links: {
+      roads: Array.from(new Set(s?.links?.roads || [])),
+      shardgates: Array.from(new Set(s?.links?.shardgates || [])),
+    },
+    discovered: !!s?.discovered,
+    meta: s?.meta ? { ...s.meta } : {},
+    style: s?.style ? { ...s.style } : {},
   };
 }
