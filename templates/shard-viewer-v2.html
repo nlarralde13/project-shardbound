@@ -22,8 +22,6 @@
     .muted.small { font-size: 12px; opacity: .8; }
     .kbd { font: 600 11px/1 ui-monospace,Menlo,Consolas; background:#222; color:#fff; padding:2px 6px; border-radius:6px; }
     .overlay-chip { font:600 10px/1 ui-sans-serif; padding:.2rem .35rem; border-radius:999px; background:#eee; color:#333; }
-    .legend .chip { display:inline-flex; align-items:center; gap:.35rem; padding:.15rem .5rem; border-radius:999px; background:#f5f5f5; margin:.15rem; }
-    .legend .swatch { width:10px; height:10px; border-radius:2px; background:#999; display:inline-block; }
     .debug-badge { position:absolute; right:10px; top:10px; z-index:2500; background:rgba(17,24,39,.9); color:#cbd5e1; border:1px solid #334155; border-radius:8px; padding:6px 8px; font:12px ui-monospace,Menlo,Consolas; pointer-events:none; transition:opacity .2s ease; max-width:42ch; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     /* Context menu for v2 */
     .ctx-menu, .ctx-submenu { position:fixed; background:#fff; color:#111; border:1px solid #cbd5e1; border-radius:8px; padding:6px; box-shadow:0 10px 30px rgba(0,0,0,.18); z-index:3000; min-width:180px; }
@@ -116,7 +114,6 @@
           <pre class="muted small" id="planOut" style="max-height:140px;overflow:auto;"></pre>
         </div>
 
-        <div class="legend" id="legend"></div>
       </section>
     </aside>
 
@@ -134,9 +131,6 @@
           <button class="zbtn" id="btnZoomIn" title="Zoom in">+</button>
           <button class="zbtn" id="btnZoomOut" title="Zoom out">−</button>
         </div>
-      </section>
-      <section>
-        <div class="legend" id="legend2"></div>
       </section>
       <section>
         <h3>Activity Log</h3>

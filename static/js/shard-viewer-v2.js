@@ -17,7 +17,7 @@ import { hasAt, removeAt } from './removeHelpers.js';
   let raf=0;
   function scheduleDraw(){
     if(raf) return;
-    raf=requestAnimationFrame(()=>{ raf=0; drawBase(); drawOverlay(); updateLegend(); });
+    raf=requestAnimationFrame(()=>{ raf=0; drawBase(); drawOverlay(); });
   }
 
   // Elements
@@ -52,7 +52,7 @@ import { hasAt, removeAt } from './removeHelpers.js';
   const alpha = () => Math.max(0, Math.min(1,(parseInt(els.opacity?.value||'85',10)||85)/100));
 
   // State
-  const ST = { shard:null, grid:null, previews: [], focus:{ x:-1, y:-1 }, baseline: null, panX: 0, panY: 0, currentBiome:'plains', rectPreview:null, draft:{ settlements:[], pois:[], tiles:{} } };
+  const ST = { shard:null, grid:null, previews: [], focus:{ x:-1, y:-1 }, baseline: null, panX: 0, panY: 0, currentBiome:'plains', rectPreview:null, draft:{ settlements:[], pois:[], tiles:{} }, linkSource:null };
 
   // Fetch JSON
   async function getJSON(url){ trace('fetch', url); const r=await fetch(url); if(!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }
@@ -87,6 +87,21 @@ import { hasAt, removeAt } from './removeHelpers.js';
     for(let y=0;y<H;y++){ const row = shard.tiles[y], line=new Array(W); for(let x=0;x<W;x++){ const t=row[x]; const b=(t&&typeof t.biome==='string')?t.biome: (t&&typeof t.tile==='string'?t.tile:'plains'); line[x]=String(b).toLowerCase(); } out[y]=line; }
     return out;
   }
+
+  // --- Shardgate helpers ---
+  function findGateAt(x,y){
+    const S=ST.shard, L=S?.layers;
+    const eq=(g)=>(((g?.x??g?.[0])|0)===x && ((g?.y??g?.[1])|0)===y);
+    const fromLayer=L?.shardgates?.nodes; if(Array.isArray(fromLayer)){ const g=fromLayer.find(eq); if(g) return g; }
+    const fromTop=S?.shardgates?.nodes; if(Array.isArray(fromTop)){ const g=fromTop.find(eq); if(g) return g; }
+    if(Array.isArray(S?.pois)){
+      for(const p of S.pois){ if(p?.type==='shardgate' && eq(p)) return p; }
+    }
+    return null;
+  }
+  function ensureGateId(g){ if(!g) return ''; if(!g.id){ const x=(g.x??g[0])|0, y=(g.y??g[1])|0; g.id=`gate_${x}_${y}_${Date.now()}`; } return String(g.id); }
+  function getGateLink(g){ return g?.link || g?.meta?.link; }
+  function setGateLink(g,val){ if(!g) return; if('link' in g){ g.link=val; } else { g.meta=g.meta||{}; g.meta.link=val; } }
 
   // --- Settlement placement (draft) ---
   function rectWithin(x,y,w,h,maxW,maxH){ return x>=0&&y>=0&&(x+w)<=maxW&&(y+h)<=maxH; }
@@ -159,7 +174,6 @@ import { hasAt, removeAt } from './removeHelpers.js';
   const PALETTES={ classic:BASE_COLORS, contrast:BASE_COLORS, pastel:BASE_COLORS, noir:BASE_COLORS };
   function biomeColor(id){ const pal=PALETTES[els.palette?.value||'classic']||PALETTES.classic; return pal[String(id).toLowerCase()]||'#889'; }
 
-  function updateLegend(){ const targets=[document.getElementById('legend'),document.getElementById('legend2')]; const set=new Set(); if(Array.isArray(ST.grid)){ for(const row of ST.grid){ for(const b of row){ set.add(b); } } } const arr=Array.from(set).sort(); for(const t of targets){ if(!t) continue; t.innerHTML=''; for(const b of arr){ const chip=document.createElement('div'); chip.className='chip'; const sw=document.createElement('span'); sw.className='swatch'; sw.style.background=biomeColor(b); chip.appendChild(sw); chip.appendChild(document.createTextNode(b)); t.appendChild(chip); } } }
   function drawBase(){ const g=ST.grid; if(!g) return; const s=scale(); const ctx=els.base.getContext('2d'); ctx.clearRect(0,0,els.base.width,els.base.height); if(els.layerBiomes && !els.layerBiomes.checked){ return; } for(let y=0;y<g.length;y++){ const row=g[y]; for(let x=0;x<row.length;x++){ ctx.fillStyle=biomeColor(row[x]); ctx.fillRect(x*s,y*s,s,s); } } }
 
   // Draw overlay: grid + shardgates
@@ -173,8 +187,14 @@ import { hasAt, removeAt } from './removeHelpers.js';
       octx.restore(); }
     // shardgates from layers or pois
     if(els.layerShardgates?.checked){ const gates=(ST.shard?.layers?.shardgates?.nodes||[]).concat(ST.shard?.shardgates?.nodes||[]).concat((ST.shard?.pois||[]).filter(p=>p?.type==='shardgate'));
-      octx.save(); octx.globalAlpha=Math.max(.9,alpha()); octx.fillStyle='#7b5cff'; octx.strokeStyle='#000'; octx.lineWidth=1;
-      for(const g1 of gates){ const x=(g1.x??g1[0])|0, y=(g1.y??g1[1])|0; const cx=(x+.5)*s, cy=(y+.5)*s, R=Math.max(3,Math.round(s*.36)); octx.beginPath(); octx.moveTo(cx,cy-R); octx.lineTo(cx+R,cy); octx.lineTo(cx,cy+R); octx.lineTo(cx-R,cy); octx.closePath(); octx.fill(); octx.stroke(); octx.beginPath(); octx.strokeStyle='rgba(255,255,255,.9)'; octx.arc(cx,cy,Math.max(2,Math.round(R*.55)),0,Math.PI*2); octx.stroke(); const name=(g1.name||g1.id||'Gate'); drawLabel(cx, cy, name, true); }
+      octx.save();
+      const gateMap=new Map(); for(const g of gates){ if(g?.id) gateMap.set(String(g.id), g); }
+      // links
+      octx.globalAlpha=Math.max(.7,alpha()); octx.strokeStyle='#7b5cff'; octx.lineWidth=Math.max(1,Math.round(s*0.2));
+      for(const g of gates){ const tid=getGateLink(g); const tgt=tid?gateMap.get(String(tid)):null; if(!tgt) continue; const idA=String(g.id||''); const idB=String(tid); if(idA && idB && idA>idB) continue; const x1=(g.x??g[0])|0, y1=(g.y??g[1])|0; const x2=(tgt.x??tgt[0])|0, y2=(tgt.y??tgt[1])|0; octx.beginPath(); octx.moveTo((x1+0.5)*s,(y1+0.5)*s); octx.lineTo((x2+0.5)*s,(y2+0.5)*s); octx.stroke(); }
+      // gates
+      octx.globalAlpha=Math.max(.9,alpha()); octx.fillStyle='#7b5cff'; octx.strokeStyle='#000'; octx.lineWidth=1;
+      for(const g1 of gates){ const x=(g1.x??g1[0])|0, y=(g1.y??g1[1])|0; const cx=(x+.5)*s, cy=(y+.5)*s, R=Math.max(3,Math.round(s*.36)); octx.beginPath(); octx.moveTo(cx,cy-R); octx.lineTo(cx+R,cy); octx.lineTo(cx,cy+R); octx.lineTo(cx-R,cy); octx.closePath(); octx.fill(); octx.stroke(); octx.beginPath(); octx.strokeStyle='rgba(255,255,255,.9)'; octx.arc(cx,cy,Math.max(2,Math.round(R*.55)),0,Math.PI*2); octx.stroke(); if(ST.linkSource===g1){ octx.beginPath(); octx.strokeStyle='#ffd60a'; octx.lineWidth=2; octx.arc(cx,cy,R+2,0,Math.PI*2); octx.stroke(); } const name=(g1.name||g1.id||'Gate'); drawLabel(cx, cy, name, true); }
       octx.restore(); }
     // settlements + POIs
     if(els.layerSettlements?.checked){ drawSettlementsAndPOIs(); }
@@ -345,7 +365,7 @@ import { hasAt, removeAt } from './removeHelpers.js';
   async function loadShard(path,label){ try{ setDebug(`GET ${path}`); const shard=await getJSON(path); if(!shard) throw new Error('invalid JSON'); const lbl=label || shard?.meta?.displayName || path; setStatus(`Loaded: ${lbl}`); setDebug(`loaded ${path}`); ST.baseline=clone(shard); ensureTilesFromAny(ST.baseline); ST.previews=[]; ST.focus={x:-1,y:-1}; renderAll(shard); }catch(e){ setStatus(`Failed to load shard: ${e.message}`); setDebug(`error ${e.message} · ${path}`); trace('loadShard:error', e?.message||e); }}
   async function loadSelectedShard(){ const opt=els.select?.selectedOptions?.[0]; if(!opt){ trace('loadSelectedShard:no-selection'); return; } const path=opt.getAttribute('data-path')||`/static/public/shards/${opt.value}`; await loadShard(path,opt.textContent); }
 
-  function renderAll(shard){ if(!shard){ return; } trace('renderAll:start'); ST.shard=shard; ensureTilesFromAny(ST.shard); ST.grid=deriveGridFromTiles(ST.shard); const H=ST.grid.length, W=H?ST.grid[0].length:0; ensureSizes(W,H); centerInFrame(); drawBase(); drawOverlay(); updateLegend(); trace('renderAll:complete', {W,H}); }
+  function renderAll(shard){ if(!shard){ return; } trace('renderAll:start'); ST.shard=shard; ensureTilesFromAny(ST.shard); ST.grid=deriveGridFromTiles(ST.shard); const H=ST.grid.length, W=H?ST.grid[0].length:0; ensureSizes(W,H); centerInFrame(); drawBase(); drawOverlay(); trace('renderAll:complete', {W,H}); }
 
   // Event wiring
   els.loadBtn?.addEventListener('click', (e)=>{ e?.preventDefault?.(); loadSelectedShard(); });
@@ -379,6 +399,7 @@ import { hasAt, removeAt } from './removeHelpers.js';
     if(!dragging) return; const dx=e.clientX-dragStartX, dy=e.clientY-dragStartY; ST.panX=startPanX+dx; ST.panY=startPanY+dy; applyPan();
   });
   window.addEventListener('mouseup', (e)=>{
+    if(ST.linkSource){ const {x,y}=tileAtClient(e); const target=findGateAt(x,y); if(target && target!==ST.linkSource){ const idA=ensureGateId(ST.linkSource); const idB=ensureGateId(target); setGateLink(ST.linkSource,idB); setGateLink(target,idA); setStatus(`Linked ${idA} ↔ ${idB}`); markUnsaved(); scheduleDraw(); } else { setStatus('Linking cancelled'); } ST.linkSource=null; return; }
     if (recting){ const {x,y}=tileAtClient(e); const x0=Math.min(rectStart.x,x), y0=Math.min(rectStart.y,y), x1=Math.max(rectStart.x,x), y1=Math.max(rectStart.y,y); for(let yy=y0; yy<=y1; yy++){ for(let xx=x0; xx<=x1; xx++){ setTileBiome(xx,yy, ST.currentBiome||'plains'); } } recting=false; ST.rectPreview=null; scheduleDraw(); return; }
     if (brushing){ brushing=false; return; }
     if(dragging){ const moved=Math.abs((e?.clientX||0)-dragStartX)+Math.abs((e?.clientY||0)-dragStartY); dragging=false; els.frame.style.cursor='default'; if (moved<4){ const {x,y}=tileAtClient(e); if(x>=0&&y>=0&&ST.grid&&y<ST.grid.length&&x<ST.grid[0].length){ ST.focus={x,y}; scheduleDraw(); updateTilePanel(x,y); } } }
@@ -480,7 +501,8 @@ import { hasAt, removeAt } from './removeHelpers.js';
         root.appendChild(rmh);
         if(flags.settlement){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove Settlements'; b.addEventListener('click',()=>{ const n=removeAt(ST,current.x,current.y,'settlement'); setStatus(n?`Removed ${n} settlement(s)`: 'No settlements here'); scheduleDraw(); markUnsaved(); close(); }); root.appendChild(b); list.push(b); }
         if(flags.poi){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove POIs'; b.addEventListener('click',()=>{ const n=removeAt(ST,current.x,current.y,'poi'); setStatus(n?`Removed ${n} POI(s)`: 'No POIs here'); scheduleDraw(); markUnsaved(); close(); }); root.appendChild(b); list.push(b); }
-        if(flags.shardgate){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove Shardgates'; b.addEventListener('click',()=>{ const n=removeAt(ST,current.x,current.y,'shardgate'); setStatus(n?`Removed ${n} shardgate(s)`: 'No shardgates here'); scheduleDraw(); markUnsaved(); close(); }); root.appendChild(b); list.push(b); }
+        if(flags.shardgate){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove Shardgates'; b.addEventListener('click',()=>{ const n=removeAt(ST,current.x,current.y,'shardgate'); setStatus(n?`Removed ${n} shardgate(s)`: 'No shardgates here'); scheduleDraw(); markUnsaved(); close(); }); root.appendChild(b); list.push(b);
+          const b2=document.createElement('button'); b2.className='ctx-item'; b2.textContent=ST.linkSource?'Select Link Target':'Link Shardgate'; b2.addEventListener('click',()=>{ const g=findGateAt(current.x,current.y); if(ST.linkSource){ ST.linkSource=null; setStatus('Linking cancelled'); } else if(g){ ST.linkSource=g; setStatus('Select destination shardgate'); } else { setStatus('No shardgate here'); } close(); }); root.appendChild(b2); list.push(b2); }
         if(flags.biome){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove Biome (reset to baseline)'; b.addEventListener('click',()=>{ const n=resetBiomeAt(current.x,current.y); setStatus(n?'Biome reset to baseline':'Biome already baseline'); scheduleDraw(); markUnsaved(); close(); }); root.appendChild(b); list.push(b); }
         if(hasDraft){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove Draft Markers'; b.addEventListener('click',()=>{ const removed=removeDraftAt(current.x,current.y); setStatus(removed?'Draft markers removed':'No draft markers'); close(); }); root.appendChild(b); list.push(b); }
         root.appendChild(sep.cloneNode());
