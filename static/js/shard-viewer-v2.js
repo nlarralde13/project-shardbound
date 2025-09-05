@@ -168,10 +168,20 @@ import { hasAt, removeAt } from './removeHelpers.js';
   function rectWithin(x,y,w,h,maxW,maxH){ return x>=0&&y>=0&&(x+w)<=maxW&&(y+h)<=maxH; }
   function overlaps(x,y,w,h,arr){ return (arr||[]).some(r=> !(x+w<=r.x||r.x+r.w<=x||y+h<=r.y||r.y+r.h<=y)); }
   function canPlaceSettlementAt(x,y,tier){ const g=ST.grid; if(!g) return {ok:false,reason:'no grid'}; const H=g.length,W=g[0]?.length||0; const w=tier.size.w,h=tier.size.h; if(!rectWithin(x,y,w,h,W,H)) return {ok:false,reason:'Out of bounds'}; const existing=(Array.isArray(ST.shard?.settlements)?ST.shard.settlements:[]).map(s=>s.bounds||{}); const pending=(ST.draft?.settlements||[]).map(s=>s.bounds||{}); if(overlaps(x,y,w,h,[...existing,...pending])) return {ok:false,reason:'Overlaps existing'}; let allWater=true; for(let yy=y; yy<y+h; yy++){ for(let xx=x; xx<x+w; xx++){ const b=(ST.grid[yy][xx]||'').toLowerCase(); if (!['ocean','river','lake','reef','water'].includes(b)){ allWater=false; break; } } if(!allWater) break; } if(allWater) return {ok:false,reason:'Water only'}; return {ok:true}; }
+  function previewSettlementAt(x,y,tier,ok){
+    ST.previews = (ST.previews||[]).filter(p=>p.type!=='settlement');
+    const pv={ type:'settlement', x, y, w:tier.size.w, h:tier.size.h, ok };
+    ST.previews.push(pv);
+    scheduleDraw();
+    setTimeout(()=>{ ST.previews = ST.previews.filter(p=>p!==pv); scheduleDraw(); },1000);
+  }
   function draftPlaceSettlementAt(x,y,tier){
+    if(!ST.draft) ST.draft={settlements:[],pois:[],tiles:{}};
+    if(!Array.isArray(ST.draft.settlements)) ST.draft.settlements=[];
+    if(!ST.draft.tiles) ST.draft.tiles={};
     const id=`settle_${Date.now()}_${Math.floor(Math.random()*1e6)}`;
     const b={x,y,w:tier.size.w,h:tier.size.h};
-    const sd={ id, name:tier.label, tier:tier.key, bounds:b, npcs_est:{min:0,max:0}, services:[], shops:[], walls:false, meta:{ notes:`${tier.label} draft` } };
+    const sd={ id, name:`Tier ${tier.tier}`, tier:tier.tier, anchor:{x,y}, footprint:{w:b.w,h:b.h}, bounds:b, links:{roads:[],shardgates:[]}, discovered:false, meta:{} };
     ST.draft.settlements.push(sd);
     for(let yy=y; yy<y+b.h; yy++){
       for(let xx=x; xx<x+b.w; xx++){
@@ -187,7 +197,7 @@ import { hasAt, removeAt } from './removeHelpers.js';
       }
     }
     scheduleDraw();
-    setStatus(`Drafted ${tier.label} at (${x},${y})`);
+    setStatus(`Placed Tier ${tier.tier} at (${x},${y})`);
   }
   function applyDraftToShard(){
     if(!ST.shard) return;
@@ -276,9 +286,10 @@ import { hasAt, removeAt } from './removeHelpers.js';
       for(const g1 of gates){ const x=(g1.x??g1[0])|0, y=(g1.y??g1[1])|0; const id=ensureGateId(g1); const cx=(x+.5)*s, cy=(y+.5)*s, R=Math.max(3,Math.round(s*.36)); octx.beginPath(); octx.moveTo(cx,cy-R); octx.lineTo(cx+R,cy); octx.lineTo(cx,cy+R); octx.lineTo(cx-R,cy); octx.closePath(); octx.fill(); octx.stroke(); octx.beginPath(); octx.strokeStyle='rgba(255,255,255,.9)'; octx.arc(cx,cy,Math.max(2,Math.round(R*.55)),0,Math.PI*2); octx.stroke(); if(srcId&&id===srcId){ octx.beginPath(); octx.strokeStyle='#ffd60a'; octx.lineWidth=2; octx.arc(cx,cy,R+2,0,Math.PI*2); octx.stroke(); } else if(hovId&&id===hovId){ octx.beginPath(); octx.strokeStyle='#ffe66d'; octx.lineWidth=2; octx.arc(cx,cy,R+2,0,Math.PI*2); octx.stroke(); } const name=(g1.name||g1.id||'Gate'); drawLabel(cx, cy, name, true); }
       octx.restore(); }
     // settlements + POIs
-    if(els.layerSettlements?.checked){ drawSettlementsAndPOIs(); }
-    // Draft settlements overlay (always visible)
-    drawDraftSettlements(s);
+    // Non-settlement POIs (gates handled elsewhere)
+    if(els.layerSettlements?.checked){ drawPOIs(); }
+    // Settlements (live + draft)
+    drawSettlements(s);
     // focus border
     if (ST.focus && ST.focus.x>=0 && ST.focus.y>=0){ const fx=ST.focus.x, fy=ST.focus.y; const fpx=fx*s, fpy=fy*s; octx.save(); octx.globalAlpha=1; octx.strokeStyle='rgba(255,214,10,0.95)'; octx.fillStyle='rgba(255,214,10,0.12)'; octx.lineWidth=2; octx.fillRect(fpx,fpy,s,s); octx.strokeRect(fpx+0.5,fpy+0.5,s-1,s-1); octx.restore(); }
     // rect preview
@@ -318,12 +329,91 @@ import { hasAt, removeAt } from './removeHelpers.js';
     if(!ST.grid) return 0; const H=ST.grid.length, W=ST.grid[0]?.length||0; let n=0; for(let y=0;y<H;y++){ for(let x=0;x<W;x++){ if (setTileBiome(x,y,toBiome)) n++; } } return n;
   }
 
-  function drawPreviews(){ const s=scale(); if(!ST.previews?.length) return; octx.save(); for(const p of ST.previews){ const x=p.x|0,y=p.y|0; const cx=(x+.5)*s, cy=(y+.5)*s; const R=Math.max(3,Math.round(s*.36)); switch(p.type){ case 'shardgate': { octx.globalAlpha=Math.max(.9,alpha()); octx.fillStyle='#7b5cff'; octx.strokeStyle='#000'; octx.lineWidth=1; octx.beginPath(); octx.moveTo(cx,cy-R); octx.lineTo(cx+R,cy); octx.lineTo(cx,cy+R); octx.lineTo(cx-R,cy); octx.closePath(); octx.fill(); octx.stroke(); octx.beginPath(); octx.strokeStyle='rgba(255,255,255,0.95)'; octx.arc(cx,cy,Math.max(2,Math.round(R*.55)),0,Math.PI*2); octx.stroke(); break; } case 'settlement': { const r=Math.max(2,Math.round(s*.22)); octx.globalAlpha=1; octx.fillStyle='#4caf50'; octx.strokeStyle='#1b263b'; octx.lineWidth=1; octx.beginPath(); octx.arc(cx,cy,r,0,Math.PI*2); octx.fill(); octx.stroke(); break; } case 'dungeon_entrance': { const r=Math.max(3,Math.round(s*.26)); octx.globalAlpha=1; octx.fillStyle='#ff5252'; octx.strokeStyle='#1b263b'; octx.lineWidth=1; octx.beginPath(); octx.moveTo(cx,cy-r); octx.lineTo(cx+r,cy+r); octx.lineTo(cx-r,cy+r); octx.closePath(); octx.fill(); octx.stroke(); break; } case 'biome': { const px=x*s, py=y*s; octx.globalAlpha=1; octx.fillStyle='rgba(60,120,60,0.22)'; octx.strokeStyle='rgba(60,120,60,0.85)'; octx.lineWidth=1.5; octx.fillRect(px,py,s,s); octx.strokeRect(px+0.5,py+0.5,s-1,s-1); break; } case 'infrastructure': default: { const r=Math.max(2,Math.round(s*.28)); octx.globalAlpha=1; octx.strokeStyle='#a0a4ad'; octx.lineWidth=Math.max(1,Math.round(s*.12)); octx.beginPath(); octx.moveTo(cx-r,cy); octx.lineTo(cx+r,cy); octx.stroke(); } } if (s>=12){ octx.font=`${Math.max(10,Math.round(s*.5))}px system-ui`; octx.textAlign='center'; octx.textBaseline='top'; octx.strokeStyle='rgba(0,0,0,.65)'; octx.lineWidth=3; const label=(p.type||'item').replace('_',' '); octx.strokeText(label,cx,cy+R+2); octx.fillStyle='#fff'; octx.fillText(label,cx,cy+R+2); } } octx.restore(); }
+function drawPreviews(){
+    const s=scale();
+    if(!ST.previews?.length) return;
+    octx.save();
+    for(const p of ST.previews){
+      const x=p.x|0, y=p.y|0;
+      const cx=(x+.5)*s, cy=(y+.5)*s;
+      const R=Math.max(3,Math.round(s*.36));
+      switch(p.type){
+        case 'shardgate': {
+          octx.globalAlpha=Math.max(.9,alpha());
+          octx.fillStyle='#7b5cff';
+          octx.strokeStyle='#000';
+          octx.lineWidth=1;
+          octx.beginPath();
+          octx.moveTo(cx,cy-R); octx.lineTo(cx+R,cy); octx.lineTo(cx,cy+R); octx.lineTo(cx-R,cy);
+          octx.closePath(); octx.fill(); octx.stroke();
+          octx.beginPath();
+          octx.strokeStyle='rgba(255,255,255,0.95)';
+          octx.arc(cx,cy,Math.max(2,Math.round(R*.55)),0,Math.PI*2);
+          octx.stroke();
+          break;
+        }
+        case 'settlement': {
+          const px=x*s, py=y*s, w=(p.w||1)*s, h=(p.h||1)*s;
+          octx.globalAlpha=1;
+          const good=p.ok!==false;
+          octx.fillStyle=good?'rgba(34,197,94,0.35)':'rgba(239,68,68,0.35)';
+          octx.strokeStyle=good?'#22c55e':'#ef4444';
+          octx.lineWidth=2;
+          octx.fillRect(px,py,w,h);
+          octx.strokeRect(px+0.5,py+0.5,w-1,h-1);
+          break;
+        }
+        case 'dungeon_entrance': {
+          const r=Math.max(3,Math.round(s*.26));
+          octx.globalAlpha=1;
+          octx.fillStyle='#ff5252';
+          octx.strokeStyle='#1b263b';
+          octx.lineWidth=1;
+          octx.beginPath();
+          octx.moveTo(cx,cy-r); octx.lineTo(cx+r,cy+r); octx.lineTo(cx-r,cy+r);
+          octx.closePath(); octx.fill(); octx.stroke();
+          break;
+        }
+        case 'biome': {
+          const px=x*s, py=y*s;
+          octx.globalAlpha=1;
+          octx.fillStyle='rgba(60,120,60,0.22)';
+          octx.strokeStyle='rgba(60,120,60,0.85)';
+          octx.lineWidth=1.5;
+          octx.fillRect(px,py,s,s);
+          octx.strokeRect(px+0.5,py+0.5,s-1,s-1);
+          break;
+        }
+        case 'infrastructure':
+        default: {
+          const r=Math.max(2,Math.round(s*.28));
+          octx.globalAlpha=1;
+          octx.strokeStyle='#a0a4ad';
+          octx.lineWidth=Math.max(1,Math.round(s*.12));
+          octx.beginPath();
+          octx.moveTo(cx-r,cy); octx.lineTo(cx+r,cy);
+          octx.stroke();
+        }
+      }
+      if (s>=12){
+        octx.font=`${Math.max(10,Math.round(s*.5))}px system-ui`;
+        octx.textAlign='center';
+        octx.textBaseline='top';
+        octx.strokeStyle='rgba(0,0,0,.65)';
+        octx.lineWidth=3;
+        const label=(p.type||'item').replace('_',' ');
+        octx.strokeText(label,cx,cy+R+2);
+        octx.fillStyle='#fff';
+        octx.fillText(label,cx,cy+R+2);
+      }
+    }
+    octx.restore();
+  }
 
   function labelText(text){ return String(text||'').trim(); }
   function drawLabel(cx, cy, text, above=true){ const s=scale(); if(s<12) return; const t=labelText(text); if(!t) return; const y=cy+(above? -Math.max(8,Math.round(s*0.4)) : (Math.max(8,Math.round(s*0.4)))); octx.save(); octx.font=`${Math.max(10,Math.round(s*.5))}px system-ui, ui-sans-serif`; octx.textAlign='center'; octx.textBaseline='bottom'; octx.lineWidth=3; octx.strokeStyle='rgba(0,0,0,.65)'; octx.strokeText(t,cx,y); octx.fillStyle='#fff'; octx.fillText(t,cx,y); octx.restore(); }
 
-  function drawSettlementsAndPOIs(){
+  function drawPOIs(){
     const s=scale();
     const setts = [];
     const L = ST.shard?.layers?.settlements || {};
@@ -365,12 +455,48 @@ import { hasAt, removeAt } from './removeHelpers.js';
     // Draft POIs overlay (purple outline)
     const dpois = Array.isArray(ST.draft?.pois) ? ST.draft.pois : [];
     if (dpois.length){ const t=scale(); octx.save(); for(const p of dpois){ const cx=(p.x+.5)*t, cy=(p.y+.5)*t; const R=Math.max(3,Math.round(t*.26)); octx.globalAlpha=1; octx.lineWidth=2; octx.strokeStyle='#a855f7'; octx.beginPath(); octx.arc(cx,cy,Math.max(2,Math.round(R*.8)),0,Math.PI*2); octx.stroke(); const label=(p.type||'poi').replace('_',' '); drawLabel(cx, cy, `draft ${label}`, false); } octx.restore(); }
-    // persisted rectangles (top-level settlements)
-    const pers = Array.isArray(ST.shard?.settlements) ? ST.shard.settlements : [];
-    if (pers.length){ const t=scale(); octx.save(); for(const s1 of pers){ const b=s1.bounds||{}; const sx=b.x*t, sy=b.y*t, sw=b.w*t, sh=b.h*t; octx.globalAlpha=0.18; octx.fillStyle='#22c55e'; octx.fillRect(sx,sy,sw,sh); octx.globalAlpha=1; octx.strokeStyle='#16a34a'; octx.lineWidth=2; octx.strokeRect(sx+0.5,sy+0.5,sw-1,sh-1); const label=((s1.tier||'').toString())+(s1.name?` ${s1.name}`:''); drawLabel(sx+sw/2, sy, label, true);} octx.restore(); }
   }
 
-  function drawDraftSettlements(tileSize){ const list = Array.isArray(ST.draft?.settlements)? ST.draft.settlements : []; if(!list.length) return; octx.save(); for(const s1 of list){ const b=s1.bounds||{}; const sx=b.x*tileSize, sy=b.y*tileSize, sw=b.w*tileSize, sh=b.h*tileSize; octx.globalAlpha=0.22; octx.fillStyle='#fbbf24'; octx.fillRect(sx,sy,sw,sh); octx.globalAlpha=1; octx.strokeStyle='#f59e0b'; octx.lineWidth=2; octx.strokeRect(sx+0.5,sy+0.5,sw-1,sh-1); } octx.restore(); }
+  function drawSettlements(tileSize){
+    const live = Array.isArray(ST.shard?.settlements) ? ST.shard.settlements : [];
+    const draft = Array.isArray(ST.draft?.settlements) ? ST.draft.settlements : [];
+    const all = live.map(s=>({s,isDraft:false})).concat(draft.map(s=>({s,isDraft:true})));
+    if(!all.length) return;
+    octx.save();
+    const fill='rgba(181, 136, 99, 0.35)';
+    for(const {s,isDraft} of all){
+      const b = s.bounds || { x: s.anchor?.x||0, y: s.anchor?.y||0, w: s.footprint?.w||1, h: s.footprint?.h||1 };
+      const sx=b.x*tileSize, sy=b.y*tileSize, sw=b.w*tileSize, sh=b.h*tileSize;
+      octx.globalAlpha=1;
+      octx.fillStyle=fill;
+      octx.fillRect(sx,sy,sw,sh);
+      octx.strokeStyle='#3b82f6';
+      octx.lineWidth=2;
+      octx.setLineDash(isDraft?[4,4]:[]);
+      octx.strokeRect(sx+0.5,sy+0.5,sw-1,sh-1);
+      const tier = Number(s.tier)||1;
+      if(tier===1 || tier===2){
+        const cx=(b.x+0.5)*tileSize, cy=(b.y+0.5)*tileSize;
+        const r=Math.max(2,Math.round(tileSize*0.2));
+        if(tier===1){
+          octx.fillStyle='#dc2626';
+          octx.beginPath();
+          octx.arc(cx,cy,r,0,Math.PI*2);
+          octx.fill();
+        } else {
+          octx.fillStyle='#f59e0b';
+          octx.beginPath();
+          octx.moveTo(cx,cy-r);
+          octx.lineTo(cx+r,cy);
+          octx.lineTo(cx,cy+r);
+          octx.lineTo(cx-r,cy);
+          octx.closePath();
+          octx.fill();
+        }
+      }
+    }
+    octx.restore();
+  }
 
   // --- Tile Info Panel ---
   function rawTileAt(x,y){
@@ -569,7 +695,7 @@ import { hasAt, removeAt } from './removeHelpers.js';
       const rb=submenu2.getBoundingClientRect(); const sbw=220, sbh=list.length*30+12; const left=(rb.right+sbw<innerWidth)?rb.right:Math.max(0,rb.left-sbw); const top=(rb.top+sbh<innerHeight)?rb.top:Math.max(0,innerHeight-sbh); submenu3.style.left=left+'px'; submenu3.style.top=top+'px';
     }
     const openBgMenu=(anchor)=>{ removeSub3(); const bg=document.createElement('div'); bg.className='ctx-submenu'; document.body.appendChild(bg); const options=[['Fill All: Bedrock','bedrock'],['Fill All: Ocean','ocean'],['Fill All: Plains','plains']]; for(const [lbl,val] of options){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent=lbl; b.addEventListener('click',()=>{ const n=fillAll(val); setStatus(`Filled ${n} tiles as ${val}`); scheduleDraw(); close(); }); bg.appendChild(b);} const ab=anchor.getBoundingClientRect(); const sbw=240, sbh=options.length*30+12; const left=(ab.right+sbw<innerWidth)?ab.right:Math.max(0,ab.left-sbw); const top=(ab.top+sbh<innerHeight)?ab.top:Math.max(0,innerHeight-sbh); bg.style.left=left+'px'; bg.style.top=top+'px'; submenu3=bg; };
-    const openSub=()=>{ removeSub(); submenu=document.createElement('div'); submenu.className='ctx-submenu'; document.body.appendChild(submenu); const entries=[['Shardgate','shardgate'],['Settlement ▶','settlement'],['Dungeon Entrance','dungeon_entrance'],['Place Land Tile','land_tile'],['Biome','biome'],['Background','background'],['Infrastructure','infrastructure']]; for(const [lbl,t] of entries){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent=lbl; if(t==='biome'){ b.addEventListener('mouseenter',()=>openBiomeCascade(b)); b.addEventListener('click',()=>openBiomeCascade(b)); } else if (t==='background'){ b.addEventListener('mouseenter',()=>openBgMenu(b)); b.addEventListener('click',()=>openBgMenu(b)); } else if (t==='settlement'){ const openSettle=()=>{ removeSub3(); submenu3=document.createElement('div'); submenu3.className='ctx-submenu'; document.body.appendChild(submenu3); const tiers=[{key:'CAMP',label:'Camp',size:{w:1,h:1}},{key:'HAMLET',label:'Hamlet',size:{w:2,h:2}},{key:'VILLAGE',label:'Village',size:{w:4,h:4}},{key:'CITY',label:'City',size:{w:8,h:8}},{key:'KINGDOM',label:'Kingdom',size:{w:16,h:16}}]; for(const tt of tiers){ const bb=document.createElement('button'); bb.className='ctx-item'; bb.textContent=tt.label; bb.addEventListener('click',()=>{ const chk=canPlaceSettlementAt(current.x,current.y,tt); if(!chk.ok){ setStatus(`Cannot place ${tt.label}: ${chk.reason}`); close(); return; } draftPlaceSettlementAt(current.x,current.y,tt); close(); }); submenu3.appendChild(bb);} const rb=submenu.getBoundingClientRect(); const sbw=220, sbh=tiers.length*30+12; const left=(rb.right+sbw<innerWidth)?rb.right:Math.max(0,rb.left-sbw); const top=(rb.top+sbh<innerHeight)?rb.top:Math.max(0,innerHeight-sbh); submenu3.style.left=left+'px'; submenu3.style.top=top+'px'; }; b.addEventListener('mouseenter',openSettle); b.addEventListener('click',openSettle); } else if (t==='land_tile'){ b.addEventListener('click',()=>{ const n=setTileBiome(current.x,current.y,'plains'); setStatus(n?'Placed land tile (plains)':'Failed to place'); scheduleDraw(); close(); }); } else { b.addEventListener('click',()=>emit(t)); } submenu.appendChild(b);} const rb=root.getBoundingClientRect(); const sbw=220,sbh=entries.length*30+12; const left=(rb.right+sbw<innerWidth)?rb.right:Math.max(0,rb.left-sbw); const top=(rb.top+sbh<innerHeight)?rb.top:Math.max(0,innerHeight-sbh); submenu.style.left=left+'px'; submenu.style.top=top+'px'; };
+    const openSub=()=>{ removeSub(); submenu=document.createElement('div'); submenu.className='ctx-submenu'; document.body.appendChild(submenu); const entries=[['Shardgate','shardgate'],['Settlement ▶','settlement'],['Dungeon Entrance','dungeon_entrance'],['Place Land Tile','land_tile'],['Biome','biome'],['Background','background'],['Infrastructure','infrastructure']]; for(const [lbl,t] of entries){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent=lbl; if(t==='biome'){ b.addEventListener('mouseenter',()=>openBiomeCascade(b)); b.addEventListener('click',()=>openBiomeCascade(b)); } else if (t==='background'){ b.addEventListener('mouseenter',()=>openBgMenu(b)); b.addEventListener('click',()=>openBgMenu(b)); } else if (t==='settlement'){ const openSettle=()=>{ removeSub3(); submenu3=document.createElement('div'); submenu3.className='ctx-submenu'; document.body.appendChild(submenu3); const tiers=[{tier:1,label:'Tier 1',size:{w:1,h:1}},{tier:2,label:'Tier 2',size:{w:1,h:1}},{tier:3,label:'Tier 3',size:{w:2,h:2}},{tier:4,label:'Tier 4',size:{w:2,h:2}},{tier:5,label:'Tier 5',size:{w:4,h:4}}]; for(const tt of tiers){ const bb=document.createElement('button'); bb.className='ctx-item'; bb.textContent=tt.label; bb.addEventListener('click',()=>{ const chk=canPlaceSettlementAt(current.x,current.y,tt); previewSettlementAt(current.x,current.y,tt,chk.ok); setStatus(`Tier ${tt.tier} ${chk.ok?'preview':'invalid: '+chk.reason}`); if(!chk.ok){ close(); return; } draftPlaceSettlementAt(current.x,current.y,tt); close(); }); submenu3.appendChild(bb);} const rb=submenu.getBoundingClientRect(); const sbw=220, sbh=tiers.length*30+12; const left=(rb.right+sbw<innerWidth)?rb.right:Math.max(0,rb.left-sbw); const top=(rb.top+sbh<innerHeight)?rb.top:Math.max(0,innerHeight-sbh); submenu3.style.left=left+'px'; submenu3.style.top=top+'px'; }; b.addEventListener('mouseenter',openSettle); b.addEventListener('click',openSettle); } else if (t==='land_tile'){ b.addEventListener('click',()=>{ const n=setTileBiome(current.x,current.y,'plains'); setStatus(n?'Placed land tile (plains)':'Failed to place'); scheduleDraw(); close(); }); } else { b.addEventListener('click',()=>emit(t)); } submenu.appendChild(b);} const rb=root.getBoundingClientRect(); const sbw=220,sbh=entries.length*30+12; const left=(rb.right+sbw<innerWidth)?rb.right:Math.max(0,rb.left-sbw); const top=(rb.top+sbh<innerHeight)?rb.top:Math.max(0,innerHeight-sbh); submenu.style.left=left+'px'; submenu.style.top=top+'px'; };
     const build=(screen)=>{ root.innerHTML='';
       const m=document.createElement('button'); m.textContent='Place …'; m.className='ctx-item'; m.setAttribute('aria-haspopup','true');
       const sep=document.createElement('div'); sep.className='ctx-sep';
