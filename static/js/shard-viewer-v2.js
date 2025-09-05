@@ -274,6 +274,7 @@ import { hasAt, removeAt } from './removeHelpers.js';
   function resetBiomeAt(x,y){
     if(!ST.baseline || !Array.isArray(ST.baseline.tiles)) return 0;
     const bt=ST.baseline.tiles?.[y]?.[x];
+
     const current=ST.shard?.tiles?.[y]?.[x];
     const bb=bt? normBiome(bt.biome) : null;
     const cb=current? normBiome(current.biome) : null;
@@ -412,6 +413,7 @@ import { hasAt, removeAt } from './removeHelpers.js';
       const sep=document.createElement('div'); sep.className='ctx-sep';
       const list=[];
       // Remove group
+
       const flags=hasAt(ST,current.x,current.y,normBiome);
       if (flags.any){
         const rmh=document.createElement('div'); rmh.className='ctx-item'; rmh.style.fontWeight='600'; rmh.textContent='Remove at tile'; rmh.tabIndex=-1; rmh.style.cursor='default';
@@ -420,6 +422,7 @@ import { hasAt, removeAt } from './removeHelpers.js';
         if(flags.poi){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove POIs'; b.addEventListener('click',()=>{ const n=removeAt(ST,current.x,current.y,'poi'); setStatus(n?`Removed ${n} POI(s)`: 'No POIs here'); drawOverlay(); close(); }); root.appendChild(b); list.push(b); }
         if(flags.shardgate){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove Shardgates'; b.addEventListener('click',()=>{ const n=removeAt(ST,current.x,current.y,'shardgate'); setStatus(n?`Removed ${n} shardgate(s)`: 'No shardgates here'); drawOverlay(); close(); }); root.appendChild(b); list.push(b); }
         if(flags.biome){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove Biome (reset to baseline)'; b.addEventListener('click',()=>{ const n=resetBiomeAt(current.x,current.y); setStatus(n?'Biome reset to baseline':'Biome already baseline'); drawBase(); drawOverlay(); close(); }); root.appendChild(b); list.push(b); }
+
         root.appendChild(sep.cloneNode());
       }
       const c=document.createElement('button'); c.textContent='Cancel'; c.className='ctx-item';
