@@ -1,7 +1,7 @@
 // Tiered settlement definitions + draft placement helpers
 
 import { rectWithinBounds, rectOverlapsAny, tilesInRect } from '../utils/geometry.js';
-import { queueSettlement, queueTilePatch } from '../state/draftBuffer.js';
+import { queueSettlement, queueTilePatch, getDraft } from '../state/draftBuffer.js';
 
 export const SETTLEMENT_TIERS = {
   CAMP: {
@@ -64,7 +64,13 @@ export function draftPlaceSettlement({ shard, startX, startY, tierKey, name = nu
     meta: { seed: cryptoSeed(), createdAt: new Date().toISOString(), notes: tier.notes }
   };
   tilesInRect(bounds.x, bounds.y, bounds.w, bounds.h)
-    .forEach(({x,y}) => queueTilePatch(x,y, { settlementId: id, tags: ['settlement_area'] }));
+    .forEach(({x,y}) => {
+      const baseTags = shard.tiles?.[y]?.[x]?.tags || [];
+      const prev = getDraft().tiles?.[`${x},${y}`];
+      const prevTags = Array.isArray(prev?.tags) ? prev.tags : [];
+      const tags = Array.from(new Set([...baseTags, ...prevTags, 'settlement_area']));
+      queueTilePatch(x, y, { settlementId: id, tags });
+    });
   queueSettlement(settlementDraft);
   return settlementDraft;
 }
