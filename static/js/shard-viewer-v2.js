@@ -105,8 +105,17 @@ import { hasAt, removeAt } from './removeHelpers.js';
     return null;
   }
   function ensureGateId(g){ if(!g) return ''; if(!g.id){ const x=(g.x??g[0])|0, y=(g.y??g[1])|0; g.id=`gate_${x}_${y}_${Date.now()}`; } return String(g.id); }
-  function getGateLink(g){ return g?.link || g?.meta?.link; }
-  function setGateLink(g,val){ if(!g) return; if('link' in g){ g.link=val; } else { g.meta=g.meta||{}; g.meta.link=val; } }
+  function getGateLinks(g){
+    if(!g) return [];
+    const arr = Array.isArray(g.linked_gates) ? g.linked_gates : g.meta?.linked_gates;
+    if(Array.isArray(arr)) return arr;
+    const single = g?.link || g?.meta?.link;
+    return single ? [single] : [];
+  }
+  function setGateLinks(g,list){ if(!g) return; if('linked_gates' in g){ g.linked_gates=list; } else { g.meta=g.meta||{}; g.meta.linked_gates=list; } }
+  function addGateLink(g,id){ const links=getGateLinks(g); if(!links.includes(id)){ setGateLinks(g, links.concat(id)); } }
+  function getAllowReturn(g){ return g?.allow_return ?? g?.meta?.allow_return; }
+  function setAllowReturn(g,val){ if(!g) return; if('allow_return' in g){ g.allow_return=val; } else { g.meta=g.meta||{}; g.meta.allow_return=val; } }
 
   // --- Settlement placement (draft) ---
   function rectWithin(x,y,w,h,maxW,maxH){ return x>=0&&y>=0&&(x+w)<=maxW&&(y+h)<=maxH; }
@@ -201,7 +210,18 @@ import { hasAt, removeAt } from './removeHelpers.js';
       const gateMap=new Map(); for(const g of gates){ if(g?.id) gateMap.set(String(g.id), g); }
       // links
       octx.globalAlpha=Math.max(.7,alpha()); octx.strokeStyle='#7b5cff'; octx.lineWidth=Math.max(1,Math.round(s*0.2));
-      for(const g of gates){ const tid=getGateLink(g); const tgt=tid?gateMap.get(String(tid)):null; if(!tgt) continue; const idA=String(g.id||''); const idB=String(tid); if(idA && idB && idA>idB) continue; const x1=(g.x??g[0])|0, y1=(g.y??g[1])|0; const x2=(tgt.x??tgt[0])|0, y2=(tgt.y??tgt[1])|0; octx.beginPath(); octx.moveTo((x1+0.5)*s,(y1+0.5)*s); octx.lineTo((x2+0.5)*s,(y2+0.5)*s); octx.stroke(); }
+      const drawn=new Set();
+      for(const g of gates){
+        const idA=String(g.id||'');
+        for(const tid of getGateLinks(g)){
+          const tgt=tid?gateMap.get(String(tid)):null; if(!tgt) continue;
+          const idB=String(tid);
+          const key=idA<idB?`${idA}|${idB}`:`${idB}|${idA}`;
+          if(drawn.has(key)) continue; drawn.add(key);
+          const x1=(g.x??g[0])|0, y1=(g.y??g[1])|0; const x2=(tgt.x??tgt[0])|0, y2=(tgt.y??tgt[1])|0;
+          octx.beginPath(); octx.moveTo((x1+0.5)*s,(y1+0.5)*s); octx.lineTo((x2+0.5)*s,(y2+0.5)*s); octx.stroke();
+        }
+      }
       // gates
       octx.globalAlpha=Math.max(.9,alpha()); octx.fillStyle='#7b5cff'; octx.strokeStyle='#000'; octx.lineWidth=1;
       for(const g1 of gates){ const x=(g1.x??g1[0])|0, y=(g1.y??g1[1])|0; const cx=(x+.5)*s, cy=(y+.5)*s, R=Math.max(3,Math.round(s*.36)); octx.beginPath(); octx.moveTo(cx,cy-R); octx.lineTo(cx+R,cy); octx.lineTo(cx,cy+R); octx.lineTo(cx-R,cy); octx.closePath(); octx.fill(); octx.stroke(); octx.beginPath(); octx.strokeStyle='rgba(255,255,255,.9)'; octx.arc(cx,cy,Math.max(2,Math.round(R*.55)),0,Math.PI*2); octx.stroke(); if(ST.linkSource===g1){ octx.beginPath(); octx.strokeStyle='#ffd60a'; octx.lineWidth=2; octx.arc(cx,cy,R+2,0,Math.PI*2); octx.stroke(); } const name=(g1.name||g1.id||'Gate'); drawLabel(cx, cy, name, true); }
@@ -409,7 +429,7 @@ import { hasAt, removeAt } from './removeHelpers.js';
     if(!dragging) return; const dx=e.clientX-dragStartX, dy=e.clientY-dragStartY; ST.panX=startPanX+dx; ST.panY=startPanY+dy; applyPan();
   });
   window.addEventListener('mouseup', (e)=>{
-    if(ST.linkSource){ const {x,y}=tileAtClient(e); const target=findGateAt(x,y); if(target && target!==ST.linkSource){ const idA=ensureGateId(ST.linkSource); const idB=ensureGateId(target); setGateLink(ST.linkSource,idB); setGateLink(target,idA); setStatus(`Linked ${idA} ↔ ${idB}`); markUnsaved(); scheduleDraw(); } else { setStatus('Linking cancelled'); } ST.linkSource=null; return; }
+    if(ST.linkSource){ const {x,y}=tileAtClient(e); const target=findGateAt(x,y); if(target && target!==ST.linkSource){ const idA=ensureGateId(ST.linkSource); const idB=ensureGateId(target); addGateLink(ST.linkSource,idB); addGateLink(target,idA); setAllowReturn(ST.linkSource,1); setAllowReturn(target,1); setStatus(`Linked ${idA} ↔ ${idB}`); markUnsaved(); scheduleDraw(); } else { setStatus('Linking cancelled'); } ST.linkSource=null; return; }
     if (recting){ const {x,y}=tileAtClient(e); const x0=Math.min(rectStart.x,x), y0=Math.min(rectStart.y,y), x1=Math.max(rectStart.x,x), y1=Math.max(rectStart.y,y); for(let yy=y0; yy<=y1; yy++){ for(let xx=x0; xx<=x1; xx++){ setTileBiome(xx,yy, ST.currentBiome||'plains'); } } recting=false; ST.rectPreview=null; scheduleDraw(); return; }
     if (brushing){ brushing=false; return; }
     if(dragging){ const moved=Math.abs((e?.clientX||0)-dragStartX)+Math.abs((e?.clientY||0)-dragStartY); dragging=false; els.frame.style.cursor='default'; if (moved<4){ const {x,y}=tileAtClient(e); if(x>=0&&y>=0&&ST.grid&&y<ST.grid.length&&x<ST.grid[0].length){ ST.focus={x,y}; scheduleDraw(); updateTilePanel(x,y); } } }
@@ -512,6 +532,7 @@ import { hasAt, removeAt } from './removeHelpers.js';
         if(flags.settlement){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove Settlements'; b.addEventListener('click',()=>{ const n=removeAt(ST,current.x,current.y,'settlement'); setStatus(n?`Removed ${n} settlement(s)`: 'No settlements here'); scheduleDraw(); markUnsaved(); close(); }); root.appendChild(b); list.push(b); }
         if(flags.poi){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove POIs'; b.addEventListener('click',()=>{ const n=removeAt(ST,current.x,current.y,'poi'); setStatus(n?`Removed ${n} POI(s)`: 'No POIs here'); scheduleDraw(); markUnsaved(); close(); }); root.appendChild(b); list.push(b); }
         if(flags.shardgate){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove Shardgates'; b.addEventListener('click',()=>{ const n=removeAt(ST,current.x,current.y,'shardgate'); setStatus(n?`Removed ${n} shardgate(s)`: 'No shardgates here'); scheduleDraw(); markUnsaved(); close(); }); root.appendChild(b); list.push(b);
+          const bEdit=document.createElement('button'); bEdit.className='ctx-item'; bEdit.textContent='Edit Shardgate Links'; bEdit.addEventListener('click',()=>{ const g=findGateAt(current.x,current.y); if(!g){ setStatus('No shardgate here'); close(); return; } const existing=getGateLinks(g).join(', '); const input=prompt('Linked gate IDs (comma separated):', existing); if(input!==null){ const list=input.split(',').map(s=>s.trim()).filter(Boolean); setGateLinks(g,list); const allow=confirm('Allow return travel?'); setAllowReturn(g, allow?1:0); setStatus('Shardgate links updated'); markUnsaved(); scheduleDraw(); } close(); }); root.appendChild(bEdit); list.push(bEdit);
           const b2=document.createElement('button'); b2.className='ctx-item'; b2.textContent=ST.linkSource?'Select Link Target':'Link Shardgate'; b2.addEventListener('click',()=>{ const g=findGateAt(current.x,current.y); if(ST.linkSource){ ST.linkSource=null; setStatus('Linking cancelled'); } else if(g){ ST.linkSource=g; setStatus('Select destination shardgate'); } else { setStatus('No shardgate here'); } close(); }); root.appendChild(b2); list.push(b2); }
         if(flags.biome){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove Biome (reset to baseline)'; b.addEventListener('click',()=>{ const n=resetBiomeAt(current.x,current.y); setStatus(n?'Biome reset to baseline':'Biome already baseline'); scheduleDraw(); markUnsaved(); close(); }); root.appendChild(b); list.push(b); }
         if(hasDraft){ const b=document.createElement('button'); b.className='ctx-item'; b.textContent='Remove Draft Markers'; b.addEventListener('click',()=>{ const removed=removeDraftAt(current.x,current.y); setStatus(removed?'Draft markers removed':'No draft markers'); close(); }); root.appendChild(b); list.push(b); }
