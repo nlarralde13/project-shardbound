@@ -86,7 +86,27 @@ import { hasAt, removeAt } from './removeHelpers.js';
   function rectWithin(x,y,w,h,maxW,maxH){ return x>=0&&y>=0&&(x+w)<=maxW&&(y+h)<=maxH; }
   function overlaps(x,y,w,h,arr){ return (arr||[]).some(r=> !(x+w<=r.x||r.x+r.w<=x||y+h<=r.y||r.y+r.h<=y)); }
   function canPlaceSettlementAt(x,y,tier){ const g=ST.grid; if(!g) return {ok:false,reason:'no grid'}; const H=g.length,W=g[0]?.length||0; const w=tier.size.w,h=tier.size.h; if(!rectWithin(x,y,w,h,W,H)) return {ok:false,reason:'Out of bounds'}; const existing=(Array.isArray(ST.shard?.settlements)?ST.shard.settlements:[]).map(s=>s.bounds||{}); const pending=(ST.draft?.settlements||[]).map(s=>s.bounds||{}); if(overlaps(x,y,w,h,[...existing,...pending])) return {ok:false,reason:'Overlaps existing'}; let allWater=true; for(let yy=y; yy<y+h; yy++){ for(let xx=x; xx<x+w; xx++){ const b=(ST.grid[yy][xx]||'').toLowerCase(); if (!['ocean','river','lake','reef','water'].includes(b)){ allWater=false; break; } } if(!allWater) break; } if(allWater) return {ok:false,reason:'Water only'}; return {ok:true}; }
-  function draftPlaceSettlementAt(x,y,tier){ const id=`settle_${Date.now()}_${Math.floor(Math.random()*1e6)}`; const b={x,y,w:tier.size.w,h:tier.size.h}; const sd={ id, name:tier.label, tier:tier.key, bounds:b, npcs_est:{min:0,max:0}, services:[], shops:[], walls:false, meta:{ notes:`${tier.label} draft` } }; ST.draft.settlements.push(sd); for(let yy=y; yy<y+b.h; yy++){ for(let xx=x; xx<x+b.w; xx++){ const k=`${xx},${yy}`; const prev=ST.draft.tiles[k]||{}; ST.draft.tiles[k]={ ...prev, settlementId:id, tags: Array.isArray(prev.tags)? Array.from(new Set([...prev.tags,'settlement_area'])) : ['settlement_area'] }; } } drawOverlay(); setStatus(`Drafted ${tier.label} at (${x},${y})`); }
+  function draftPlaceSettlementAt(x,y,tier){
+    const id=`settle_${Date.now()}_${Math.floor(Math.random()*1e6)}`;
+    const b={x,y,w:tier.size.w,h:tier.size.h};
+    const sd={ id, name:tier.label, tier:tier.key, bounds:b, npcs_est:{min:0,max:0}, services:[], shops:[], walls:false, meta:{ notes:`${tier.label} draft` } };
+    ST.draft.settlements.push(sd);
+    for(let yy=y; yy<y+b.h; yy++){
+      for(let xx=x; xx<x+b.w; xx++){
+        const k=`${xx},${yy}`;
+        const prev=ST.draft.tiles[k]||{};
+        const baseTags = ST.shard?.tiles?.[yy]?.[xx]?.tags || [];
+        const prevTags = Array.isArray(prev.tags) ? prev.tags : [];
+        ST.draft.tiles[k]={
+          ...prev,
+          settlementId:id,
+          tags: Array.from(new Set([...baseTags, ...prevTags, 'settlement_area']))
+        };
+      }
+    }
+    drawOverlay();
+    setStatus(`Drafted ${tier.label} at (${x},${y})`);
+  }
   function applyDraftToShard(){
     if(!ST.shard) return;
     // Ensure container
@@ -413,7 +433,6 @@ import { hasAt, removeAt } from './removeHelpers.js';
       const sep=document.createElement('div'); sep.className='ctx-sep';
       const list=[];
       // Remove group
-
       const flags=hasAt(ST,current.x,current.y,normBiome);
       if (flags.any){
         const rmh=document.createElement('div'); rmh.className='ctx-item'; rmh.style.fontWeight='600'; rmh.textContent='Remove at tile'; rmh.tabIndex=-1; rmh.style.cursor='default';
