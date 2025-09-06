@@ -30,6 +30,10 @@ async function loadShardClient(url) {
 }
 window.loadShard = loadShardClient;
 
+// Load a default shard immediately so the map is visible on page load
+const DEFAULT_SHARD_URL = '/static/public/shards/00089451_test123.json';
+loadShardClient(DEFAULT_SHARD_URL).catch(() => {});
+
 // ----- console bootstrap -----
 const consoleUI = mountConsole(document.getElementById('console-root'), {
   onSubmit: async (line, ctx = {}) => {
