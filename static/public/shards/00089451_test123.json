@@ -2330,7 +2330,9 @@
         "y": 10,
         "biome": "plains",
         "elevation": 0,
-        "tags": [],
+        "tags": [
+          "settlement_area"
+        ],
         "resources": [],
         "flags": {
           "buildable": false,
@@ -2556,7 +2558,9 @@
         "y": 11,
         "biome": "plains",
         "elevation": 0,
-        "tags": [],
+        "tags": [
+          "settlement_area"
+        ],
         "resources": [],
         "flags": {
           "buildable": false,
@@ -2570,7 +2574,9 @@
         "y": 11,
         "biome": "plains",
         "elevation": 0,
-        "tags": [],
+        "tags": [
+          "settlement_area"
+        ],
         "resources": [],
         "flags": {
           "buildable": false,
@@ -2782,7 +2788,9 @@
         "y": 12,
         "biome": "plains",
         "elevation": 0,
-        "tags": [],
+        "tags": [
+          "settlement_area"
+        ],
         "resources": [],
         "flags": {
           "buildable": false,
@@ -2796,7 +2804,9 @@
         "y": 12,
         "biome": "plains",
         "elevation": 0,
-        "tags": [],
+        "tags": [
+          "settlement_area"
+        ],
         "resources": [],
         "flags": {
           "buildable": false,
@@ -3644,9 +3654,7 @@
       "name": "Skull Island Gate",
       "icon": "shardgate",
       "description": "",
-      "meta": {
-        "allow_return": 1
-      }
+      "meta": {}
     },
     {
       "id": "poi_shardgate_1757079984473_59177",
@@ -3656,9 +3664,7 @@
       "name": "Starter Shardgate",
       "icon": "shardgate",
       "description": "",
-      "meta": {
-        "allow_return": 1
-      }
+      "meta": {}
     },
     {
       "id": "poi_shardgate_1757079990917_83309",
@@ -3668,8 +3674,38 @@
       "name": "Mountain Shardgate",
       "icon": "shardgate",
       "description": "",
-      "meta": {
-        "allow_return": 1
+      "meta": {}
+    }
+  ],
+  "settlements": [
+    {
+      "id": "sett_4_10",
+      "name": "Tier 1",
+      "tier": 1,
+      "anchor": {
+        "x": 4,
+        "y": 10
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "faction_id": null,
+      "population": null,
+      "links": {
+        "roads": [],
+        "shardgates": []
+      },
+      "discovered": false,
+      "template_slug": null,
+      "variant": null,
+      "meta": {},
+      "style": {},
+      "bounds": {
+        "x": 4,
+        "y": 10,
+        "w": 1,
+        "h": 1
       }
     }
   ],
@@ -3683,5 +3719,6 @@
     "version": "2.0.0",
     "template": "normal-16",
     "generator": "v2"
-  }
+  },
+  "settlements_schema_version": 1
 }

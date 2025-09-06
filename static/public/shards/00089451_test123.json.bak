@@ -2556,7 +2556,9 @@
         "y": 11,
         "biome": "plains",
         "elevation": 0,
-        "tags": [],
+        "tags": [
+          "settlement_area"
+        ],
         "resources": [],
         "flags": {
           "buildable": false,
@@ -2570,7 +2572,9 @@
         "y": 11,
         "biome": "plains",
         "elevation": 0,
-        "tags": [],
+        "tags": [
+          "settlement_area"
+        ],
         "resources": [],
         "flags": {
           "buildable": false,
@@ -2782,7 +2786,9 @@
         "y": 12,
         "biome": "plains",
         "elevation": 0,
-        "tags": [],
+        "tags": [
+          "settlement_area"
+        ],
         "resources": [],
         "flags": {
           "buildable": false,
@@ -2796,7 +2802,9 @@
         "y": 12,
         "biome": "plains",
         "elevation": 0,
-        "tags": [],
+        "tags": [
+          "settlement_area"
+        ],
         "resources": [],
         "flags": {
           "buildable": false,
@@ -3644,9 +3652,7 @@
       "name": "Skull Island Gate",
       "icon": "shardgate",
       "description": "",
-      "meta": {
-        "allow_return": 1
-      }
+      "meta": {}
     },
     {
       "id": "poi_shardgate_1757079984473_59177",
@@ -3656,9 +3662,7 @@
       "name": "Starter Shardgate",
       "icon": "shardgate",
       "description": "",
-      "meta": {
-        "allow_return": 1
-      }
+      "meta": {}
     },
     {
       "id": "poi_shardgate_1757079990917_83309",
