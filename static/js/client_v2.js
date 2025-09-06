@@ -1,5 +1,5 @@
 import * as Viewer from './shard-viewer-v2.js';
-import { API, autosaveCharacterState } from './api.js';
+import { API } from '/static/js/api.js';
 import { initActionHUD, updateActionHUD } from './actionHud.js';
 import { mountConsole, print as consolePrint } from '/static/src/console/consoleUI.js';
 import { parse } from '/static/src/console/parse.js';
@@ -116,10 +116,13 @@ initActionHUD({ mount: document.getElementById('action-root') });
 // Track current position for autosave
 let CurrentPos = { x: 0, y: 0 };
 let CurrentShardId = '';
+window.CurrentPos = CurrentPos;
+window.CurrentShardId = CurrentShardId;
 window.addEventListener('game:moved', (ev) => {
   const d = ev.detail || {};
   if (Number.isFinite(d.x) && Number.isFinite(d.y)) {
     CurrentPos = { x: d.x, y: d.y };
+    window.CurrentPos = CurrentPos;
   }
 });
 
@@ -191,24 +194,63 @@ bind('btnRest', async () => {
 bind('btnSkill1', () => log('Not implemented.'));
 bind('btnSkill2', () => log('Not implemented.'));
 
+// ---- Auth + active character guard ----
+async function guardAuthAndCharacter() {
+  const u = await API.me().catch(() => null);
+  if (!u) { location.href = '/'; return null; }
+  document.getElementById('userHandle')?.replaceChildren(document.createTextNode(u.handle || u.email || ''));
+  document.getElementById('userBadge')?.classList.remove('hidden');
+
+  const c = await API.characterActive().catch(() => null);
+  if (!c) { location.href = '/characters'; return null; }
+
+  window.__currentUser = u;
+  window.__activeCharacter = c;
+  try { window.dispatchEvent(new CustomEvent('character:ready', { detail: c })); } catch {}
+  return { u, c };
+}
+
+document.getElementById('btnLogout')?.addEventListener('click', async () => {
+  try { await API.logout(); } catch {}
+  location.href = '/';
+});
+
+// ---- Autosave ----
+function startAutosave() {
+  setInterval(async () => {
+    const pos = window.CurrentPos || {};
+    const shard = window.CurrentShardId || null;
+    const state = {};
+    try {
+      await API.autosaveCharacter({ shard_id: shard, x: pos.x ?? null, y: pos.y ?? null, state });
+    } catch {}
+  }, 60000);
+}
+
 // ----- boot -----
 (async () => {
+  const ok = await guardAuthAndCharacter();
+  if (!ok) return;
   let st;
   try {
     st = await API.state();
   } catch {
-    await API.spawn();
+    const DEV = new URLSearchParams(location.search).has('devmode');
+    await API.spawn({ devmode: DEV });
     st = await API.state();
   }
   const pos = st.player?.pos || [];
   if (pos.length === 2) {
     CurrentPos = { x: pos[0], y: pos[1] };
-    window.dispatchEvent(
-      new CustomEvent('game:moved', { detail: CurrentPos })
-    );
+    window.CurrentPos = CurrentPos;
+    window.dispatchEvent(new CustomEvent('game:moved', { detail: CurrentPos }));
+    log(`Player at (${pos[0]}, ${pos[1]})`);
   }
   CurrentShardId = st.room?.shard_id || st.shard_id || '';
+  window.CurrentShardId = CurrentShardId;
   if (st.room?.shard_url) await loadShardClient(st.room.shard_url);
+  window.currentRoom = st.room;
+  window.patchRoom?.(st.room);
   updateActionHUD({ interactions: st.interactions });
   updateCharHUD(st.player);
   const invMount = document.getElementById('invPanelMount');
@@ -216,7 +258,6 @@ bind('btnSkill2', () => log('Not implemented.'));
   if (invMount && characterId) {
     try { await initInventoryOverlay({ characterId, mountEl: invMount }); } catch {}
   }
-  window.dispatchEvent(new CustomEvent('character:ready', { detail: st.player }));
   if (Array.isArray(st.log)) {
     window.dispatchEvent(
       new CustomEvent('game:log', {
@@ -224,13 +265,7 @@ bind('btnSkill2', () => log('Not implemented.'));
       })
     );
   }
-  setInterval(() => {
-    autosaveCharacterState({
-      shard_id: CurrentShardId,
-      x: CurrentPos.x,
-      y: CurrentPos.y
-    }).catch(() => {});
-  }, 60000);
+  startAutosave();
 })();
 
 export { loadShardClient as loadShard };
