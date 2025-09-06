@@ -173,9 +173,12 @@
           };
           if(!payload.name){ alert('Name required'); return; }
           // Create character via gameplay API; server will grant loadout
-          await api('/api/game/characters',{method:'POST',headers:{'Content-Type':'application/json'},body: JSON.stringify(payload)});
-          // send them to select page so they can pick and play
-          window.location.href = '/characters';
+          const newChar = await api('/api/game/characters',{method:'POST',headers:{'Content-Type':'application/json'},body: JSON.stringify(payload)});
+          // auto-select new character then start playing
+          try {
+            await api('/api/game/characters/select',{method:'POST',headers:{'Content-Type':'application/json'},body: JSON.stringify({character_id:newChar.character_id})});
+          } catch(e){}
+          window.location.href = '/play';
         }catch(e){ alert(e.message || 'Create failed'); }
       });
     }

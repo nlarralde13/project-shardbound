@@ -18,7 +18,7 @@
     <div class="title">Choose Your Character</div>
     <div class="row">
       <a class="btn ghost" href="/class-builder">Class Builder</a>
-      <a class="btn ghost" href="/mvp">Play (current)</a>
+      <a class="btn ghost" href="/play">Play</a>
       <a class="btn" href="/character-create">+ Create New</a>
     </div>
   </header>
@@ -54,7 +54,7 @@
           try{
             if(act==='play'){
               await api('/api/game/characters/select',{method:'POST',headers:{'Content-Type':'application/json'}, body: JSON.stringify({character_id:id})});
-              window.location.href = '/mvp';
+              window.location.href = '/play';
             }else if(act==='delete'){
               if(confirm('Delete this character?')){
                 await api(`/api/game/characters/${id}`,{method:'DELETE'});

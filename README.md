@@ -115,7 +115,7 @@ This repo now includes a tiny inventory system wired end-to-end.
    ```
    python app.py
    ```
-3. Visit [http://localhost:5000/mvp](http://localhost:5000/mvp).
+3. Visit [http://localhost:5000/play](http://localhost:5000/play).
 4. A panel near the bottom shows the inventory for `demo-character-id`.
    Use the **Add Potion** and **Remove Potion** buttons to test the
    `/api/characters/<id>/inventory` endpoints.
