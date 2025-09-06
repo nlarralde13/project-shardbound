@@ -10,8 +10,6 @@ export function initOverlayMap({ devMode = false } = {}) {
   const root = document.getElementById('overlayMap');
   if (!root) return stub();
 
-  root.classList.add('overlay');
-
   // scaffold
   const panel  = ensure(root, '.map-panel', () => { const p=document.createElement('div'); p.className='map-panel'; return p; });
   const top    = ensure(panel, '.map-top', () => { const t=document.createElement('header'); t.className='map-top'; t.innerHTML = `<div class="map-title">World Map</div>`; return t; });

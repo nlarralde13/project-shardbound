@@ -52,8 +52,6 @@ const USER_TOKEN = (() => {
 })();
 
 // ==== DOM HOOKS ====
-const overlayMapEl = document.getElementById('overlayMap');
-const btnWorldMap   = document.getElementById('btnWorldMap');
 const overlayChar   = document.getElementById('overlayChar');
 const overlayInv    = document.getElementById('overlayInventory');
 
@@ -66,7 +64,6 @@ const shardStatus   = document.getElementById('shardStatus');
 
 const roomTitle = document.getElementById('roomTitle');
 const roomBiome = document.getElementById('roomBiome');
-const roomArt   = document.getElementById('roomArt');
 
 const statHP     = document.getElementById('statHP');
 const statMP     = document.getElementById('statMP');
@@ -139,24 +136,6 @@ const isTyping = (t) => {
   return t.isContentEditable === true;
 };
 
-// ---- ART RESOLUTION HELPERS (for game card — unchanged behavior) ----
-async function headOk(url) { try { const r=await fetch(url,{method:'HEAD'}); return r.ok; } catch { return false; } }
-function makeArtCandidates(room) {
-  const biome = (room.biome || '').toLowerCase();
-  const poi   = (room.poi?.type || room.town?.type || room.tags?.find(t => /town|city|village|port|dungeon/i.test(t)) || '').toString().toLowerCase();
-  const roots = ['/static/assets/rooms','/static/assets/biomes','/static/assets/2d/rooms','/static/assets/2d/biomes'];
-  const names = [];
-  if (poi) names.push(`poi_${poi}.png`, `town_${poi}.png`, `${poi}.png`);
-  if (biome) names.push(`biome_${biome}.png`, `${biome}.png`);
-  names.push('default_room.png','unknown.png');
-  const out=[]; for(const root of roots) for(const n of names) out.push(`${root}/${n}`); return out;
-}
-async function resolveArtSrc(room) {
-  if (room.artSrc) return room.artSrc;
-  for (const url of makeArtCandidates(room)) { if (await headOk(url)) return url; }
-  return '';
-}
-
 // ==== CHARACTER HUD ====
 function updateCharHud(p = {}) {
   if (statHP && Number.isFinite(p.hp) && Number.isFinite(p.max_hp)) statHP.style.width = clampPct((p.hp / p.max_hp) * 100) + '%';
@@ -170,13 +149,6 @@ function renderRoomInfo(room, opts = { flavor: true }) {
   if (!room) return;
   if (roomTitle) roomTitle.textContent = room.title || `(${room.x},${room.y})`;
   if (roomBiome) roomBiome.textContent = room.biome || '';
-  const applyArt = (src) => {
-    if (!roomArt) return;
-    if (roomArt.tagName === 'IMG') { roomArt.removeAttribute('src'); if (src) roomArt.src = src; roomArt.alt = room.title || 'room art'; }
-    else { roomArt.style.backgroundImage = src ? `url("${src}")` : ''; roomArt.title = room.title || ''; roomArt.setAttribute('aria-hidden', src ? 'false' : 'true'); }
-  };
-  if (room.artSrc) applyArt(room.artSrc);
-  else resolveArtSrc(room).then(applyArt);
   if (opts.flavor && room.flavor) log(room.flavor, 'log-flavor');
 }
 
@@ -192,9 +164,6 @@ function log(text, cls, ts) {
 
 // ==== OVERLAY MAP INSTANCE ====
 const overlay = initOverlayMap?.({ devMode: DEV_MODE });
-const openMap   = () => { overlayMapEl?.classList.remove('hidden'); overlay?.render?.(); };
-const closeMap  = () => overlayMapEl?.classList.add('hidden');
-const toggleMap = () => overlayMapEl?.classList.contains('hidden') ? openMap() : closeMap();
 
 // ==== GAME STATE ====
 let CurrentPos = { x: 0, y: 0 };
@@ -237,10 +206,9 @@ window.addEventListener('game:log', (ev) => {
 window.addEventListener('keydown', (e) => {
   if (isTyping(e.target)) return;
   const k = e.key?.toLowerCase?.();
-  if (k === 'm') { e.preventDefault(); toggleMap(); }
   if (k === 'c') { e.preventDefault(); toggle(overlayChar); }
   if (k === 'i') { e.preventDefault(); const hidden = overlayInv?.classList.contains('hidden'); if (hidden) openInventoryOverlay(); else overlayInv?.classList.add('hidden'); }
-  if (k === 'escape') { e.preventDefault(); closeMap(); overlayChar?.classList.add('hidden'); overlayInv?.classList.add('hidden'); }
+  if (k === 'escape') { e.preventDefault(); overlayChar?.classList.add('hidden'); overlayInv?.classList.add('hidden'); }
 });
 
 // ==== SHARD LOADING FLOW ====
@@ -362,7 +330,6 @@ btnLoadShard?.addEventListener('click', async () => {
   await loadShard(url);
 });
 shardSelect?.addEventListener('change', () => btnLoadShard?.click());
-btnWorldMap?.addEventListener('click', () => toggleMap());
 btnCharacter?.addEventListener('click', () => toggle(overlayChar));
 btnInventory?.addEventListener('click', () => {
   const hidden = overlayInv?.classList.contains('hidden');
