@@ -5,9 +5,9 @@ Thin runner that uses the unified factory and runs Socket.IO.
 import re, datetime as dt
 from flask import Blueprint, request, jsonify
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from app.models import db, User
+from api.models import db, User
 from flask_socketio import SocketIO
-from app import create_app
+from api import create_app
 
 
 auth_bp = Blueprint("auth_bp", __name__)

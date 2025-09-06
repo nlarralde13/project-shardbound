@@ -60,7 +60,7 @@ def fix_grid(obj):
     else: obj["tiles"] = tiles
     return changed
 
-def main(folder="static/public/shards"):
+def main(folder="client/public/shards"):
     any_changed = False
     for p in Path(folder).glob("*.json"):
         data = json.loads(p.read_text(encoding="utf-8"))

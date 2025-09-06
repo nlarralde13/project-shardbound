@@ -21,10 +21,10 @@ class SaveResult:
 
 def default_shards_dir() -> Path:
     """
-    Resolve /static/public/shards relative to /app (do not import app.py).
+    Resolve /static/public/shards relative to /app (do not import api.py).
     """
     root = Path(__file__).resolve().parents[1]   # /app
-    d = root / "static" / "public" / "shards"
+    d = root / "client" / "public" / "shards"
     d.mkdir(parents=True, exist_ok=True)
     return d
 

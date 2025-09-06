@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 
-from server.player_engine import Player, move
+from engine.player_engine import Player, move
 
 
 @dataclass

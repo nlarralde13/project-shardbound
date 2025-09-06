@@ -4,7 +4,7 @@
 
 1. Install dependencies: `pip install -r requirements.txt`
 2. Seed demo data: `python db_cli.py seed-starter`
-3. Start the server: `python app.py`
+3. Start the server: `python api.py`
 4. Visit `http://localhost:5000`
 
 To access admin features set an admin passphrase before running the server:
@@ -92,7 +92,7 @@ World & Gameplay Helpers:
 
 ## Demo Warrior Scenario
 1. `python db_cli.py seed-starter`
-2. Start the Flask server: `python app.py`
+2. Start the Flask server: `python api.py`
 3. Open the game and log in.
 4. Create a Warrior (`POST /api/game/characters` or via UI).
 5. Spawn at (12,15) and note the Enter Town option.
@@ -109,11 +109,11 @@ This repo now includes a tiny inventory system wired end-to-end.
 ### Setup
 1. Apply migrations (uses SQLite by default):
    ```
-   FLASK_APP=app.py flask db upgrade
+   FLASK_APP=api.py flask db upgrade
    ```
 2. Start the development server:
    ```
-   python app.py
+   python api.py
    ```
 3. Visit [http://localhost:5000/play](http://localhost:5000/play).
 4. A panel near the bottom shows the inventory for `demo-character-id`.

@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 
 def test_warrior_gets_starter_kit():
-    from app import create_app
+    from api import create_app
     app = create_app()
     with app.test_client() as client, app.app_context():
         # seed catalog + loadout
@@ -22,8 +22,8 @@ def test_warrior_gets_starter_kit():
         cid = created.get_json()['character_id']
 
         # verify character_items got rows
-        from app.models import db
-        from app.models.inventory_v2 import CharacterItem
+        from api.models import db
+        from api.models.inventory_v2 import CharacterItem
         rows = db.session.query(CharacterItem).filter_by(character_id=cid).all()
         # Expected from seed: 1+1+sums (3+2+1+1+2+2+1) = 13 total quantity across 9 slugs
         assert len(rows) >= 5

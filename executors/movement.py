@@ -3,17 +3,17 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Tuple
 
-from app.player_service import get_player, save_player
-from server.player_engine import move as engine_move
+from api.player_service import get_player, save_player
+from engine.player_engine import move as engine_move
 
 from executors.look import look
 
 try:
-    from app.api.routes import WORLD
+    from api.api.routes import WORLD
 except Exception:  # pragma: no cover
-    from server.world_loader import load_world
+    from engine.world_loader import load_world
     from pathlib import Path
-    WORLD = load_world(Path("static/public/shards/00089451_test123.json"))
+    WORLD = load_world(Path("client/public/shards/00089451_test123.json"))
 
 # Direction deltas
 DIRS: Dict[str, Tuple[int, int]] = {

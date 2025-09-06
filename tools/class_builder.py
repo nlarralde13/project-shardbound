@@ -24,8 +24,8 @@ PUBS   = CONTENT / "classes" / "published"
 def _maybe_load_app():
     try:
         sys.path.insert(0, str(ROOT))
-        from app import create_app  # type: ignore
-        from app.models import db   # type: ignore
+        from api import create_app  # type: ignore
+        from api.models import db   # type: ignore
         return create_app, db
     except Exception:
         return None, None
@@ -214,7 +214,7 @@ def cmd_sync_db(_):
         return
     # Attempt to import ClassDef; if you add this model later, it will work.
     try:
-        from app.models import ClassDef  # type: ignore
+        from api.models import ClassDef  # type: ignore
     except Exception:
         print("No ClassDef model found. Add one to models.py if you want DB sync.")
         return

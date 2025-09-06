@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 
 import pytest
 
-from server.player_engine import Player, can_enter
+from engine.player_engine import Player, can_enter
 
 
 @dataclass

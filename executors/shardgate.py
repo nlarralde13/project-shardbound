@@ -6,19 +6,19 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from app.player_service import get_player, save_player
+from api.player_service import get_player, save_player
 from flask_login import current_user
-from app.models import db
-from app.models.users import User
-from app.models.gameplay import CharacterDiscovery
-from server.world_loader import gate_at, gate_by_id
+from api.models import db
+from api.models.users import User
+from api.models.gameplay import CharacterDiscovery
+from engine.world_loader import gate_at, gate_by_id
 
 try:
-    from app.api.routes import WORLD
+    from api.api.routes import WORLD
 except Exception:  # pragma: no cover
-    from server.world_loader import load_world
+    from engine.world_loader import load_world
     from pathlib import Path
-    WORLD = load_world(Path("static/public/shards/00089451_test123.json"))
+    WORLD = load_world(Path("client/public/shards/00089451_test123.json"))
 
 
 def enter_shardgate(cmd: Dict[str, Any], ctx: Dict[str, Any]) -> List[Dict[str, Any]]:
