@@ -31,7 +31,7 @@ async function bootSelect() {
     `;
     card.querySelector("button").addEventListener("click", async () => {
       await API.characterSelect(c.character_id);
-      location.href = "/mvp";
+      location.href = "/play";
     });
     deck.appendChild(card);
   });
@@ -54,9 +54,12 @@ async function bootCreate() {
     };
     const msg = el("msg");
     try {
-      await API.characterCreate(payload);
+      const res = await API.characterCreate(payload);
       msg.textContent = "Created!";
-      location.href = "/mvp";
+      if (res?.character_id) {
+        try { await API.characterSelect(res.character_id); } catch {}
+      }
+      location.href = "/play";
     } catch (err) {
       msg.textContent = err.message || "Failed to create character";
     }

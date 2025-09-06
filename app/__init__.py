@@ -189,6 +189,10 @@ def create_app():
     def mvp():
         return render_template("mvp3.html")
 
+    @app.route("/play")
+    def play():
+        return render_template("mvp3.html")
+
     @app.route("/api-playground")
     def api_playground():
         return render_template("api-playground.html")
