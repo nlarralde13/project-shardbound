@@ -10,54 +10,11 @@
   <link rel="stylesheet" href="/static/css/shard-viewer-v2.css" />
   <link rel="stylesheet" href="/static/css/inventoryOverlay.css" />
   <link rel="stylesheet" href="/static/css/characterPanel.css" />
+  <link rel="stylesheet" href="/static/css/client_v2.css" />
 
   <script>
     window.SHARDBIOME_SOURCE = 'grid';
   </script>
-
-  <style>
-    /* Layout scaffolding */
-    #clientSidebar {
-      position: fixed;
-      top: 0; bottom: 0; left: 0;
-      width: 240px;
-      padding: 16px;
-      background: var(--panel);
-      border-right: 1px solid var(--line);
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      overflow: auto;
-      transition: transform .2s ease;
-    }
-    #clientSidebar.collapsed { transform: translateX(-100%); }
-    #btnSidebarCollapse {
-      position: absolute;
-      top: 8px;
-      right: -12px;
-      width: 24px;
-      height: 24px;
-    }
-    main.viewerMain {
-      margin-left: 240px;
-      margin-right: 80px;
-      padding: 16px;
-      display: flex;
-      justify-content: center;
-    }
-    body.sidebar-collapsed main.viewerMain { margin-left: 0; }
-    #actionRail {
-      position: fixed;
-      right: 16px;
-      top: 50%;
-      transform: translateY(-50%);
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    #actionRail button { width: 60px; height: 60px; }
-    #shardStatus { font-size: 12px; color: var(--muted); }
-  </style>
 </head>
 <body>
   <header>
@@ -114,7 +71,10 @@
           <button class="zbtn" id="btnZoomOut" title="Zoom out">−</button>
         </div>
       </section>
-      <div id="console-root" aria-live="polite"></div>
+      <details id="consoleSection" class="console-section" open>
+        <summary>Console</summary>
+        <div id="console-root" aria-live="polite"></div>
+      </details>
     </section>
   </main>
 
@@ -128,6 +88,15 @@
 
   <div id="action-root" class="action-root"></div>
 
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.matchMedia('(max-width: 900px)').matches) {
+        document.body.classList.add('sidebar-collapsed');
+        document.getElementById('clientSidebar')?.classList.add('collapsed');
+        document.getElementById('consoleSection')?.removeAttribute('open');
+      }
+    });
+  </script>
   <script type="module" src="/static/js/client_v2.js"></script>
 </body>
 </html>
