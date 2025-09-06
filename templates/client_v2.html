@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Shardbound Client v2</title>
+
+  <!-- Base styles + v2 overlay styles -->
+  <link rel="stylesheet" href="/static/css/shard-viewer.css" />
+  <link rel="stylesheet" href="/static/css/shard-viewer-v2.css" />
+
+  <script>
+    window.SHARDBIOME_SOURCE = 'grid';
+  </script>
+
+  <style>
+    /* Layout scaffolding */
+    #clientSidebar {
+      position: fixed;
+      top: 0; bottom: 0; left: 0;
+      width: 240px;
+      padding: 16px;
+      background: var(--panel);
+      border-right: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow: auto;
+      transition: transform .2s ease;
+    }
+    #clientSidebar.collapsed { transform: translateX(-100%); }
+    main.viewerMain {
+      margin-left: 240px;
+      margin-right: 80px;
+      padding: 16px;
+      display: flex;
+      justify-content: center;
+    }
+    body.sidebar-collapsed main.viewerMain { margin-left: 0; }
+    #actionRail {
+      position: fixed;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    #actionRail button { width: 60px; height: 60px; }
+    #shardStatus { font-size: 12px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <button id="btnSidebarToggle" aria-label="Toggle sidebar">☰</button>
+    <h1 id="shardName">Shard</h1>
+    <span id="shardStatus">—</span>
+  </header>
+
+  <aside id="clientSidebar">
+    <section>
+      <h2>Character</h2>
+      <div id="charPanel"></div>
+    </section>
+    <section>
+      <h2>Inventory</h2>
+      <div id="invPanel"></div>
+    </section>
+  </aside>
+
+  <main class="viewerMain">
+    <section class="card viewer">
+      <h2>Map</h2>
+      <section class="canvas-wrap" id="frame">
+        <canvas id="canvas"></canvas>
+        <div class="tooltip" id="tooltip"></div>
+        <div class="debug-badge" id="debugBadge" aria-live="polite" style="opacity:0"></div>
+        <div class="zoomOverlay">
+          <button class="zbtn" id="btnFit" title="Fit (refit)">⤢</button>
+          <button class="zbtn" id="btnZoomIn" title="Zoom in">+</button>
+          <button class="zbtn" id="btnZoomOut" title="Zoom out">−</button>
+        </div>
+      </section>
+      <div id="console-root" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <div id="actionRail">
+    <button id="btnLook">Look</button>
+    <button id="btnInteract">Interact</button>
+    <button id="btnRest">Rest</button>
+    <button id="btnSkill1">Skill 1</button>
+    <button id="btnSkill2">Skill 2</button>
+  </div>
+
+  <div id="action-root" class="action-root"></div>
+
+  <script type="module" src="/static/js/client_v2.js"></script>
+</body>
+</html>
