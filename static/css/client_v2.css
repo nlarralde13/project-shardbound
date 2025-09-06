@@ -2,13 +2,16 @@
 
 body {
   display: grid;
-  grid-template-columns: 340px 1fr 80px;
+  grid-template-columns: 340px 1fr 80px 300px;
   grid-template-rows: auto 1fr;
   min-height: 100vh;
+  background: #1c1a17;
+  color: var(--text);
+  font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
 }
 
 body.sidebar-collapsed {
-  grid-template-columns: 0 1fr 80px;
+  grid-template-columns: 0 1fr 80px 300px;
 }
 
 header {
@@ -63,6 +66,24 @@ main.viewerMain {
   height: 100vh;
 }
 
+#rightSidebar {
+  grid-row: 2;
+  grid-column: 4;
+  width: 300px;
+  padding: 16px;
+  background: var(--panel);
+  border-left: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+}
+
+.panel-body {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
 #actionRail button {
   width: 60px;
   height: 60px;
@@ -96,10 +117,10 @@ main.viewerMain {
 
 @media (max-width: 900px) {
   body {
-    grid-template-columns: 0 1fr 60px;
+    grid-template-columns: 0 1fr 60px 0;
   }
   body.sidebar-collapsed {
-    grid-template-columns: 0 1fr 60px;
+    grid-template-columns: 0 1fr 60px 0;
   }
   body.sidebar-collapsed #clientSidebar {
     transform: translateX(-100%);
@@ -113,5 +134,8 @@ main.viewerMain {
   #actionRail {
     grid-column: 3;
     padding: 8px 4px;
+  }
+  #rightSidebar {
+    display: none;
   }
 }
