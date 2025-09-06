@@ -4,6 +4,7 @@ import { initActionHUD, updateActionHUD } from './actionHud.js';
 import { mountConsole, print as consolePrint } from '/static/src/console/consoleUI.js';
 import { parse } from '/static/src/console/parse.js';
 import { dispatch } from '/static/src/console/dispatch.js';
+import { initInventoryOverlay } from '/static/src/ui/inventoryPanel.js';
 
 // ----- simple helpers -----
 const log = (text, type = 'log') => {
@@ -65,11 +66,48 @@ window.addEventListener('game:log', (ev) => {
   }
 });
 
-// ----- sidebar toggle -----
+// ----- sidebar collapse -----
 const sidebar = document.getElementById('clientSidebar');
-const btnSidebarToggle = document.getElementById('btnSidebarToggle');
-btnSidebarToggle?.addEventListener('click', () => {
-  sidebar?.classList.toggle('is-collapsed');
+const btnSidebarCollapse = document.getElementById('btnSidebarCollapse');
+btnSidebarCollapse?.addEventListener('click', () => {
+  const collapsed = sidebar?.classList.toggle('collapsed');
+  document.body.classList.toggle('sidebar-collapsed', collapsed);
+  if (btnSidebarCollapse) btnSidebarCollapse.textContent = collapsed ? '▶' : '◀';
+});
+
+function ensureSidebarVisible() {
+  if (!sidebar) return;
+  if (sidebar.classList.contains('collapsed')) {
+    sidebar.classList.remove('collapsed');
+    document.body.classList.remove('sidebar-collapsed');
+    if (btnSidebarCollapse) btnSidebarCollapse.textContent = '◀';
+  }
+}
+
+const isTyping = (t) => {
+  if (!t) return false;
+  const tag = t.tagName;
+  if (tag === 'TEXTAREA') return true;
+  if (tag === 'INPUT') {
+    const disallowed = ['checkbox','radio','button','range','submit','reset','file','color'];
+    return !disallowed.includes((t.type || '').toLowerCase());
+  }
+  return t.isContentEditable === true;
+};
+
+window.addEventListener('keydown', (e) => {
+  if (isTyping(e.target)) return;
+  const k = e.key?.toLowerCase();
+  if (k === 'c') {
+    e.preventDefault();
+    ensureSidebarVisible();
+    document.getElementById('cardCharacter')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  if (k === 'i') {
+    e.preventDefault();
+    ensureSidebarVisible();
+    document.getElementById('cardInventory')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 });
 
 // ----- action HUD -----
@@ -88,11 +126,19 @@ window.addEventListener('game:moved', (ev) => {
 function updateCharHUD(p = {}) {
   const hp = document.getElementById('statHP');
   const mp = document.getElementById('statMP');
+  const sta = document.getElementById('statSTA');
+  const hunger = document.getElementById('statHunger');
   if (hp && Number.isFinite(p.hp) && Number.isFinite(p.max_hp)) {
     hp.style.width = clampPct((p.hp / p.max_hp) * 100) + '%';
   }
   if (mp && Number.isFinite(p.mp) && Number.isFinite(p.max_mp)) {
     mp.style.width = clampPct((p.mp / p.max_mp) * 100) + '%';
+  }
+  if (sta && Number.isFinite(p.sta) && Number.isFinite(p.max_sta)) {
+    sta.style.width = clampPct((p.sta / p.max_sta) * 100) + '%';
+  }
+  if (hunger && Number.isFinite(p.hunger)) {
+    hunger.textContent = `Hunger: ${p.hunger}`;
   }
 }
 window.updateCharHud = updateCharHUD;
@@ -165,6 +211,12 @@ bind('btnSkill2', () => log('Not implemented.'));
   if (st.room?.shard_url) await loadShardClient(st.room.shard_url);
   updateActionHUD({ interactions: st.interactions });
   updateCharHUD(st.player);
+  const invMount = document.getElementById('invPanelMount');
+  const characterId = st.player?.character_id || st.player?.id;
+  if (invMount && characterId) {
+    try { await initInventoryOverlay({ characterId, mountEl: invMount }); } catch {}
+  }
+  window.dispatchEvent(new CustomEvent('character:ready', { detail: st.player }));
   if (Array.isArray(st.log)) {
     window.dispatchEvent(
       new CustomEvent('game:log', {
