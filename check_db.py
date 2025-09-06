@@ -6,7 +6,7 @@ def find_sqlite_path_from_flask():
     try:
         # ensure local package import works when running directly
         sys.path.insert(0, os.path.abspath("."))
-        from app import create_app
+        from api import create_app
         a = create_app()
         uri = a.config.get("SQLALCHEMY_DATABASE_URI", "")
         print("Flask SQLALCHEMY_DATABASE_URI:", uri)
@@ -20,7 +20,7 @@ def find_sqlite_path_from_flask():
             # Not SQLite (e.g., Postgres); bail to manual check
             return None
     except Exception as e:
-        print("Could not import app.create_app (that's OK):", repr(e))
+        print("Could not import api.create_app (that's OK):", repr(e))
         return None
 
 def first_existing(paths):
@@ -51,7 +51,7 @@ def main():
     fallback_paths = [
         guess_from_flask,
         os.path.join("app.db"),
-        os.path.join("app", "app.db"),
+        os.path.join("api", "app.db"),
     ]
     db_path = first_existing(fallback_paths)
     print("Resolved DB path:", db_path if db_path else "(not found)")

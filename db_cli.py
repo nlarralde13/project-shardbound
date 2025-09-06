@@ -11,10 +11,10 @@ os.environ.setdefault("AUTO_CREATE_TABLES", "0")
 import sqlalchemy as sa  # type: ignore
 
 # App + models
-from app import create_app  # type: ignore
-from app.models import db, User, Character  # type: ignore
+from api import create_app  # type: ignore
+from api.models import db, User, Character  # type: ignore
 try:
-    from app.models import Item, ItemInstance, CharacterInventory  # type: ignore
+    from api.models import Item, ItemInstance, CharacterInventory  # type: ignore
 except Exception:
     Item = ItemInstance = CharacterInventory = None  # type: ignore
 
@@ -64,8 +64,8 @@ def _slugify(name: str) -> str:
 
 
 def cmd_seed_items(args):
-    from app.models.items import Item
-    from app.models.inventory_v2 import StarterLoadout
+    from api.models.items import Item
+    from api.models.inventory_v2 import StarterLoadout
     path = args.file
     if not os.path.exists(path):
         print(f"Seed file not found: {path}")
@@ -135,7 +135,7 @@ def cmd_seed_items(args):
     items_spec = loadout.get("items") or []
     # Map slug -> item_id
     slugs = [s.get("slug") for s in items_spec if s.get("slug")]
-    from app.models.items import Item as ItemModel
+    from api.models.items import Item as ItemModel
     rows = ItemModel.query.filter(ItemModel.slug.in_(slugs)).all() if slugs else []
     by_slug = {r.slug: r for r in rows}
     added = 0
@@ -162,7 +162,7 @@ def cmd_seed_items(args):
 
 
 def cmd_export_catalog(args):
-    from app.models.items import Item
+    from api.models.items import Item
     out_path = args.out
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     rows = (
@@ -402,7 +402,7 @@ def build_parser():
 
     # export-catalog
     s = sub.add_parser("export-catalog", help="Export item catalog JSON for client")
-    s.add_argument("--out", default="static/public/api/catalog.json")
+    s.add_argument("--out", default="client/public/api/catalog.json")
     s.set_defaults(func=cmd_export_catalog)
 
     return p

@@ -1,5 +1,5 @@
 import uuid
-from app import create_app
+from api import create_app
 
 
 def _register(client):

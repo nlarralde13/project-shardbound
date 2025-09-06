@@ -1,7 +1,8 @@
-echo ".DS_Store
+__pycache__/
+*.py[cod]
+.DS_Store
 node_modules/
 dist/
 .env
 *.log
-" > .gitignore
 app.db

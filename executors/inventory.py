@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from app.services import items as item_svc
+from api.services import items as item_svc
 
 
 def _require_character(ctx: Dict[str, Any]) -> str | None:

@@ -1,6 +1,6 @@
 import command_router as router
-from app import create_app
-from app.models import db, Character
+from api import create_app
+from api.models import db, Character
 
 
 def test_resolve_alias():

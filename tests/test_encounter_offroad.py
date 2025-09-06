@@ -4,9 +4,9 @@ import pytest
 
 from flask import Flask
 
-from app.api import routes
-import server.combat as combat
-from server.player_engine import Player
+from api.api import routes
+import engine.combat as combat
+from engine.player_engine import Player
 
 
 @dataclass

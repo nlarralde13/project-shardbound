@@ -1,4 +1,4 @@
-from app import create_app
+from api import create_app
 
 
 def test_spawn_and_move_updates_state():

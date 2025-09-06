@@ -1,12 +1,12 @@
-from app import create_app
-from server.config import START_POS
+from api import create_app
+from engine.config import START_POS
 import uuid
 
 
 def test_autosave_before_spawn_does_not_override_start():
     app = create_app()
     with app.test_client() as client, app.app_context():
-        from app.models import Character
+        from api.models import Character
         # register and login
         email = f"{uuid.uuid4().hex}@t.com"
         handle = uuid.uuid4().hex[:8]

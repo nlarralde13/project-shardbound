@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from server.world_loader import load_world
+from engine.world_loader import load_world
 
 
 def test_load_world_populates_world_sets() -> None:
