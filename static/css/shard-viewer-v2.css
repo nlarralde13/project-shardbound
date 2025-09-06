@@ -16,7 +16,8 @@
 
 /* Both canvases: absolutely fill the wrap */
 #canvas,
-#overlayCanvasV2 {
+#overlayCanvasV2,
+#overlayCanvasLite {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -30,7 +31,8 @@
 
 /* Overlay above base, but ignore pointer events so hover math works */
 #canvas { z-index: 2; }
-#overlayCanvasV2 { z-index: 5; pointer-events: none; }
+#overlayCanvasV2,
+#overlayCanvasLite { z-index: 5; pointer-events: none; }
 
 /* Floating tooltip above everything */
 #tooltip {

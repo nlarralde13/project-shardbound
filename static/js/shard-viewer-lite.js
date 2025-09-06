@@ -61,7 +61,8 @@ Object.assign(tip.style, {
 document.body.appendChild(tip);
 
 const dpr = () => window.devicePixelRatio || 1;
-const scale = () => Math.max(1, parseInt(els.scale?.value || '8', 10));
+// Default to a 35px tile scale if no control is present
+const scale = () => Math.max(1, parseInt(els.scale?.value || '35', 10));
 const alpha = () => Math.max(0, Math.min(1, (parseInt(els.opacity?.value || '85', 10) || 85) / 100));
 
 // State
@@ -362,7 +363,7 @@ window.addEventListener('mouseup', (e) => {
 els.frame?.addEventListener('contextmenu', (e) => e.preventDefault());
 
 // Zoom controls
-function setScalePx(px) {
+export function setScalePx(px) {
   px = Math.max(4, Math.min(64, Math.round(px)));
   if (els.scale) els.scale.value = String(px);
   if (ST.grid) {
@@ -381,13 +382,21 @@ function zoomAt(fx, fy, factor) {
   setScalePx(s2);
   applyPan();
 }
-els.frame?.addEventListener('wheel', (e) => {
+function handleWheel(e) {
   e.preventDefault();
-  const fx = e.clientX - (els.frame.getBoundingClientRect().left);
-  const fy = e.clientY - (els.frame.getBoundingClientRect().top);
-  const factor = (e.deltaY > 0) ? 0.9 : 1.1;
+  const rect = els.frame.getBoundingClientRect();
+  const fx = e.clientX - rect.left;
+  const fy = e.clientY - rect.top;
+  const factor = e.deltaY > 0 ? 0.9 : 1.1;
   zoomAt(fx, fy, factor);
-}, { passive: false });
+}
+// Attach the wheel listener only once on the frame. Previously both the
+// frame and base canvas listened for the wheel event which caused the handler
+// to fire twice per scroll action. That resulted in the map jumping or
+// drifting out of the viewport instead of smoothly zooming like Google Maps.
+// The frame receives bubbled wheel events from the canvas, so a single
+// listener here is sufficient.
+els.frame?.addEventListener('wheel', handleWheel, { passive: false });
 $('btnZoomIn')?.addEventListener('click', (e) => { e?.preventDefault?.(); const rect = els.frame.getBoundingClientRect(); zoomAt(rect.width / 2, rect.height / 2, 1.2); });
 $('btnZoomOut')?.addEventListener('click', (e) => { e?.preventDefault?.(); const rect = els.frame.getBoundingClientRect(); zoomAt(rect.width / 2, rect.height / 2, 0.8); });
 $('btnFit')?.addEventListener('click', (e) => { e?.preventDefault?.(); centerInFrame(); });
