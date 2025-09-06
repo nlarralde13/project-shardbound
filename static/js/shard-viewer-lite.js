@@ -390,6 +390,7 @@ function handleWheel(e) {
   const factor = e.deltaY > 0 ? 0.9 : 1.1;
   zoomAt(fx, fy, factor);
 }
+
 // Attach the wheel listener only once on the frame. Previously both the
 // frame and base canvas listened for the wheel event which caused the handler
 // to fire twice per scroll action. That resulted in the map jumping or
@@ -397,6 +398,7 @@ function handleWheel(e) {
 // The frame receives bubbled wheel events from the canvas, so a single
 // listener here is sufficient.
 els.frame?.addEventListener('wheel', handleWheel, { passive: false });
+
 $('btnZoomIn')?.addEventListener('click', (e) => { e?.preventDefault?.(); const rect = els.frame.getBoundingClientRect(); zoomAt(rect.width / 2, rect.height / 2, 1.2); });
 $('btnZoomOut')?.addEventListener('click', (e) => { e?.preventDefault?.(); const rect = els.frame.getBoundingClientRect(); zoomAt(rect.width / 2, rect.height / 2, 0.8); });
 $('btnFit')?.addEventListener('click', (e) => { e?.preventDefault?.(); centerInFrame(); });
