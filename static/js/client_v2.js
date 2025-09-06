@@ -1,4 +1,5 @@
-import * as Viewer from './shard-viewer-v2.js';
+// Import read-only shard viewer (no editing or draft handlers)
+import * as Viewer from './shard-viewer-lite.js';
 import { API } from '/static/js/api.js';
 import { initActionHUD, updateActionHUD } from './actionHud.js';
 import { mountConsole, print as consolePrint } from '/static/src/console/consoleUI.js';
