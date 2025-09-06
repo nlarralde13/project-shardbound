@@ -1,4 +1,4 @@
-from server import settlements
+from engine import settlements
 
 
 def test_upgrade_initializes_from_pois():

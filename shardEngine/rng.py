@@ -11,7 +11,7 @@ Design:
 - Stable across Python versions (no reliance on random.Random internals)
 
 Use:
-    from app.shardEngine.rng import KeyedRNG, randf, randi, choice, sample, shuffle, value_noise2d
+    from api.shardEngine.rng import KeyedRNG, randf, randi, choice, sample, shuffle, value_noise2d
 
     rng = KeyedRNG(seed=12345678, namespace="v2.normal-16")
     p = rng.randf("river.source.0")

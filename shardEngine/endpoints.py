@@ -12,7 +12,7 @@ from .schemas import PlanRequest
 from .registry import Registry, overrides_hash_sha1
 from . import generator_v2 as gen
 
-# --- v1 + misc deps moved from app.py ---
+# --- v1 + misc deps moved from api.py ---
 from shard_gen import generate_shard_from_registry, save_shard
 from player_state import (
     get_player_state, patch_player_state,
@@ -238,7 +238,7 @@ def generate_endpoint():
     return jsonify(payload), 200
 
 # ------------------------
-# General API blueprint (moved from app.py)
+# General API blueprint (moved from api.py)
 # ------------------------
 api_bp = Blueprint("api", __name__)     # mounted at /api
 

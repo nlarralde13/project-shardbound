@@ -1,7 +1,7 @@
 import command_router as router
-from app import create_app
-from app.player_service import get_player
-from app.models import db, Character
+from api import create_app
+from api.player_service import get_player
+from api.models import db, Character
 
 
 def test_inv_returns_table_frame():

@@ -1,12 +1,12 @@
-from app import create_app
-from server.config import START_TOWN_COORDS
+from api import create_app
+from engine.config import START_TOWN_COORDS
 import uuid
 
 
 def test_cur_loc_updates_and_persists():
     app = create_app()
     with app.test_client() as client, app.app_context():
-        from app.models import db, Character
+        from api.models import db, Character
         # register and login
         email = f"{uuid.uuid4().hex}@t.com"
         handle = uuid.uuid4().hex[:8]

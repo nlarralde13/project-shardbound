@@ -1,0 +1,135 @@
+[
+  {
+    "slug": "bandage",
+    "name": "Bandage",
+    "type": "consumable",
+    "slot": null,
+    "icon_path": "/static/assets/items/bandage.png",
+    "stackable": true,
+    "max_stack": 10,
+    "stats": {},
+    "on_use": {
+      "heal": "1d3"
+    },
+    "on_equip": null,
+    "tags": null
+  },
+  {
+    "slug": "bread",
+    "name": "Bread",
+    "type": "consumable",
+    "slot": null,
+    "icon_path": "/static/assets/items/bread.png",
+    "stackable": true,
+    "max_stack": 10,
+    "stats": {},
+    "on_use": {
+      "heal": "1d2"
+    },
+    "on_equip": null,
+    "tags": null
+  },
+  {
+    "slug": "buckler",
+    "name": "Buckler",
+    "type": "shield",
+    "slot": "offhand",
+    "icon_path": "/static/assets/items/buckler.png",
+    "stackable": false,
+    "max_stack": 1,
+    "stats": {
+      "defense": 1
+    },
+    "on_use": null,
+    "on_equip": {
+      "defense": "+1"
+    },
+    "tags": null
+  },
+  {
+    "slug": "health-potion",
+    "name": "Health Potion",
+    "type": "consumable",
+    "slot": null,
+    "icon_path": "/static/assets/items/health_potion.png",
+    "stackable": true,
+    "max_stack": 20,
+    "stats": {},
+    "on_use": {
+      "heal": "1d4"
+    },
+    "on_equip": null,
+    "tags": null
+  },
+  {
+    "slug": "leather-jerkin",
+    "name": "Leather Jerkin",
+    "type": "armor",
+    "slot": "chest",
+    "icon_path": "/static/assets/items/leather_jerkin.png",
+    "stackable": false,
+    "max_stack": 1,
+    "stats": {},
+    "on_use": null,
+    "on_equip": {
+      "defense": "+1"
+    },
+    "tags": null
+  },
+  {
+    "slug": "ripped-pants",
+    "name": "Ripped Pants",
+    "type": "armor",
+    "slot": "legs",
+    "icon_path": "/static/assets/items/ripped_pants.png",
+    "stackable": false,
+    "max_stack": 1,
+    "stats": {},
+    "on_use": null,
+    "on_equip": null,
+    "tags": null
+  },
+  {
+    "slug": "torch",
+    "name": "Torch",
+    "type": "utility",
+    "slot": null,
+    "icon_path": "/static/assets/items/torch.png",
+    "stackable": true,
+    "max_stack": 10,
+    "stats": {},
+    "on_use": null,
+    "on_equip": null,
+    "tags": null
+  },
+  {
+    "slug": "whetstone",
+    "name": "Whetstone",
+    "type": "utility",
+    "slot": null,
+    "icon_path": "/static/assets/items/whetstone.png",
+    "stackable": true,
+    "max_stack": 5,
+    "stats": {},
+    "on_use": null,
+    "on_equip": null,
+    "tags": null
+  },
+  {
+    "slug": "wooden-sword",
+    "name": "Wooden Sword",
+    "type": "weapon",
+    "slot": "mainhand",
+    "icon_path": "/static/assets/items/wooden_sword.png",
+    "stackable": false,
+    "max_stack": 1,
+    "stats": {
+      "attack": 2
+    },
+    "on_use": null,
+    "on_equip": {
+      "attack": "+2"
+    },
+    "tags": null
+  }
+]

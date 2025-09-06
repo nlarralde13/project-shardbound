@@ -3,9 +3,9 @@
 import os
 import tempfile
 
-from app import create_app
+from api import create_app
 import command_router as router
-from app.models import db, Item, Character, CharacterInventory
+from api.models import db, Item, Character, CharacterInventory
 
 
 def _setup_app():
