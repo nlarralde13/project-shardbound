@@ -8,6 +8,8 @@
   <!-- Base styles + v2 overlay styles -->
   <link rel="stylesheet" href="/static/css/shard-viewer.css" />
   <link rel="stylesheet" href="/static/css/shard-viewer-v2.css" />
+  <link rel="stylesheet" href="/static/css/inventoryOverlay.css" />
+  <link rel="stylesheet" href="/static/css/characterPanel.css" />
 
   <script>
     window.SHARDBIOME_SOURCE = 'grid';
@@ -29,6 +31,13 @@
       transition: transform .2s ease;
     }
     #clientSidebar.collapsed { transform: translateX(-100%); }
+    #btnSidebarCollapse {
+      position: absolute;
+      top: 8px;
+      right: -12px;
+      width: 24px;
+      height: 24px;
+    }
     main.viewerMain {
       margin-left: 240px;
       margin-right: 80px;
@@ -52,19 +61,43 @@
 </head>
 <body>
   <header>
-    <button id="btnSidebarToggle" aria-label="Toggle sidebar">☰</button>
     <h1 id="shardName">Shard</h1>
     <span id="shardStatus">—</span>
   </header>
 
   <aside id="clientSidebar">
-    <section>
+    <button id="btnSidebarCollapse" aria-label="Collapse sidebar">◀</button>
+    <section class="card" id="cardCharacter">
       <h2>Character</h2>
-      <div id="charPanel"></div>
+      <div class="hud" id="charHud" style="margin:10px 0;">
+        <div class="bar hp"><span>HP</span><i id="statHP" style="width:80%"></i></div>
+        <div class="bar mp"><span>MP</span><i id="statMP" style="width:60%"></i></div>
+        <div class="bar sta"><span>STA</span><i id="statSTA" style="width:90%"></i></div>
+      </div>
+      <div class="dim" id="statHunger" style="font-size:12px;margin-bottom:10px;">Hunger: 0</div>
+      <div class="char-grid">
+        <div class="char-col">
+          <h3>Equipment</h3>
+          <ul class="slots">
+            <li><span>Head</span><i>—</i></li>
+            <li><span>Chest</span><i>Leather Jerkin</i></li>
+            <li><span>Main-hand</span><i>Rusty Blade</i></li>
+            <li><span>Off-hand</span><i>Buckler</i></li>
+            <li><span>Ring</span><i>Copper Band</i></li>
+          </ul>
+        </div>
+        <div class="char-col">
+          <h3>Stats</h3>
+          <ul class="stats">
+            <li>STR 10</li><li>AGI 9</li><li>INT 8</li><li>STA 12</li>
+            <li>Armor 4</li><li>Crit 2%</li>
+          </ul>
+        </div>
+      </div>
     </section>
-    <section>
-      <h2>Inventory</h2>
-      <div id="invPanel"></div>
+    <section class="card" id="cardInventory">
+      <h2 id="invHeaderTitle">Inventory (0)</h2>
+      <div id="invPanelMount" class="inv-mount" aria-live="polite"></div>
     </section>
   </aside>
 
