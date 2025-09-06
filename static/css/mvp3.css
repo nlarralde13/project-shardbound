@@ -146,19 +146,20 @@ a:hover{text-decoration:underline}
   border: 1px solid rgba(0,0,0,.45);
 }
 .room-stage{ position:relative; }
-#roomArt{
+#overlayMap{
   width:100%;
   height: calc(var(--card-w) * var(--card-ratio));
-  border-radius: 14px;
-  background: var(--paper) center/contain no-repeat;
-  border: 1px solid var(--paper-edge);
+  border-radius:14px;
+  overflow:hidden;
+  border:1px solid var(--paper-edge);
   box-shadow:
     0 1px 0 rgba(255,255,255,.5) inset,
     0 0 0 1px rgba(0,0,0,.06),
     var(--glow);
-  transition: opacity 120ms linear;
+  --map-panel-w:100%;
+  --map-holder-w:100%;
+  --map-holder-h:100%;
 }
-#roomArt.fade-out{ opacity:.65; }
 
 /* ---------- HUD (action & stats) ---------- */
 .hud{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }

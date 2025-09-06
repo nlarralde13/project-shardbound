@@ -36,7 +36,6 @@
     <nav class="actions">
       <button id="btnInventory" class="btn ghost">Inventory (I)</button>
       <button id="btnCharacter" class="btn">Character (C)</button>
-      <button id="btnWorldMap" class="btn">Map (M)</button>
       <button id="btnSettings" class="btn ghost">Settings</button>
       <a href="/characters" class="btn ghost">Character Select</a>
       <a href="/itemForge" class="btn ghost"> Item Forge</a>
@@ -64,7 +63,7 @@
 
       <div class="room-card">
         <div class="room-stage">
-          <div class="room-art" id="roomArt" aria-hidden="true"></div>
+          <div id="overlayMap"></div>
         </div>
       </div>
 
@@ -72,8 +71,6 @@
     </section>
   </main>
 
-  <!-- World Map Overlay (overlayMap.js populates) -->
-  <div id="overlayMap" class="overlay hidden" role="dialog" aria-modal="true" aria-label="World Map"></div>
 
   <!-- Character Panel -->
   <div id="overlayChar" class="overlay hidden" role="dialog" aria-modal="true" aria-label="Character Panel">

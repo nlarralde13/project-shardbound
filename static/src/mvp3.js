@@ -24,11 +24,9 @@ const USER_TOKEN = (() => {
 })();
 
 // ---- DOM ----
-const overlayMapEl = document.getElementById('overlayMap');
 const overlayChar  = document.getElementById('overlayChar');
 const overlayInv   = document.getElementById('overlayInv');
 
-const btnWorldMap  = document.getElementById('btnWorldMap');
 const btnCharacter = document.getElementById('btnCharacter');
 const btnInventory = document.getElementById('btnInventory');
 
@@ -38,7 +36,6 @@ const shardStatus  = document.getElementById('shardStatus');
 
 const roomTitle    = document.getElementById('roomTitle');
 const roomBiome    = document.getElementById('roomBiome');
-const roomArt      = document.getElementById('roomArt');
 
 
 const statHP       = document.getElementById('statHP');
@@ -105,9 +102,6 @@ const overlay = initOverlayMap?.({ devMode: DEV_MODE });
 
 // small helpers
 const toggle = (el, force) => { if (!el) return; const show = (typeof force==='boolean') ? force : el.classList.contains('hidden'); el.classList.toggle('hidden', !show); };
-const openMap = () => { overlayMapEl?.classList.remove('hidden'); overlay?.render?.(); };
-const closeMap = () => overlayMapEl?.classList.add('hidden');
-const toggleMap = () => overlayMapEl?.classList.contains('hidden') ? openMap() : closeMap();
 
 // ---- state ----
 let CurrentPos = { x: 0, y: 0 };
@@ -125,51 +119,14 @@ window.patchRoom = (delta) => {
   }
 };
 
-// ---- room render (keeps your working art swap) ----
-let __anim = null;
+// ---- room render ----
 function renderRoomInfo(room, { flavor = true } = {}) {
-  if (__anim?.raf) cancelAnimationFrame(__anim.raf);
-  __anim = null;
+  if (!room) return;
   roomTitle && (roomTitle.textContent = room.title || '');
-  roomBiome && (roomBiome.textContent = room.subtitle || '');
-
-  if (roomArt) roomArt.classList.add('fade-out');
-  roomArt.style.backgroundImage    = 'none';
-  roomArt.style.backgroundSize     = '';
-  roomArt.style.backgroundPosition = '';
-  roomArt.style.backgroundRepeat   = '';
-  void roomArt.offsetWidth;
-
-  const art = room.art || {};
-  roomArt.style.backgroundImage    = art.image || 'none';
-  roomArt.style.backgroundSize     = art.size || '';
-  roomArt.style.backgroundPosition = art.position || '';
-  roomArt.style.backgroundRepeat   = art.repeat || '';
-  setTimeout(()=>roomArt.classList.remove('fade-out'), 80);
-
+  roomBiome && (roomBiome.textContent = room.subtitle || room.biome || '');
   if (flavor && room.description) {
     const key = `${room.x},${room.y}:${room.biome}:${room.label||'none'}`;
     if (renderRoomInfo._k !== key) { log(room.description, 'log-flavor'); renderRoomInfo._k = key; }
-  }
-
-  if (Array.isArray(art.frames) && art.frames.length>1 && typeof art.animIndex==='number') {
-    const frameMS = Math.max(60, Number(art.frame_ms || 120));
-    __anim = { idx:0, total:art.frames.length, animLayer:art.animIndex, base:Array.isArray(art.layers)?art.layers.slice():[], acc:0, ms:frameMS, raf:null, last:0 };
-    const step = (ts) => {
-      if (!__anim) return;
-      if (!__anim.last) __anim.last = ts;
-      const dt = ts - __anim.last; __anim.last = ts; __anim.acc += dt;
-      while (__anim.acc >= __anim.ms) {
-        __anim.acc -= __anim.ms; __anim.idx = (__anim.idx+1) % __anim.total;
-        const layers = __anim.base.slice(); layers[__anim.animLayer] = `url("${art.frames[__anim.idx]}")`;
-        roomArt.style.backgroundImage    = layers.join(', ');
-        roomArt.style.backgroundSize     = new Array(layers.length).fill('cover').join(', ');
-        roomArt.style.backgroundPosition = new Array(layers.length).fill('center').join(', ');
-        roomArt.style.backgroundRepeat   = new Array(layers.length).fill('no-repeat').join(', ');
-      }
-      __anim.raf = requestAnimationFrame(step);
-    };
-    __anim.raf = requestAnimationFrame(step);
   }
 }
 
@@ -197,10 +154,9 @@ const isTyping = (t)=>!t?false:(t.tagName==='TEXTAREA')||(t.tagName==='INPUT'&&!
 window.addEventListener('keydown', (e)=>{
   if (isTyping(e.target)) return;
   const k = e.key?.toLowerCase?.();
-  if (k==='m'){ e.preventDefault(); toggleMap(); }
   if (k==='c'){ e.preventDefault(); toggle(overlayChar); }
   if (k==='i'){ e.preventDefault(); toggle(overlayInv); }
-  if (k==='escape'){ e.preventDefault(); closeMap(); overlayChar?.classList.add('hidden'); overlayInv?.classList.add('hidden'); }
+  if (k==='escape'){ e.preventDefault(); overlayChar?.classList.add('hidden'); overlayInv?.classList.add('hidden'); }
 });
 
 // ---- shard picker ----
@@ -289,7 +245,6 @@ document.addEventListener('click', (e) => {
 // ---- UI wires ----
 btnLoadShard?.addEventListener('click', async ()=>{ const url=shardSelect?.value; if(!url) return; try{ await loadShard(url); }catch{} });
 shardSelect?.addEventListener('change', ()=>btnLoadShard?.click());
-btnWorldMap?.addEventListener('click', ()=>toggleMap());
 btnCharacter?.addEventListener('click', ()=>toggle(overlayChar));
 btnInventory?.addEventListener('click', ()=>toggle(overlayInv));
 

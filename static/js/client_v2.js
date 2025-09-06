@@ -32,8 +32,10 @@ window.loadShard = loadShardClient;
 
 // Load a default shard immediately so the map is visible on page load
 const DEFAULT_SHARD_URL = '/static/public/shards/00089451_test123.json';
+
 // Apply a 35px default scale so the map isn't tiny on load
 Viewer.setScalePx?.(35);
+
 loadShardClient(DEFAULT_SHARD_URL).catch(() => {});
 
 // ----- console bootstrap -----
