@@ -4,13 +4,13 @@
    listens for 'equip:changed'.
 */
 
+import { API } from './api.js';
+
 const grid = document.getElementById('inventory-grid');
 
-let inventory = [
-  { id: 'wooden_sword', name: 'Wooden Sword', slot: 'mainhand', icon: '/static/assets/items/wooden_sword.png', qty: 1 },
-  { id: 'bread', name: 'Bread', slot: null, icon: '/static/assets/items/bread.png', qty: 3 },
-  { id: 'health_potion', name: 'Health Potion', slot: null, icon: '/static/assets/items/health_potion.png', qty: 2 }
-];
+// Current character inventory; populated from the server.
+let inventory = [];
+
 
 function render() {
   grid.innerHTML = '';
@@ -82,5 +82,29 @@ document.addEventListener('equip:changed', (e) => {
   render();
 });
 
-render();
+async function loadInventory() {
+  try {
+    const active = await API.characterActive();
+    const characterId = active?.character_id || active?.id;
+    if (!characterId) return;
+    const r = await fetch(`/api/characters/${characterId}/inventory`, { credentials: 'include' });
+    if (!r.ok) return;
+    const data = await r.json();
+    inventory = (data.items || [])
+      .filter(it => !it.slot)
+      .map(it => ({
+        id: it.slug || it.item_id,
+        name: it.display_name || it.slug,
+        slot: it.slot || null,
+        icon: it.icon_url,
+        qty: it.quantity || 1,
+      }));
+    render();
+  } catch (err) {
+    console.error('Failed to load inventory', err);
+  }
+}
+
+loadInventory();
+
 

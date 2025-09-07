@@ -3,12 +3,12 @@
    Public events: dispatches 'equip:changed'; listens for 'inventory:unequip'.
 */
 
+
+import { API } from './api.js';
+
 const slots = ['head','cloak','chest','belt','pants','boots','mainhand','offhand','jewelry','gadget'];
-const equipment = {
-  chest: { id: 'leather_jerkin', name: 'Leather Jerkin', slot: 'chest', icon: '/static/assets/items/leather_jerkin.png', qty: 1 },
-  mainhand: { id: 'iron_sword', name: 'Iron Sword', slot: 'mainhand', icon: '/static/assets/items/iron_sword.png', qty: 1 },
-  offhand: { id: 'buckler', name: 'Buckler', slot: 'offhand', icon: '/static/assets/items/buckler.png', qty: 1 }
-};
+let equipment = {};
+const slotEls = {};
 
 const doll = document.getElementById('paperdoll');
 
@@ -17,6 +17,9 @@ slots.forEach(slot => {
   cell.className = 'equip-slot';
   cell.dataset.slot = slot;
   cell.draggable = true;
+
+  slotEls[slot] = cell;
+
   updateCell(cell, equipment[slot]);
 
   cell.addEventListener('dragstart', e => {
@@ -63,4 +66,35 @@ document.addEventListener('inventory:unequip', e => {
 export function getEquipment() {
   return equipment;
 }
+
+
+async function loadEquipment() {
+  try {
+    const active = await API.characterActive();
+    const characterId = active?.character_id || active?.id;
+    if (!characterId) return;
+    const r = await fetch(`/api/characters/${characterId}/equipment`, { credentials: 'include' });
+    if (!r.ok) return;
+    const data = await r.json();
+    equipment = {};
+    for (const slot of slots) {
+      const it = data[slot];
+      if (it) {
+        equipment[slot] = {
+          id: it.slug || it.item_id,
+          name: it.name || it.slug,
+          slot: slot,
+          icon: it.icon_path || it.icon_url,
+          qty: it.quantity || 1,
+        };
+        const cell = slotEls[slot];
+        if (cell) updateCell(cell, equipment[slot]);
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load equipment', err);
+  }
+}
+
+loadEquipment();
 

@@ -5,49 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Shardbound Client v2</title>
 
-  <!-- v2 viewer styles + client layout -->
+
+
   <link rel="stylesheet" href="{{ url_for('static', filename='css/shard-viewer-v2.css') }}" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/client_v2.css') }}" />
 </head>
 <body>
-  <!-- LEFT: Paperdoll + Inventory -->
+
   <div id="panel-left">
     <div id="paperdoll" class="paperdoll"></div>
     <div id="inventory" class="inventory">
-      <div id="invPanelMount" class="inventory-grid"></div>
+      <div id="inventory-grid" class="inventory-grid"></div>
     </div>
   </div>
 
-  <!-- CENTER: Map viewer (v2 markup) -->
   <div id="viewport">
-    <section class="canvas-wrap" id="frame">
-      <canvas id="canvas"></canvas>
-      <canvas id="overlayCanvasLite"></canvas>
-      <div class="zoomOverlay">
-        <button class="zbtn" id="btnFit" title="Fit (refit)">⤢</button>
-        <button class="zbtn" id="btnZoomIn" title="Zoom in">+</button>
-        <button class="zbtn" id="btnZoomOut" title="Zoom out">−</button>
-      </div>
-      <div id="tooltip" class="tooltip"></div>
-    </section>
+    <canvas id="map-canvas" width="640" height="480"></canvas>
   </div>
 
-  <!-- RIGHT: Action rail + tile info -->
   <div id="panel-right">
-    <div id="action-root" style="margin-bottom:12px"></div>
     <div id="quick-actions">
-      <button id="btnLook">Look</button>
-      <button id="btnInteract">Interact</button>
-      <button id="btnRest">Rest</button>
-      <button id="btnSkill1">Action 1</button>
-      <button id="btnSkill2">Action 2</button>
+      <button data-action="look">Look</button>
+      <button data-action="interact">Interact</button>
+      <button data-action="rest">Rest</button>
+      <button data-action="slot1">Action 1</button>
+      <button data-action="slot2">Action 2</button>
     </div>
-
     <div id="tile-info">
       <h3>Tile Info</h3>
       <pre id="tile-json">{}</pre>
-
-      <!-- optional editor area (hidden until you need it) -->
       <div id="tile-form-wrap" hidden>
         <textarea id="tile-form" rows="6"></textarea>
         <div class="tile-buttons">
@@ -59,12 +45,17 @@
     </div>
   </div>
 
-  <!-- BOTTOM: Console -->
   <div id="console">
-    <div id="console-root"></div>
+    <div id="console-log"></div>
+    <input id="console-input" type="text" placeholder="Command..." />
   </div>
 
-  <!-- Your client logic (already loads default shard, sets 35px scale, etc.) -->
-  <script type="module" src="{{ url_for('static', filename='js/client_v2.js') }}"></script>
+  <script type="module" src="{{ url_for('static', filename='js/paperdoll.js') }}"></script>
+  <script type="module" src="{{ url_for('static', filename='js/inventory.js') }}"></script>
+  <script type="module" src="{{ url_for('static', filename='js/mapViewport.js') }}"></script>
+  <script type="module" src="{{ url_for('static', filename='js/tileInfoPanel.js') }}"></script>
+  <script type="module" src="{{ url_for('static', filename='js/consoleUI.js') }}"></script>
+
 </body>
 </html>
+

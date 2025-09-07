@@ -1,12 +1,14 @@
 /* client_v2.css
    Minimal layout for paperdoll, inventory, map viewport and console.
 */
+
 :root {
   --bg: #0a0f1f;         /* page background */
   --panel: #0b1228;      /* panel background */
   --text: #dbeafe;       /* panel text */
   --line: #2a3a62;       /* panel borders */
 }
+
 
 
 body {
@@ -54,7 +56,9 @@ body {
   flex-direction: column;
   background: var(--panel);
   border-top: 1px solid var(--line);
+
   color: var(--text)
+
 }
 
 #console-log {
