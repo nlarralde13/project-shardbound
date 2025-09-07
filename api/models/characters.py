@@ -1,6 +1,7 @@
 import uuid, datetime as dt
 
 from .base import db, Model
+from .equipment import CharacterEquipped
 
 
 def gen_uuid() -> str:
@@ -32,6 +33,7 @@ class Character(Model):
 
     # easy-mode state bucket (inventory, quests, flags) -> normalize later
     state = db.Column(db.JSON)
+    combat_snapshot = db.Column(db.JSON)
 
     # legacy compatibility: some databases still have an `is_deleted` column
     # defined as NOT NULL; include it with a default to satisfy inserts.
@@ -50,3 +52,12 @@ class Character(Model):
         back_populates="character",
         cascade="all, delete-orphan",
     )
+    equipped_items = db.relationship(
+        "CharacterEquipped",
+        back_populates="character",
+        lazy="select",
+        cascade="all, delete-orphan",
+    )
+
+    def get_equipped_map(self):
+        return {ce.slot: ce.item_instance for ce in self.equipped_items}
