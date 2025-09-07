@@ -44,8 +44,9 @@ body {
   margin: 0;
   display: grid;
   grid-template-columns: 280px 1fr 300px;
-  grid-template-rows: 1fr 180px;
+  grid-template-rows: auto 1fr 180px;
   grid-template-areas:
+    "topbar topbar topbar"
     "left center right"
     "console console console";
   height: 100vh;
@@ -68,6 +69,7 @@ body::after {
 }
 #panel-left  { grid-area: left;  border-right: 1px solid var(--line); }
 #panel-right { grid-area: right; border-left:  1px solid var(--line); }
+#topbar { grid-area: topbar; display: flex; gap: 12px; }
 
 #viewport {
   grid-area: center;

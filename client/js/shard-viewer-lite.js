@@ -413,6 +413,7 @@ function zoomAt(fx, fy, factor) {
 }
 function handleWheel(e) {
   e.preventDefault();
+  e.stopPropagation();
   const rect = els.frame.getBoundingClientRect();
   const fx = e.clientX - rect.left;
   const fy = e.clientY - rect.top;
@@ -420,12 +421,10 @@ function handleWheel(e) {
   zoomAt(fx, fy, factor);
 }
 
-// Attach the wheel listener only once on the frame. Previously both the
-// frame and base canvas listened for the wheel event which caused the handler
-// to fire twice per scroll action. That resulted in the map jumping or
-// drifting out of the viewport instead of smoothly zooming like Google Maps.
-// The frame receives bubbled wheel events from the canvas, so a single
-// listener here is sufficient.
+// Listen on both the canvas and its frame so wheel zoom works anywhere inside
+// the map container. stopPropagation in the handler prevents double firing
+// when the wheel event originates on the canvas and bubbles to the frame.
+els.base?.addEventListener('wheel', handleWheel, { passive: false });
 els.frame?.addEventListener('wheel', handleWheel, { passive: false });
 
 $('btnZoomIn')?.addEventListener('click', (e) => { e?.preventDefault?.(); const rect = els.frame.getBoundingClientRect(); zoomAt(rect.width / 2, rect.height / 2, 1.2); });
