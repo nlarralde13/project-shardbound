@@ -4,114 +4,53 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Shardbound Client v2</title>
-
-  <!-- Base styles + v2 overlay styles -->
-  <link rel="stylesheet" href="/static/css/shard-viewer.css" />
   <link rel="stylesheet" href="/static/css/shard-viewer-v2.css" />
-  <link rel="stylesheet" href="/static/css/inventoryOverlay.css" />
-  <link rel="stylesheet" href="/static/css/characterPanel.css" />
   <link rel="stylesheet" href="/static/css/client_v2.css" />
-
-  <script>
-    window.SHARDBIOME_SOURCE = 'grid';
-  </script>
 </head>
 <body>
-  <header>
-    <h1 id="shardName">Shard</h1>
-    <span id="shardStatus">—</span>
-  </header>
-
-  <aside id="clientSidebar">
-    <button id="btnSidebarCollapse" aria-label="Collapse sidebar">◀</button>
-    <section class="card" id="cardCharacter">
-      <h2>Character</h2>
-      <div class="hud" id="charHud" style="margin:10px 0;">
-        <div class="bar hp"><span>HP</span><i id="statHP" style="width:80%"></i></div>
-        <div class="bar mp"><span>MP</span><i id="statMP" style="width:60%"></i></div>
-        <div class="bar sta"><span>STA</span><i id="statSTA" style="width:90%"></i></div>
-      </div>
-      <div class="dim" id="statHunger" style="font-size:12px;margin-bottom:10px;">Hunger: 0</div>
-      <div class="char-grid">
-        <div class="char-col">
-          <h3>Equipment</h3>
-          <ul class="slots">
-            <li><span>Head</span><i>—</i></li>
-            <li><span>Chest</span><i>Leather Jerkin</i></li>
-            <li><span>Main-hand</span><i>Rusty Blade</i></li>
-            <li><span>Off-hand</span><i>Buckler</i></li>
-            <li><span>Ring</span><i>Copper Band</i></li>
-          </ul>
-        </div>
-        <div class="char-col">
-          <h3>Stats</h3>
-          <ul class="stats">
-            <li>STR 10</li><li>AGI 9</li><li>INT 8</li><li>STA 12</li>
-            <li>Armor 4</li><li>Crit 2%</li>
-          </ul>
-        </div>
-      </div>
-    </section>
-    <section class="card" id="cardInventory">
-      <h2 id="invHeaderTitle">Inventory (0)</h2>
-      <div id="invPanelMount" class="inv-mount" aria-live="polite"></div>
-    </section>
-  </aside>
-
-  <main class="viewerMain">
-    <section class="card viewer">
-      <h2>Map</h2>
-      <section class="canvas-wrap" id="frame">
-        <canvas id="canvas"></canvas>
-        <div class="tooltip" id="tooltip"></div>
-        <div class="debug-badge" id="debugBadge" aria-live="polite" style="opacity:0"></div>
-        <div class="zoomOverlay">
-          <button class="zbtn" id="btnFit" title="Fit (refit)">⤢</button>
-          <button class="zbtn" id="btnZoomIn" title="Zoom in">+</button>
-          <button class="zbtn" id="btnZoomOut" title="Zoom out">−</button>
-        </div>
-      </section>
-      <details id="consoleSection" class="console-section" open>
-        <summary>Console</summary>
-        <div id="console-root" aria-live="polite"></div>
-      </details>
-    </section>
-  </main>
-
-  <div id="actionRail">
-    <button id="btnLook">Look</button>
-    <button id="btnInteract">Interact</button>
-    <button id="btnRest">Rest</button>
-    <button id="btnSkill1">Skill 1</button>
-    <button id="btnSkill2">Skill 2</button>
+  <div id="panel-left">
+    <div id="paperdoll" class="paperdoll"></div>
+    <div id="inventory" class="inventory">
+      <div id="inventory-grid" class="inventory-grid"></div>
+    </div>
   </div>
 
-  <aside id="rightSidebar">
-    <section class="card" id="cardQuestLog">
-      <h2>Quest Log</h2>
-      <div class="panel-body" id="questLog">No quests available.</div>
-    </section>
-    <section class="card" id="cardJournal">
-      <h2>Journal</h2>
-      <div class="panel-body" id="journal">Your thoughts go here.</div>
-    </section>
-    <section class="card" id="cardPlaceholder">
-      <h2>Mysteries</h2>
-      <div class="panel-body" id="placeholder">Nothing here yet.</div>
-    </section>
-  </aside>
+  <div id="viewport">
+    <canvas id="map-canvas" width="640" height="480"></canvas>
+  </div>
 
-  <div id="action-root" class="action-root"></div>
+  <div id="panel-right">
+    <div id="quick-actions">
+      <button data-action="look">Look</button>
+      <button data-action="interact">Interact</button>
+      <button data-action="rest">Rest</button>
+      <button data-action="slot1">Action 1</button>
+      <button data-action="slot2">Action 2</button>
+    </div>
+    <div id="tile-info">
+      <h3>Tile Info</h3>
+      <pre id="tile-json">{}</pre>
+      <div id="tile-form-wrap" hidden>
+        <textarea id="tile-form" rows="6"></textarea>
+        <div class="tile-buttons">
+          <button id="btn-validate">Validate</button>
+          <button id="btn-apply">Apply</button>
+          <button id="btn-push">Push Live</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      if (window.matchMedia('(max-width: 900px)').matches) {
-        document.body.classList.add('sidebar-collapsed');
-        document.getElementById('clientSidebar')?.classList.add('collapsed');
-        document.getElementById('consoleSection')?.removeAttribute('open');
-      }
-    });
-  </script>
-  <script type="module" src="/static/js/client_v2.js"></script>
+  <div id="console">
+    <div id="console-log"></div>
+    <input id="console-input" type="text" placeholder="Command..." />
+  </div>
+
+  <script type="module" src="/static/js/paperdoll.js"></script>
+  <script type="module" src="/static/js/inventory.js"></script>
+  <script type="module" src="/static/js/mapViewport.js"></script>
+  <script type="module" src="/static/js/tileInfoPanel.js"></script>
+  <script type="module" src="/static/js/consoleUI.js"></script>
 </body>
 </html>
+
