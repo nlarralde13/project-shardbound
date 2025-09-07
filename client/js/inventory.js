@@ -8,6 +8,9 @@ import { API } from './api.js';
 
 const grid = document.getElementById('inventory-grid');
 
+// Local fallback icon if an item does not declare one
+const FALLBACK_ICON = '/static/assets/items/_fallback.png';
+
 // Current character inventory; populated from the server.
 let inventory = [];
 
@@ -91,24 +94,32 @@ async function loadInventory() {
     const active = await API.characterActive();
     const characterId = active?.character_id || active?.id;
     if (!characterId) return;
-    const r = await fetch(`/api/characters/${characterId}/inventory`, { credentials: 'include' });
+    const r = await fetch(`/api/characters/${characterId}/inventory`, {
+      credentials: 'include',
+      headers: { 'Accept': 'application/json' }
+    });
     if (!r.ok) return;
     const data = await r.json();
     inventory = (data.items || [])
       .filter(it => !it.slot)
-      .map(it => ({
-        id: it.slug || it.item_id,
-        name: it.display_name || it.slug,
-        slot: it.slot || null,
-        icon: it.icon_url,
-        qty: it.quantity || 1,
-      }));
+      .map(it => {
+        const slug = it.slug || '';
+        const inferred = slug ? `/static/assets/items/${slug.replace(/-/g, '_')}.png` : FALLBACK_ICON;
+        return {
+          id: slug || it.item_id,
+          name: it.display_name || slug,
+          slot: it.slot || null,
+          icon: it.icon_url || it.icon_path || inferred || FALLBACK_ICON,
+          qty: it.quantity || 1,
+          rarity: it.rarity || null,
+        };
+      });
     render();
   } catch (err) {
     console.error('Failed to load inventory', err);
   }
 }
 
+// Initial load and refresh when the active character changes
 loadInventory();
-
-
+window.addEventListener('character:ready', loadInventory);
