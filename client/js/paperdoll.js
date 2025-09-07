@@ -3,6 +3,7 @@
    Public events: dispatches 'equip:changed'; listens for 'inventory:unequip'.
 */
 
+
 import { API } from './api.js';
 
 const slots = ['head','cloak','chest','belt','pants','boots','mainhand','offhand','jewelry','gadget'];
@@ -16,7 +17,9 @@ slots.forEach(slot => {
   cell.className = 'equip-slot';
   cell.dataset.slot = slot;
   cell.draggable = true;
+
   slotEls[slot] = cell;
+
   updateCell(cell, equipment[slot]);
 
   cell.addEventListener('dragstart', e => {
@@ -63,6 +66,7 @@ document.addEventListener('inventory:unequip', e => {
 export function getEquipment() {
   return equipment;
 }
+
 
 async function loadEquipment() {
   try {

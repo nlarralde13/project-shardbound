@@ -11,6 +11,7 @@ const grid = document.getElementById('inventory-grid');
 // Current character inventory; populated from the server.
 let inventory = [];
 
+
 function render() {
   grid.innerHTML = '';
   inventory.forEach((item, idx) => {
@@ -105,4 +106,5 @@ async function loadInventory() {
 }
 
 loadInventory();
+
 
