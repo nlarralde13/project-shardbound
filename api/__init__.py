@@ -65,7 +65,12 @@ def _backfill_coords(conn: sa.engine.Connection, have_xy: bool):
         """))
 
 def create_app():
-    app = Flask(__name__, static_folder="../client", template_folder="../client/templates")
+    app = Flask(
+        __name__,
+        static_url_path="/static",
+        static_folder="../client",
+        template_folder="../client/templates",
+    )
 
     BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     DB_PATH = os.path.join(BASE_DIR, "app.db")
@@ -191,7 +196,7 @@ def create_app():
 
     @app.route("/play")
     def play():
-        return render_template("mvp3.html")
+        return render_template("client_v2.html")
 
     @app.route("/api-playground")
     def api_playground():
