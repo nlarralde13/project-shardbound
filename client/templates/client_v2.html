@@ -13,9 +13,14 @@
 
   <!-- v2 map viewer styles + client layout -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/shard-viewer-v2.css') }}" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/client_v2.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/client_v2.css') }}" />
 </head>
 <body class="theme-fantasy">
+  <nav id="topbar" class="card">
+    <a href="/forums">Forums</a>
+    <a href="/account">Account</a>
+    <a id="linkDevTools" href="/dev" style="display:none">Dev Tools</a>
+  </nav>
   <!-- LEFT: Character + Inventory (single expanded card, no scrolling) -->
   <aside id="panel-left">
     <section class="card" id="cardCharacter">
@@ -65,6 +70,7 @@
           <button class="zbtn" id="btnFit" title="Fit (refit)">⤢</button>
           <button class="zbtn" id="btnZoomIn" title="Zoom in">+</button>
           <button class="zbtn" id="btnZoomOut" title="Zoom out">−</button>
+          <button class="zbtn" id="btnCenter" title="Player not placed yet" disabled>◎</button>
         </div>
         <div id="tooltip" class="tooltip"></div>
       </section>

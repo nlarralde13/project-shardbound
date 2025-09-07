@@ -48,10 +48,12 @@ window.loadShard = loadShardClient;
 // Load a default shard immediately so the map is visible on page load
 const DEFAULT_SHARD_URL = '/static/public/shards/00089451_default.json';
 
-// Apply a 35px default scale so the map isn't tiny on load
-Viewer.setScalePx?.(35);
+// Apply a 50px default scale so the map isn't tiny on load
+Viewer.setScalePx?.(50);
 
-loadShardClient(DEFAULT_SHARD_URL).catch(() => {});
+loadShardClient(DEFAULT_SHARD_URL).then(() => {
+  Viewer.fitToFrame?.();
+}).catch(() => {});
 
 // ----- console bootstrap -----
 const consoleUI = mountConsole(document.getElementById('console-root'), {
@@ -142,11 +144,20 @@ let CurrentPos = { x: 0, y: 0 };
 let CurrentShardId = '';
 window.CurrentPos = CurrentPos;
 window.CurrentShardId = CurrentShardId;
+const autoCenterOnMove = false;
+let hasCenteredOnce = false;
 window.addEventListener('game:moved', (ev) => {
   const d = ev.detail || {};
   if (Number.isFinite(d.x) && Number.isFinite(d.y)) {
     CurrentPos = { x: d.x, y: d.y };
     window.CurrentPos = CurrentPos;
+    Viewer.setPlayerPos?.(d.x, d.y);
+    const btnCenter = document.getElementById('btnCenter');
+    if (btnCenter && btnCenter.disabled) {
+      btnCenter.disabled = false;
+      btnCenter.title = 'Center on player';
+    }
+    if (autoCenterOnMove) Viewer.centerOnTile?.(d.x, d.y);
   }
 });
 
@@ -217,6 +228,11 @@ bind('btnRest', async () => {
 
 bind('btnSkill1', () => log('Not implemented.'));
 bind('btnSkill2', () => log('Not implemented.'));
+bind('btnCenter', () => {
+  if (Number.isFinite(CurrentPos.x) && Number.isFinite(CurrentPos.y)) {
+    Viewer.centerOnTile?.(CurrentPos.x, CurrentPos.y);
+  }
+});
 
 // ---- Auth + active character guard ----
 async function guardAuthAndCharacter() {
@@ -224,6 +240,12 @@ async function guardAuthAndCharacter() {
   if (!u) { location.href = '/'; return null; }
   document.getElementById('userHandle')?.replaceChildren(document.createTextNode(u.handle || u.email || ''));
   document.getElementById('userBadge')?.classList.remove('hidden');
+  const devLink = document.getElementById('linkDevTools');
+  if (devLink) {
+    const acl = String(u.acl || '').toLowerCase();
+    if (['admin','owner','super','root'].includes(acl)) devLink.style.display = '';
+    else devLink.remove();
+  }
 
   const c = await API.characterActive().catch(() => null);
   if (!c) { location.href = '/characters'; return null; }
@@ -275,12 +297,20 @@ function startAutosave() {
   if (pos.length === 2) {
     CurrentPos = { x: pos[0], y: pos[1] };
     window.CurrentPos = CurrentPos;
+    Viewer.setPlayerPos?.(pos[0], pos[1]);
     window.dispatchEvent(new CustomEvent('game:moved', { detail: CurrentPos }));
     log(`Player at (${pos[0]}, ${pos[1]})`);
   }
   CurrentShardId = st.room?.shard_id || st.shard_id || '';
   window.CurrentShardId = CurrentShardId;
-  if (st.room?.shard_url) await loadShardClient(st.room.shard_url);
+  if (st.room?.shard_url) {
+    await loadShardClient(st.room.shard_url);
+    Viewer.fitToFrame?.();
+  }
+  if (!hasCenteredOnce && Number.isFinite(CurrentPos.x) && Number.isFinite(CurrentPos.y)) {
+    Viewer.centerOnTile?.(CurrentPos.x, CurrentPos.y);
+    hasCenteredOnce = true;
+  }
   window.currentRoom = st.room;
   window.patchRoom?.(st.room);
   updateActionHUD({ interactions: st.interactions });
