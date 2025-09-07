@@ -19,7 +19,7 @@ from api.models.gameplay import CharacterDiscovery
 
 bp = Blueprint("core_api", __name__, url_prefix="/api")
 
-STARTER_SHARD_PATH = Path("client/public/shards/00089451_test123.json")
+STARTER_SHARD_PATH = Path("client/public/shards/00089451_default.json")
 WORLD = load_world(STARTER_SHARD_PATH)
 add_safe_zone(*START_POS)
 add_safe_zone(START_POS[0] + 1, START_POS[1])  # NPC tile next to spawn

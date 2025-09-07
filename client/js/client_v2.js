@@ -5,15 +5,30 @@ import { initActionHUD, updateActionHUD } from './actionHud.js';
 import { mountConsole, print as consolePrint } from '/static/src/console/consoleUI.js';
 import { parse } from '/static/src/console/parse.js';
 import { dispatch } from '/static/src/console/dispatch.js';
-import { initInventoryOverlay } from '/static/src/ui/inventoryPanel.js';
 
 // ----- simple helpers -----
+
+
 const log = (text, type = 'log') => {
   window.dispatchEvent(
     new CustomEvent('game:log', { detail: [{ text, type, ts: Date.now() }] })
   );
 };
 const clampPct = (v) => Math.max(0, Math.min(100, v));
+
+// Preload item catalog so the overlay can resolve icons/tooltips (MVP3 parity)
+async function preloadCatalog() {
+  try {
+    const res = await fetch('/static/public/api/catalog.json', { headers: { Accept: 'application/json' } });
+    if (res.ok) {
+      window.__itemCatalog = await res.json();
+      window.dispatchEvent(new CustomEvent('catalog:loaded', {
+        detail: { count: Array.isArray(window.__itemCatalog) ? window.__itemCatalog.length : 0 }
+      }));
+    }
+  } catch (_) {}
+}
+
 
 // ----- shard viewer wiring (read‑only) -----
 const viewerLoad = Viewer.loadShard || window.loadShard;
@@ -31,7 +46,7 @@ async function loadShardClient(url) {
 window.loadShard = loadShardClient;
 
 // Load a default shard immediately so the map is visible on page load
-const DEFAULT_SHARD_URL = '/static/public/shards/00089451_test123.json';
+const DEFAULT_SHARD_URL = '/static/public/shards/00089451_default.json';
 
 // Apply a 35px default scale so the map isn't tiny on load
 Viewer.setScalePx?.(35);
@@ -224,6 +239,10 @@ document.getElementById('btnLogout')?.addEventListener('click', async () => {
   location.href = '/';
 });
 
+window.addEventListener('equipment:changed', () => {
+  try { refreshInventoryOverlay(true); } catch {}
+});
+
 // ---- Autosave ----
 function startAutosave() {
   setInterval(async () => {
@@ -240,6 +259,10 @@ function startAutosave() {
 (async () => {
   const ok = await guardAuthAndCharacter();
   if (!ok) return;
+
+  await preloadCatalog();
+
+
   let st;
   try {
     st = await API.state();
@@ -262,11 +285,7 @@ function startAutosave() {
   window.patchRoom?.(st.room);
   updateActionHUD({ interactions: st.interactions });
   updateCharHUD(st.player);
-  const invMount = document.getElementById('invPanelMount');
-  const characterId = st.player?.character_id || st.player?.id;
-  if (invMount && characterId) {
-    try { await initInventoryOverlay({ characterId, mountEl: invMount }); } catch {}
-  }
+  
   if (Array.isArray(st.log)) {
     window.dispatchEvent(
       new CustomEvent('game:log', {

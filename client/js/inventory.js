@@ -20,6 +20,10 @@ function render() {
     cell.draggable = true;
     cell.dataset.index = idx;
     cell.style.backgroundImage = `url(${item.icon})`;
+    if (item.rarity) {
+      cell.dataset.rarity = String(item.rarity).toLowerCase();
+    }
+
     cell.title = item.name;
     if (item.qty > 1) {
       const stack = document.createElement('span');

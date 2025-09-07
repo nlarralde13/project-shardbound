@@ -12,7 +12,7 @@ try:
 except Exception:  # pragma: no cover
     from engine.world_loader import load_world
     from pathlib import Path
-    WORLD = load_world(Path("client/public/shards/00089451_test123.json"))
+    WORLD = load_world(Path("client/public/shards/00089451_default.json"))
 
 _DIRS = {
     "north": (0, -1),

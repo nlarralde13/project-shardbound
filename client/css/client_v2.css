@@ -1,156 +1,409 @@
-/* client_v2.css
-   Minimal layout for paperdoll, inventory, map viewport and console.
+/* client_v2.css — Fantasy theme overhaul
+   Keeps your structure; reskins with parchment/stone/gold + runes.
+   Fonts are provided via Google Fonts in <head>.
 */
 
+/* ====== THEME ====== */
 :root {
-  --bg: #0a0f1f;         /* page background */
-  --panel: #0b1228;      /* panel background */
-  --text: #dbeafe;       /* panel text */
-  --line: #2a3a62;       /* panel borders */
+  /* palette */
+  --bg: #0b0a11;          /* page backdrop (deep void) */
+  --panel: #13111b;       /* card background (midnight stone) */
+  --ink: #e9e4d8;         /* parchment ink */
+  --muted: #b8b2a4;       /* dim parchment ink */
+  --line: #2a2740;        /* etched lines */
+  --gold: #d4a64e;        /* warm gold accents */
+  --gold-deep: #b3822d;
+  --rune: #62c0ff;        /* arcane blue */
+  --rune-soft: rgba(98,192,255,.15);
+
+  /* shadows/glows */
+  --glow: 0 0 24px rgba(98,192,255,.25);
+  --gold-glow: 0 0 18px rgba(212,166,78,.35);
+
+  /* slots */
+  --slot: 64px;
 }
 
+/* Typography */
+.theme-fantasy {
+  color: var(--ink);
+  background:
+    radial-gradient(1200px 800px at 50% -20%, rgba(98,192,255,.06), transparent 60%),
+    radial-gradient(800px 600px at 80% 120%, rgba(212,166,78,.08), transparent 60%),
+    #0b0a11;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+}
+.theme-fantasy .card-h,
+.theme-fantasy .quick-actions button {
+  font-family: "Cinzel", serif;
+  letter-spacing: .4px;
+}
 
-
+/* Global layout (unchanged areas kept) */
 body {
   margin: 0;
   display: grid;
-  grid-template-columns: 240px 1fr 240px;
-  grid-template-rows: 1fr 160px;
+  grid-template-columns: 280px 1fr 300px;
+  grid-template-rows: 1fr 180px;
   grid-template-areas:
     "left center right"
     "console console console";
   height: 100vh;
-  background: var(--bg);
-  color: var(--text);
-  font-family: ui-sans-serif, system-ui, sans-serif;
 }
 
-#panel-left {
-  grid-area: left;
-  padding: 8px;
-  background: var(--panel);
-  border-right: 1px solid var(--line);
-  overflow-y: auto;
+/* Subtle vignette */
+body::after {
+  content: "";
+  position: fixed; inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 160px rgba(0,0,0,.7);
 }
+
+/* ====== PANELS ====== */
+#panel-left, #panel-right {
+  background: linear-gradient(180deg, #0d0b14 0%, #13111b 70%);
+  border-color: var(--line);
+  overflow-y: auto;
+  padding: 10px;
+}
+#panel-left  { grid-area: left;  border-right: 1px solid var(--line); }
+#panel-right { grid-area: right; border-left:  1px solid var(--line); }
 
 #viewport {
   grid-area: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-start;
+  gap: 12px;
+  padding-top: 10px;
 }
 
-#panel-right {
-  grid-area: right;
-  padding: 8px;
-  background: var(--panel);
-  border-left: 1px solid var(--line);
-  overflow-y: auto;
-  font-size: 14px;
-}
-
-#console {
-  grid-area: console;
-  display: flex;
-  flex-direction: column;
-  background: var(--panel);
-  border-top: 1px solid var(--line);
-
-  color: var(--text)
-
-}
-
-#console-log {
-  flex: 1;
-  padding: 4px;
-  overflow-y: auto;
-  font-family: ui-monospace, monospace;
-}
-
-#console-input {
-  padding: 6px;
-  border: none;
-  background: var(--bg);
-  color: var(--text);
-}
-
-.paperdoll {
-  display: grid;
-  grid-template-columns: repeat(3, 64px);
-  grid-auto-rows: 64px;
-  gap: 4px;
-  margin-bottom: 8px;
-}
-
-.equip-slot {
-  width: 64px;
-  height: 64px;
+/* ====== CARDS (stone + gold frame) ====== */
+.card {
+  position: relative;
+  background:
+    radial-gradient(120% 120% at 50% 0%, rgba(255,255,255,.05), rgba(10,9,14,.05)),
+    #13111b;
   border: 1px solid var(--line);
-  background: var(--bg);
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
+  border-radius: 14px;
+  padding: 12px;
+  margin: 10px 8px;
+  color: var(--ink);
+  box-shadow:
+    0 6px 20px rgba(0,0,0,.45),
+    0 1px 0 rgba(255,255,255,.03) inset;
 }
 
-.inventory-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 64px);
-  gap: 4px;
+/* Gold inset trim */
+.card::before {
+  content: "";
+  position: absolute; inset: 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(212,166,78,.25);
+  pointer-events: none;
 }
 
-.inventory-grid .cell {
-  width: 64px;
-  height: 64px;
+/* Corner glyphs (subtle runes) */
+.card::after {
+  content: "";
+  position: absolute; inset: 0;
+  border-radius: 14px;
+  background:
+    radial-gradient(10px 10px at 16px 16px, rgba(212,166,78,.38), transparent 60%),
+    radial-gradient(10px 10px at calc(100% - 16px) 16px, rgba(212,166,78,.38), transparent 60%),
+    radial-gradient(10px 10px at 16px calc(100% - 16px), rgba(212,166,78,.38), transparent 60%),
+    radial-gradient(10px 10px at calc(100% - 16px) calc(100% - 16px), rgba(212,166,78,.38), transparent 60%);
+  opacity: .35;
+  pointer-events: none;
+}
+
+.card-h {
+  font-weight: 700;
+  margin: 0 0 10px 0;
+  color: #ffe6b3;
+  text-shadow: 0 1px 0 #5d431c;
+  display: flex; align-items: center; gap: 8px;
+}
+.card-h::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(212,166,78,.5), rgba(212,166,78,0));
+  border-radius: 1px;
+  margin-left: 6px;
+}
+
+/* ====== MAP FRAME (ornate “wood”) ====== */
+.canvas-wrap {
+  width: 720px; height: 540px;   /* keep your viewer sizing */
+  background:
+    linear-gradient(180deg,#1b1a23,#0e0d13);
+  border-radius: 14px;
   border: 1px solid var(--line);
-  background: var(--bg);
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
+  box-shadow:
+    0 10px 30px rgba(0,0,0,.5),
+    inset 0 0 0 2px rgba(255,255,255,.03);
   position: relative;
 }
-
-.inventory-grid .stack {
-  position: absolute;
-  bottom: 2px;
-  right: 4px;
-  background: rgba(0,0,0,0.6);
-  padding: 0 2px;
-  font-size: 12px;
+/* wood strips illusion + gold pins */
+.canvas-wrap::before {
+  content:"";
+  position:absolute; inset:4px;
+  border-radius: 10px;
+  background:
+    repeating-linear-gradient(90deg, rgba(120,90,40,.08) 0 12px, rgba(120,90,40,.12) 12px 24px),
+    linear-gradient(180deg, rgba(255,255,255,.035), rgba(0,0,0,.12));
+  border: 1px solid rgba(212,166,78,.25);
+  pointer-events:none;
+}
+.canvas-wrap::after {
+  content:"";
+  position:absolute; inset:0;
+  background:
+    radial-gradient(6px 6px at 14px 14px, rgba(212,166,78,.55), transparent 60%),
+    radial-gradient(6px 6px at calc(100% - 14px) 14px, rgba(212,166,78,.55), transparent 60%),
+    radial-gradient(6px 6px at 14px calc(100% - 14px), rgba(212,166,78,.55), transparent 60%),
+    radial-gradient(6px 6px at calc(100% - 14px) calc(100% - 14px), rgba(212,166,78,.55), transparent 60%);
+  border-radius:14px;
+  opacity:.4; pointer-events:none;
 }
 
-#quick-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 12px;
+/* Zoom buttons -> small rune stones */
+.zoomOverlay .zbtn {
+  width: 32px; height: 32px; line-height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(circle at 50% 35%, rgba(255,255,255,.06), rgba(0,0,0,0) 60%),
+    #16141f;
+  color: #e7d7b3;
+  text-shadow: 0 1px 0 #2a1f0c;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
 }
+.zoomOverlay .zbtn:hover { box-shadow: var(--gold-glow), inset 0 0 0 1px rgba(255,255,255,.05); }
 
-#quick-actions button {
+/* ====== CONSOLE ====== */
+.console-card { width: 720px; }
+#console-root {
+  background:
+    linear-gradient(180deg, #0d0c13, #0b0a11),
+    url('/static/public/ui/parchment_noise_512.png'); /* optional; leave as-is if not present */
+  min-height: 110px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+  font-family: ui-monospace, monospace;
+  color: #e9e4d8;
   padding: 8px;
-  background: var(--bg);
-  color: var(--text);
-  border: 1px solid var(--line);
 }
 
-#tile-json {
-  background: var(--bg);
+/* ====== PAPERDOLL SHRINE ====== */
+.paperdoll-window {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--slot) 1fr var(--slot);
+  grid-template-rows: var(--slot) 1fr var(--slot);
+  gap: 10px;
+  width: 360px; height: 380px;
+  margin: 0 auto;
+  place-items: center;
+  background:
+    radial-gradient(80% 80% at 50% 30%, rgba(255,255,255,.05), rgba(0,0,0,0) 60%),
+    linear-gradient(180deg, #14121c 0%, #0f0d16 100%);
   border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: inset 0 0 60px rgba(0,0,0,.45);
+}
+
+/* Runic halo behind the doll */
+.paperdoll-window::before {
+  content: "";
+  position: absolute; left: 50%; top: 50%;
+  width: 220px; height: 220px; transform: translate(-50%,-50%);
+  border-radius: 50%;
+  background:
+    /* runic ticks */
+    repeating-conic-gradient(from 0deg, rgba(98,192,255,.4) 0 4deg, transparent 4deg 12deg),
+    radial-gradient(closest-side, rgba(98,192,255,.22), rgba(98,192,255,.04) 60%, transparent 70%);
+  filter: blur(.2px);
+  box-shadow: var(--glow);
+  opacity: .9;
+  pointer-events: none;
+}
+
+/* Central doll image */
+.doll-image {
+  grid-column: 2 / 3;
+  grid-row: 2 / 3;
+  max-width: 180px; max-height: 220px;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 8px 18px rgba(0,0,0,.45));
+  pointer-events: none;
+}
+
+/* ====== EQUIP SLOTS (gilded) ====== */
+.equip-slot {
+  width: var(--slot); height: var(--slot);
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(circle at 40% 30%, rgba(255,255,255,.06), rgba(0,0,0,0) 60%),
+    #0f0d16 url('/static/public/placeholders/slot_placeholder_64.png') center/74% no-repeat;
+  position: relative;
+  transition: transform .08s ease, box-shadow .08s ease, border-color .08s ease;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
+}
+.equip-slot:hover { border-color: var(--gold); box-shadow: var(--gold-glow), inset 0 0 0 1px rgba(255,255,255,.05); }
+.equip-slot[draggable="true"] { cursor: grab; }
+.equip-slot.reject { animation: rej .28s ease; }
+@keyframes rej { 0% { transform: translateX(0) } 25% { transform: translateX(-4px) } 75% { transform: translateX(4px) } 100% { transform: translateX(0) } }
+
+/* Slot labels (tiny runes) */
+.equip-slot::after {
+  content: attr(aria-label);
+  position: absolute; left: 7px; bottom: 6px;
+  font: 600 10px/1 "Cinzel", serif;
+  color: #c9e6ff;
+  opacity: .85; text-shadow: 0 1px 0 #08111a;
+}
+
+/* grid placement (unchanged) */
+.equip-slot[data-slot="head"]     { grid-column: 2; grid-row: 1; }
+.equip-slot[data-slot="cloak"]    { grid-column: 1; grid-row: 1; }
+.equip-slot[data-slot="chest"]    { grid-column: 1; grid-row: 2; }
+.equip-slot[data-slot="belt"]     { grid-column: 1; grid-row: 3; }
+.equip-slot[data-slot="pants"]    { grid-column: 2; grid-row: 3; }
+.equip-slot[data-slot="boots"]    { grid-column: 3; grid-row: 3; }
+.equip-slot[data-slot="mainhand"] { grid-column: 3; grid-row: 2; }
+.equip-slot[data-slot="offhand"]  { grid-column: 3; grid-row: 1; }
+.equip-slot[data-slot="jewelry"]  { grid-column: 2; grid-row: 1 / 2; justify-self: end; align-self: center; transform: translateX(-76px); }
+.equip-slot[data-slot="gadget"]   { grid-column: 2; grid-row: 1 / 2; justify-self: start; align-self: center; transform: translateX(76px); }
+
+/* ====== INVENTORY GRID ====== */
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(5, var(--slot));
+  gap: 10px;
   padding: 4px;
-  max-height: 200px;
-  overflow: auto;
 }
-
-#tile-form {
-  width: 100%;
-  background: var(--bg);
-  color: var(--text);
+.inventory-grid .cell {
+  width: var(--slot); height: var(--slot);
+  border-radius: 12px;
   border: 1px solid var(--line);
+  background:
+    radial-gradient(circle at 40% 30%, rgba(255,255,255,.06), rgba(0,0,0,0) 60%),
+    #0f0d16 center/74% no-repeat;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
+  position: relative;
+}
+.inventory-grid .cell:focus { outline: 2px solid #60a5fa; }
+
+/* stack badge */
+.inventory-grid .stack {
+  position: absolute; bottom: 4px; right: 6px;
+  padding: 0 6px; border-radius: 6px;
+  font: 700 12px/18px ui-monospace, monospace;
+  color: #18161f; background: #e8dfc8;
+  border: 1px solid rgba(0,0,0,.4);
 }
 
-.tile-buttons {
-  display: flex;
-  gap: 4px;
-  margin-top: 4px;
+/* ====== RARITY GLOWS (applies to slots & inventory cells) ====== */
+[equip-slot],[data-rarity] { position: relative; }
+[data-rarity="common"]     { box-shadow: inset 0 0 0 1px rgba(255,255,255,.03); }
+[data-rarity="uncommon"]   { box-shadow: 0 0 10px rgba(67,160,71,.35), inset 0 0 0 1px rgba(67,160,71,.25); }
+[data-rarity="rare"]       { box-shadow: 0 0 12px rgba(59,130,246,.45), inset 0 0 0 1px rgba(59,130,246,.3); }
+[data-rarity="epic"]       { box-shadow: 0 0 14px rgba(168,85,247,.5), inset 0 0 0 1px rgba(168,85,247,.35); }
+[data-rarity="legendary"]  { box-shadow: 0 0 16px rgba(245,158,11,.55), inset 0 0 0 1px rgba(245,158,11,.4); }
+
+/* ====== ACTION BUTTONS ====== */
+.quick-actions { display:flex; flex-direction:column; gap:10px; margin-bottom: 12px; }
+.quick-actions button {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  color: #ffe6b3;
+  background:
+    radial-gradient(40% 60% at 50% 10%, rgba(255,255,255,.06), rgba(0,0,0,0) 60%),
+    linear-gradient(180deg, #1a1723, #12101a);
+  text-shadow: 0 1px 0 #2a1f0c;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
+  transition: transform .08s ease, box-shadow .12s ease, border-color .12s ease;
+}
+.quick-actions button:hover {
+  border-color: var(--gold);
+  box-shadow: var(--gold-glow), inset 0 0 0 1px rgba(255,255,255,.06);
+  transform: translateY(-1px);
 }
 
+/* ====== TILE JSON / EDITOR ====== */
+.tile-json {
+  background: linear-gradient(180deg, #0e0d14, #0c0a12);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px; max-height: 240px; overflow: auto;
+  color: var(--muted);
+}
+.tile-edit .tile-buttons { display:flex; gap:8px; margin-top:6px; }
+#tile-form {
+  width: 100%; min-height: 120px;
+  background: #0e0d14; color: var(--ink);
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: 6px;
+}
+/* ===== Layout tweaks ===== */
+body {
+  grid-template-columns: 380px 1fr 360px; /* widen side panels */
+}
+#viewport { padding-top: 10px; }
+
+/* Map + actions side-by-side */
+.viewer-row {
+  display: grid;
+  grid-template-columns: 720px 180px; /* canvas width + action dock */
+  gap: 12px;
+  align-items: start;
+}
+
+/* Expanded character area = two columns (doll + inventory) */
+.char-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows:auto auto;
+  gap: 16px;
+  align-items: start;
+}
+
+/* Embedded inventory header */
+.sub-h {
+  font: 700 13px "Cinzel", serif;
+  color: #ffe6b3;
+  margin: 2px 0 8px;
+}
+
+/* Keep your inventory comfortable in the left card */
+.inv-embed .inventory-grid {
+  grid-template-columns: repeat(4, var(--slot)); /* 4 wide to reduce height */
+  gap: 10px;
+}
+
+/* Action dock styling */
+.action-dock {
+  position: sticky;
+  top: 10px;
+  width: 180px;
+  padding-bottom: 12px;
+}
+.action-dock .quick-actions { gap: 10px; }
+
+/* Right panel: quest log + journal */
+.flavor { color: var(--muted); line-height: 1.4; }
+.journal-wrap textarea {
+  width: 100%;
+  min-height: 180px;
+  resize: vertical;
+  background: #0e0d14;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+}
+.muted { color: var(--muted); margin-left: 8px; }

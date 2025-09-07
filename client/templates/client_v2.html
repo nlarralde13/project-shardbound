@@ -4,58 +4,117 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Shardbound Client v2</title>
+  <link rel="icon" href="data:,">
 
+  <!-- Fantasy fonts (already safe to include; optional) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Uncial+Antiqua&display=swap" rel="stylesheet">
 
-
+  <!-- v2 map viewer styles + client layout -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/shard-viewer-v2.css') }}" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/client_v2.css') }}" />
 </head>
-<body>
+<body class="theme-fantasy">
+  <!-- LEFT: Character + Inventory (single expanded card, no scrolling) -->
+  <aside id="panel-left">
+    <section class="card" id="cardCharacter">
+      <header class="card-h">Character</header>
 
-  <div id="panel-left">
-    <div id="paperdoll" class="paperdoll"></div>
-    <div id="inventory" class="inventory">
-      <div id="inventory-grid" class="inventory-grid"></div>
-    </div>
-  </div>
+      <!-- Two-column grid: paperdoll shrine + embedded inventory -->
+      <div class="char-grid">
+        <!-- Paperdoll shrine -->
+        <div>
+          <div class="paperdoll-window">
+            <!-- Central doll image (replace src with your sprite path) -->
+            <img class="doll-image"
+                 src="/static/assets/character_models/placeholder_warrior.png"
+                 alt="Character"
+                 draggable="false" />
+            <!-- Slot scaffold; paperdoll.js will populate each .equip-slot -->
+            <div class="equip-slot" data-slot="head"      aria-label="Head"></div>
+            <div class="equip-slot" data-slot="cloak"     aria-label="Cloak"></div>
+            <div class="equip-slot" data-slot="chest"     aria-label="Chest"></div>
+            <div class="equip-slot" data-slot="belt"      aria-label="Belt"></div>
+            <div class="equip-slot" data-slot="pants"     aria-label="Pants"></div>
+            <div class="equip-slot" data-slot="boots"     aria-label="Boots"></div>
+            <div class="equip-slot" data-slot="mainhand"  aria-label="Main Hand"></div>
+            <div class="equip-slot" data-slot="offhand"   aria-label="Off Hand"></div>
+            <div class="equip-slot" data-slot="jewelry"   aria-label="Jewelry"></div>
+            <div class="equip-slot" data-slot="gadget"    aria-label="Gadget"></div>
+          </div>
+        </div>
 
-  <div id="viewport">
-    <canvas id="map-canvas" width="640" height="480"></canvas>
-  </div>
-
-  <div id="panel-right">
-    <div id="quick-actions">
-      <button data-action="look">Look</button>
-      <button data-action="interact">Interact</button>
-      <button data-action="rest">Rest</button>
-      <button data-action="slot1">Action 1</button>
-      <button data-action="slot2">Action 2</button>
-    </div>
-    <div id="tile-info">
-      <h3>Tile Info</h3>
-      <pre id="tile-json">{}</pre>
-      <div id="tile-form-wrap" hidden>
-        <textarea id="tile-form" rows="6"></textarea>
-        <div class="tile-buttons">
-          <button id="btn-validate">Validate</button>
-          <button id="btn-apply">Apply</button>
-          <button id="btn-push">Push Live</button>
+        <!-- Embedded Inventory (same #inventory-grid id so drag↔drop keeps working) -->
+        <div class="inv-embed">
+          <header class="sub-h">Inventory</header>
+          <div id="inventory-grid" class="inventory-grid"></div>
         </div>
       </div>
+    </section>
+  </aside>
+
+  <!-- CENTER: Map viewer + Actions dock -->
+  <main id="viewport">
+    <div class="viewer-row">
+      <!-- Map frame -->
+      <section class="canvas-wrap" id="frame">
+        <canvas id="canvas"></canvas>
+        <canvas id="overlayCanvasLite"></canvas>
+        <div class="zoomOverlay">
+          <button class="zbtn" id="btnFit" title="Fit (refit)">⤢</button>
+          <button class="zbtn" id="btnZoomIn" title="Zoom in">+</button>
+          <button class="zbtn" id="btnZoomOut" title="Zoom out">−</button>
+        </div>
+        <div id="tooltip" class="tooltip"></div>
+      </section>
+
+      <!-- Actions dock (attached to map) -->
+      <aside class="action-dock card" id="cardActions">
+        <header class="card-h">Actions</header>
+        <div id="action-root"></div>
+        <div class="quick-actions">
+          <button id="btnLook">Look</button>
+          <button id="btnInteract">Interact</button>
+          <button id="btnRest">Rest</button>
+          <button id="btnSkill1">Action 1</button>
+          <button id="btnSkill2">Action 2</button>
+        </div>
+      </aside>
     </div>
-  </div>
 
-  <div id="console">
-    <div id="console-log"></div>
-    <input id="console-input" type="text" placeholder="Command..." />
-  </div>
+    <!-- Console -->
+    <section class="card console-card">
+      <header class="card-h">Console</header>
+      <div id="console-root"></div>
+    </section>
+  </main>
 
+  <!-- RIGHT: Quest Log + Journal -->
+  <aside id="panel-right">
+    <section class="card" id="cardQuests">
+      <header class="card-h">Quest Log</header>
+      <div class="flavor">
+        <p><em>No quests yet.</em></p>
+        <p>A faint whisper echoes from the shards… “Seek the runes. The path will reveal itself.”</p>
+      </div>
+    </section>
+
+    <section class="card" id="cardJournal">
+      <header class="card-h">Journal</header>
+      <div class="journal-wrap">
+        <textarea id="journal-input" rows="10" placeholder="Write notes, rumors, coordinates, and secrets here..."></textarea>
+        <div class="tile-buttons">
+          <button id="btnUpdateJournal">Update Journal</button>
+          <span id="journal-status" class="muted"></span>
+        </div>
+      </div>
+    </section>
+  </aside>
+
+  <!-- Scripts -->
+  <script type="module" src="{{ url_for('static', filename='js/client_v2.js') }}"></script>
   <script type="module" src="{{ url_for('static', filename='js/paperdoll.js') }}"></script>
   <script type="module" src="{{ url_for('static', filename='js/inventory.js') }}"></script>
-  <script type="module" src="{{ url_for('static', filename='js/mapViewport.js') }}"></script>
-  <script type="module" src="{{ url_for('static', filename='js/tileInfoPanel.js') }}"></script>
-  <script type="module" src="{{ url_for('static', filename='js/consoleUI.js') }}"></script>
-
 </body>
 </html>
-
