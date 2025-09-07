@@ -22,7 +22,12 @@ function render() {
     cell.className = 'cell';
     cell.draggable = true;
     cell.dataset.index = idx;
-    cell.style.backgroundImage = `url(${item.icon})`;
+    const img = document.createElement('img');
+    img.className = 'icon';
+    img.draggable = false;            // let the cell handle drag, not the image
+    img.alt = item.name || '';
+    img.src = item.icon;              // e.g. /static/assets/items/wooden_sword.png
+    cell.appendChild(img);
     if (item.rarity) {
       cell.dataset.rarity = String(item.rarity).toLowerCase();
     }
@@ -101,6 +106,7 @@ async function loadInventory() {
     if (!r.ok) return;
     const data = await r.json();
     inventory = (data.items || [])
+    
       .filter(it => !it.slot)
       .map(it => {
         const slug = it.slug || '';
