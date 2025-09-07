@@ -62,11 +62,13 @@ document.body.appendChild(tip);
 
 const dpr = () => window.devicePixelRatio || 1;
 // Default to a 35px tile scale if no control is present
-const scale = () => Math.max(1, parseInt(els.scale?.value || '35', 10));
+const scale = () => Math.max(1, parseInt(els.scale?.value || '50', 10));
 const alpha = () => Math.max(0, Math.min(1, (parseInt(els.opacity?.value || '85', 10) || 85) / 100));
 
 // State
-const ST = { shard: null, grid: null, focus: { x: -1, y: -1 }, panX: 0, panY: 0 };
+const ST = { shard: null, grid: null, focus: { x: -1, y: -1 }, panX: 0, panY: 0, playerPos: { x: -1, y: -1 } };
+const playerToken = new Image();
+playerToken.src = '/static/assets/tokens/player.png';
 
 function scheduleDraw() {
   if (scheduleDraw.raf) return;
@@ -123,6 +125,8 @@ function deriveGridFromTiles(shard) {
 }
 
 // Sizing and pan
+const MIN_SCALE = 15, MAX_SCALE = 100;
+
 function ensureSizes(W, H) {
   const s = scale();
   if (!W || !H) return;
@@ -150,6 +154,26 @@ function centerInFrame() {
   ST.panX = Math.round((fw - cw) / 2);
   ST.panY = Math.round((fh - ch) / 2);
   applyPan();
+}
+
+export function centerOnTile(x, y) {
+  const s = scale();
+  const fw = els.frame?.clientWidth || 0, fh = els.frame?.clientHeight || 0;
+  ST.panX = Math.round(fw / 2 - (x + 0.5) * s);
+  ST.panY = Math.round(fh / 2 - (y + 0.5) * s);
+  applyPan();
+}
+
+export function fitToFrame(minPx = 50) {
+  const g = ST.grid;
+  if (!g) return;
+  const fw = els.frame?.clientWidth || 0, fh = els.frame?.clientHeight || 0;
+  const H = g.length, W = g[0]?.length || 0;
+  if (!fw || !fh || !W || !H) return;
+  const sx = Math.floor(fw / W), sy = Math.floor(fh / H);
+  const s = Math.max(minPx, Math.floor(Math.min(sx, sy)));
+  setScalePx(s);
+  centerInFrame();
 }
 
 // Biome colors
@@ -280,6 +304,11 @@ function drawOverlay() {
     }
     octx.restore();
   }
+  if (Number.isFinite(ST.playerPos.x) && Number.isFinite(ST.playerPos.y)) {
+    const px = ST.playerPos.x * s;
+    const py = ST.playerPos.y * s;
+    octx.drawImage(playerToken, px, py, s, s);
+  }
   if (ST.focus && ST.focus.x >= 0 && ST.focus.y >= 0) {
     const fx = ST.focus.x, fy = ST.focus.y; const fpx = fx * s, fpy = fy * s;
     octx.save();
@@ -364,7 +393,7 @@ els.frame?.addEventListener('contextmenu', (e) => e.preventDefault());
 
 // Zoom controls
 export function setScalePx(px) {
-  px = Math.max(4, Math.min(64, Math.round(px)));
+  px = Math.max(MIN_SCALE, Math.min(MAX_SCALE, Math.round(px)));
   if (els.scale) els.scale.value = String(px);
   if (ST.grid) {
     ensureSizes(ST.grid[0]?.length || 0, ST.grid.length || 0);
@@ -373,7 +402,7 @@ export function setScalePx(px) {
 }
 function zoomAt(fx, fy, factor) {
   const s1 = scale();
-  const s2 = Math.max(4, Math.min(64, Math.round(s1 * factor)));
+  const s2 = Math.max(MIN_SCALE, Math.min(MAX_SCALE, Math.round(s1 * factor)));
   if (s2 === s1) return;
   const k = s2 / s1;
   const panX = ST.panX || 0, panY = ST.panY || 0;
@@ -401,7 +430,7 @@ els.frame?.addEventListener('wheel', handleWheel, { passive: false });
 
 $('btnZoomIn')?.addEventListener('click', (e) => { e?.preventDefault?.(); const rect = els.frame.getBoundingClientRect(); zoomAt(rect.width / 2, rect.height / 2, 1.2); });
 $('btnZoomOut')?.addEventListener('click', (e) => { e?.preventDefault?.(); const rect = els.frame.getBoundingClientRect(); zoomAt(rect.width / 2, rect.height / 2, 0.8); });
-$('btnFit')?.addEventListener('click', (e) => { e?.preventDefault?.(); centerInFrame(); });
+$('btnFit')?.addEventListener('click', (e) => { e?.preventDefault?.(); fitToFrame(); });
 
 // Layer controls
 els.scale?.addEventListener('input', () => { if (!ST.grid) return; ensureSizes(ST.grid[0]?.length || 0, ST.grid.length || 0); scheduleDraw(); });
@@ -415,3 +444,4 @@ els.palette?.addEventListener('change', () => scheduleDraw());
 
 // public API
 export function currentShard() { return ST.shard; }
+export function setPlayerPos(x, y) { ST.playerPos = { x, y }; scheduleDraw(); }
