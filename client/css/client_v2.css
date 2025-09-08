@@ -136,7 +136,7 @@ body::after {
 
 /* ====== MAP FRAME (ornate “wood”) ====== */
 .canvas-wrap {
-  width: 720px; height: 540px;   /* keep your viewer sizing */
+  display: inline-block;
   background:
     linear-gradient(180deg,#1b1a23,#0e0d13);
   border-radius: 14px;

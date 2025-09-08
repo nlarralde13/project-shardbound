@@ -62,7 +62,7 @@ document.body.appendChild(tip);
 
 const dpr = () => window.devicePixelRatio || 1;
 // Default to a 35px tile scale if no control is present
-const scale = () => Math.max(1, parseInt(els.scale?.value || '50', 10));
+const scale = () => Math.max(1, parseInt(els.scale?.value || '32', 10));
 const alpha = () => Math.max(0, Math.min(1, (parseInt(els.opacity?.value || '85', 10) || 85) / 100));
 
 // State
@@ -139,6 +139,10 @@ function ensureSizes(W, H) {
     overlay.height = H * s;
     overlay.style.width = `${W * s}px`;
     overlay.style.height = `${H * s}px`;
+    if (els.frame) {
+      els.frame.style.width = `${W * s}px`;
+      els.frame.style.height = `${H * s}px`;
+    }
   }
 }
 function applyPan() {
@@ -430,6 +434,7 @@ els.frame?.addEventListener('wheel', handleWheel, { passive: false });
 $('btnZoomIn')?.addEventListener('click', (e) => { e?.preventDefault?.(); const rect = els.frame.getBoundingClientRect(); zoomAt(rect.width / 2, rect.height / 2, 1.2); });
 $('btnZoomOut')?.addEventListener('click', (e) => { e?.preventDefault?.(); const rect = els.frame.getBoundingClientRect(); zoomAt(rect.width / 2, rect.height / 2, 0.8); });
 $('btnFit')?.addEventListener('click', (e) => { e?.preventDefault?.(); fitToFrame(); });
+$('btnCenter')?.addEventListener('click', (e) => { e?.preventDefault?.(); if (Number.isFinite(ST.playerPos.x) && Number.isFinite(ST.playerPos.y)) centerOnTile(ST.playerPos.x, ST.playerPos.y); });
 
 // Layer controls
 els.scale?.addEventListener('input', () => { if (!ST.grid) return; ensureSizes(ST.grid[0]?.length || 0, ST.grid.length || 0); scheduleDraw(); });
@@ -443,4 +448,9 @@ els.palette?.addEventListener('change', () => scheduleDraw());
 
 // public API
 export function currentShard() { return ST.shard; }
-export function setPlayerPos(x, y) { ST.playerPos = { x, y }; scheduleDraw(); }
+export function setPlayerPos(x, y) {
+  ST.playerPos = { x, y };
+  const c = $('btnCenter');
+  if (c) { c.disabled = false; c.title = 'Center on player'; }
+  scheduleDraw();
+}

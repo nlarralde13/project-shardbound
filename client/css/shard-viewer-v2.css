@@ -9,9 +9,7 @@
   border: 1px solid var(--line);
   border-radius: 10px;
   overflow: hidden;
-  /* Fixed map box size */
-  width: 720px;
-  height: 540px;
+  display: inline-block; /* shrink to map size */
 }
 
 /* Both canvases: absolutely fill the wrap */

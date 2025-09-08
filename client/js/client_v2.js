@@ -224,6 +224,19 @@ function startAutosave() {
   // Always lock frame & disable wheel to satisfy “edge to edge, no zoom”
   lockViewerFrameEdgeToEdge();
 
+  try {
+    const state = await API.spawn();
+    const pos = state?.player?.pos;
+    if (Array.isArray(pos)) {
+      Viewer.setPlayerPos?.(pos[0], pos[1]);
+      Viewer.centerOnTile?.(pos[0], pos[1]);
+      const cBtn = document.getElementById('btnCenter');
+      if (cBtn) { cBtn.disabled = false; cBtn.title = 'Center on player'; }
+    }
+  } catch (err) {
+    console.warn('Player spawn failed', err);
+  }
+
   // HUD and actions
   try {
     if (document.querySelector('.room-stage')) {
