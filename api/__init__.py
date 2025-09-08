@@ -251,5 +251,9 @@ def create_app():
     def data_vault():
         admin_guard()
         return render_template("theVault.html")
+    
+    @app.route("/layout")
+    def ui_layout():
+        return render_template("layout.html")
 
     return app
