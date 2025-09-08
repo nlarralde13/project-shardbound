@@ -21,6 +21,7 @@
     <a href="/account">Account</a>
     <a id="linkDevTools" href="/dev" style="display:none">Dev Tools</a>
   </nav>
+  <div id="layout">
   <!-- LEFT: Character + Inventory (single expanded card, no scrolling) -->
   <aside id="panel-left">
     <section class="card" id="cardCharacter">
@@ -120,6 +121,7 @@
       </div>
     </section>
   </aside>
+  </div>
 
   <!-- Scripts -->
   <script src="{{ url_for('static', filename='js/consoleUI.js') }}"></script>

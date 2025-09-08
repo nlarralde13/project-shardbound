@@ -48,9 +48,17 @@ body{
   box-shadow: 0 6px 18px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.03);
 }
 #topbar{padding:8px 10px;display:flex;gap:10px;margin:8px}
-#panel-left,#panel-right{padding:10px;margin:8px}
+
+
+/* three‑column layout wrapper */
+#layout{display:flex;gap:8px;margin:0 8px 8px;}
+#panel-left,#panel-right,#viewport{margin:0;}
+#panel-left,#panel-right{padding:10px;flex:0 0 auto;}
 #viewport{
-  padding:10px;margin:8px;
+  padding:10px;
+  flex:1;
+  min-width:0;
+
   display:flex;
   flex-direction:column;
   gap:12px;
