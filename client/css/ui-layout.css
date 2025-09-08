@@ -1,14 +1,32 @@
+/* ==========================================================================
+   Shardbound — Layout Sandbox CSS
+   - Clean tokens
+   - Fixed banner height via --banner-h
+   - Bounded playfield (docked grid / free absolute)
+   - Square map frame (shard fills fully)
+   - User chip & menu
+   - Guides, snap grid, buttons, panel polish
+   ========================================================================== */
+
 /* ===== TOKENS & GLOBALS ===== */
 :root{
+  /* theme */
   --bg:#0b0a11; --panel:#13111b; --ink:#e9e4d8; --muted:#b8b2a4;
   --line:#2a2740; --gold:#d4a64e; --rune:#62c0ff;
-  --slot:64px; --gap:10px; --radius:12px; --gold-glow:0 0 18px rgba(212,166,78,.35);
 
-  /* Layout page controls */
-  --banner-h:48px;   /* ← change this to shrink/expand the top banner (e.g., 72px, 64px) */
-  --snap:24px;       /* default pixel snap (panels.js may override) */
-  --pf-pad:12px;     /* inner padding of playfield */
+  /* layout */
+  --banner-h:48px;           /* ← set me to 64/72/etc to resize banner */
+  --pf-pad:12px;             /* inner padding for playfield */
+  --snap:24px;               /* default pixel snap (JS may override) */
+  --map-side: clamp(480px, 32vw, 860px);  /* square map panel width */
+
+  /* components */
+  --slot:64px; --gap:10px; --radius:12px;
+  --gold-glow:0 0 18px rgba(212,166,78,.35);
 }
+
+*{ box-sizing:border-box; }
+html,body{ height:100%; margin:0; }
 
 body.theme-fantasy{
   color:var(--ink);
@@ -23,19 +41,36 @@ body.theme-fantasy{
 
 /* ===== CARDS ===== */
 .card{
-  position:relative; background:#13111b;
-  border:1px solid var(--line); border-radius:14px; padding:12px; margin:10px 8px;
+  position:relative; background:var(--panel);
+  border:1px solid var(--line); border-radius:14px;
+  padding:12px; margin:10px 8px;
   box-shadow:0 6px 20px rgba(0,0,0,.45), 0 1px 0 rgba(255,255,255,.03) inset;
 }
-.card-h{font-family:"Cinzel", serif; font-weight:700; color:#ffe6b3; margin:0 0 10px;}
-.card-h::after{content:""; display:inline-block; height:1px; background:linear-gradient(90deg, rgba(212,166,78,.5), transparent); width:100%; margin-left:8px; vertical-align:middle}
+.card-h{
+  display:flex; align-items:center; gap:8px;
+  font-family:"Cinzel", serif; font-weight:700; color:#ffe6b3; margin:0 0 10px;
+}
+.card-h::after{
+  content:""; flex:1 1 auto; height:1px;
+  background:linear-gradient(90deg, rgba(212,166,78,.5), transparent);
+}
 
-/* ===== BANNER (fixed height via --banner-h) ===== */
+/* Small chevron used by panels.js "collapse" */
+.panel-toggle{
+  margin-left:auto; background:none; border:0; color:var(--ink);
+  opacity:.85; display:inline-flex; align-items:center; cursor:pointer;
+}
+.panel[data-collapsed="1"] .panel-toggle svg{ transform: rotate(180deg); }
+
+/* ===== BANNER ===== */
 #banner{
   position:fixed; left:0; right:0; top:0; height:var(--banner-h);
   z-index:20; display:flex; align-items:center; gap:12px; padding:8px 12px;
+  background:linear-gradient(180deg, rgba(0,0,0,.15), transparent);
 }
-#banner .brand{ font-family:"Cinzel", serif; font-weight:700; letter-spacing:.5px; color:#ffe6b3; font-size:18px; }
+#banner .brand{
+  font-family:"Cinzel", serif; font-weight:700; letter-spacing:.5px; color:#ffe6b3; font-size:18px;
+}
 #banner .spacer{ flex:1; }
 
 /* ===== USER CHIP ===== */
@@ -51,8 +86,8 @@ body.theme-fantasy{
 .user-chip .avatar{
   position: relative; width:36px; height:36px; border-radius:50%; overflow:hidden; display:inline-grid; place-items:center;
   background: radial-gradient(60% 60% at 35% 35%, rgba(255,255,255,.06), transparent 60%), #0f0d16;
+  box-shadow: 0 0 0 2px rgba(212,166,78,.35), inset 0 0 0 1px rgba(255,255,255,.04);
 }
-.user-chip .avatar.ring{ box-shadow: 0 0 0 2px rgba(212,166,78,.35), inset 0 0 0 1px rgba(255,255,255,.04); }
 .user-chip .avatar img{ display:block; width:100%; height:100%; object-fit:cover; }
 .user-chip .initials{
   position:absolute; inset:0; display:grid; place-items:center; font:700 13px/1 "Cinzel", serif; color:#ffe6b3; text-shadow:0 1px 0 #2a1f0c;
@@ -83,8 +118,10 @@ body.theme-fantasy{
 
 /* ===== BOUNDED PLAYFIELD ===== */
 #playfield{
-  position:fixed; left:0; right:0; top:var(--banner-h); bottom:0;
-  padding:var(--pf-pad); overflow:hidden; z-index:10;
+  position:fixed; left:0; right:0;
+  top:calc(var(--banner-h, 48px));  /* safe fallback */
+  bottom:0; padding:var(--pf-pad, 12px);
+  overflow:hidden; z-index:10;
 }
 
 /* Docked (grid) layout by default */
@@ -103,7 +140,7 @@ body.theme-fantasy{
 #playfield .panel.dragging{ box-shadow: 0 0 0 2px rgba(212,166,78,.35), 0 16px 48px rgba(0,0,0,.6); }
 #playfield .panel .card-h{ user-select:none; }
 
-/* Snap grid overlay */
+/* Snap grid overlay (visual aid only) */
 #snapGrid{
   position:absolute; inset:0; z-index:0; pointer-events:none;
   background-image:
@@ -123,18 +160,34 @@ body.theme-fantasy{
 .guide.v { width: 2px; height: 100%; top: 0; }
 .guide.h { height: 2px; width: 100%; left: 0; }
 
-/* ===== MAP / ACTIONS / CONSOLE placeholders ===== */
-.map-card{ width:720px; }
-.console-card{ width:720px; }
+/* ===== MAP PANEL (square frame) ===== */
+.map-card{ width: var(--map-side); }
+
 .canvas-wrap{
-  background:linear-gradient(180deg,#1b1a23,#0e0d13); border:1px solid var(--line); border-radius:14px;
+  background:linear-gradient(180deg,#1b1a23,#0e0d13);
+  border:1px solid var(--line); border-radius:14px;
   box-shadow: inset 0 0 0 2px rgba(255,255,255,.03), 0 10px 30px rgba(0,0,0,.5);
+  padding:10px;
 }
+
 #frame{
-  width:720px; height:420px;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;      /* force square so a 1:1 shard fills */
+  height: auto;
+  overflow: hidden;
   background:radial-gradient(60% 60% at 30% 40%, rgba(255,255,255,.04), transparent 60%), #101018;
   border-radius:10px; border:1px solid var(--line);
 }
+
+#frame > canvas{
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  display: block;
+  image-rendering: pixelated; /* crisp tiles */
+}
+
+/* ===== ACTIONS / BUTTONS ===== */
 .action-dock{ width:200px; }
 .quick-actions{ display:flex; flex-direction:column; gap:10px; }
 .btn{
@@ -144,7 +197,7 @@ body.theme-fantasy{
 }
 .btn:hover{ border-color:var(--gold); box-shadow:var(--gold-glow), inset 0 0 0 1px rgba(255,255,255,.06); }
 
-/* ===== CHARACTER demo (for visual parity only) ===== */
+/* ===== CHARACTER / INVENTORY placeholders (for parity while sandboxing) ===== */
 .char-grid{ display:grid; grid-template-columns:1fr; grid-template-rows:auto auto; gap:6px; }
 .paperdoll{ padding:8px; }
 .paperdoll-stage{
@@ -163,6 +216,7 @@ body.theme-fantasy{
   pointer-events:none; filter:blur(.2px);
 }
 .doll-image{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); max-width:180px; max-height:220px; image-rendering:pixelated; filter:drop-shadow(0 8px 18px rgba(0,0,0,.45)); }
+
 .paperdoll-grid{
   position:absolute; inset:0;
   display:grid; grid-template-columns:repeat(3, var(--slot)); grid-template-rows:repeat(3, var(--slot));
@@ -195,6 +249,7 @@ body.theme-fantasy{
 }
 .inventory-grid .inv-cell{
   width:var(--cell); height:var(--cell);
-  border-radius:12px; border:1px solid var(--line); background: radial-gradient(circle at 40% 30%, rgba(255,255,255,.06), transparent 60%), #0f0d16;
+  border-radius:12px; border:1px solid var(--line);
+  background: radial-gradient(circle at 40% 30%, rgba(255,255,255,.06), transparent 60%), #0f0d16;
   overflow:hidden; position:relative; box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
 }
