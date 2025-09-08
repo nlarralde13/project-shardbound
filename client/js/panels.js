@@ -1,7 +1,10 @@
 // static/js/panels.js
 const MODE_KEY = "ui.freeLayout";
 const POS_KEY  = "ui.panelPos.";
+const LOCK_KEY = "ui.panelLock";
 const PANELS   = ["cardCharacter","mapCard","cardActions","cardQuests","cardJournal","cardConsole"];
+
+const GRID = 20; // snap panels to 20px grid
 
 const $ = (id) => document.getElementById(id);
 const save = (k,v) => localStorage.setItem(k, JSON.stringify(v));
@@ -18,17 +21,28 @@ function clampToViewport(x, y, el){
   return { x: Math.min(Math.max(x, minX), maxX), y: Math.min(Math.max(y, minY), maxY) };
 }
 
+function snap(n){ return Math.round(n / GRID) * GRID; }
+
 function place(el, x, y){
-  el.style.left = Math.round(x) + "px";
-  el.style.top  = Math.round(y) + "px";
+  el.style.left = snap(x) + "px";
+  el.style.top  = snap(y) + "px";
   el.style.position = "fixed";
+}
+
+function panelsLocked(){ return document.body.dataset.panelsLocked === "1"; }
+
+function setLocked(on){
+  document.body.dataset.panelsLocked = on ? "1" : "";
+  save(LOCK_KEY, on ? 1 : 0);
+  const lockBtn = $("toggleLock");
+  if (lockBtn) lockBtn.textContent = on ? "Unlock panels" : "Lock panels";
 }
 
 function makeDraggable(panel, id){
   const handle = panel.querySelector(".card-h") || panel;
 
   handle.addEventListener("pointerdown", (e) => {
-    if (e.button !== 0) return; // left click only
+    if (e.button !== 0 || panelsLocked()) return; // left click only and not locked
     panel.setPointerCapture?.(e.pointerId);
     bringFront(panel);
     panel.classList.add("dragging");
@@ -59,6 +73,7 @@ function makeDraggable(panel, id){
 
   // Double-click header to reset this panel’s saved position
   handle.addEventListener("dblclick", () => {
+    if (panelsLocked()) return;
     localStorage.removeItem(POS_KEY + id);
     const r = panel.getBoundingClientRect();
     place(panel, 20, Math.max(60, r.top)); // simple reset
@@ -91,6 +106,7 @@ function enableFreeLayout(on){
       el.style.left = el.style.top = el.style.position = el.style.zIndex = "";
       el.classList.remove("dragging");
     });
+    setLocked(false);
   }
 }
 
@@ -103,8 +119,18 @@ function init(){
       btn.textContent = !on ? "Dock panels" : "Free layout";
     });
   }
+
+  const lockBtn = $("toggleLock");
+  if (lockBtn){
+    lockBtn.addEventListener("click", () => {
+      const on = panelsLocked();
+      setLocked(!on);
+    });
+  }
+
   const shouldEnable = load(MODE_KEY) === 1;
   enableFreeLayout(shouldEnable);
+  setLocked(load(LOCK_KEY) === 1);
   if (btn) btn.textContent = shouldEnable ? "Dock panels" : "Free layout";
 }
 

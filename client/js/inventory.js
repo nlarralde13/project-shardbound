@@ -76,13 +76,10 @@ function render() {
 
 function applyLoadout(dto) {
   const items = Array.isArray(dto?.inventory) ? dto.inventory : [];
-  const equippedKeys = new Set(
-    Object.values(dto?.equipped || {}).map(it =>
-      it?.character_item_id ?? it?.id ?? it?.slug
-    )
-  );
+  const keyOf = (it) => String(it?.character_item_id ?? it?.id ?? it?.slug ?? "");
+  const equippedKeys = new Set(Object.values(dto?.equipped || {}).map(keyOf));
   inventory = items
-    .filter(it => !equippedKeys.has(it.character_item_id ?? it.id ?? it.slug))
+    .filter(it => !equippedKeys.has(keyOf(it)))
     .map(normalizeItem);
   render();
 }
