@@ -4,10 +4,7 @@
 
 | Model | Table |
 | ----- | ----- |
-| `api.models.inventory_item.InventoryItem` | `inventory_items` |
 | `api.models.towns.Town` | `towns` |
-| `api.models.inventory.ItemInstance` | `item_instances` |
-| `api.models.inventory.CharacterInventory` | `character_inventory` |
 | `api.models.users.User` | `users` |
 | `api.models.gameplay.Town` | `towns` |
 | `api.models.gameplay.TownRoom` | `town_rooms` |
@@ -17,9 +14,7 @@
 | `api.models.gameplay.CharacterState` | `character_states` |
 | `api.models.gameplay.EncounterTrigger` | `encounter_triggers` |
 | `api.models.gameplay.CharacterDiscovery` | `character_discoveries` |
-| `api.models.item.Item` | `items_v1` |
 | `api.models.audit.AdminAuditLog` | `admin_audit_logs` |
-| `api.models.equipment.CharacterEquipped` | `character_equipped` |
 | `api.models.crafting.Recipe` | `recipes` |
 | `api.models.items.Item` | `items` |
 | `api.models.characters.Character` | `character` |
@@ -55,8 +50,6 @@
 
 ### Inventory (`/api`)
 - `GET /api/characters/<character_id>/inventory`
-- `POST /api/characters/<character_id>/inventory/add`
-- `POST /api/characters/<character_id>/inventory/remove`
 - `POST /api/characters/<character_id>/equip`
 - `POST /api/characters/<character_id>/unequip`
 - `GET /api/characters/<character_id>/equipment`
@@ -76,12 +69,6 @@
 - `POST /api/game/encounters/start`
 - `POST /api/game/encounters/turn`
 
-### Characters (legacy)
-- `GET /api/characters/<character_id>/loadout`
-- `POST /api/characters/<character_id>/equip`
-- `POST /api/characters/<character_id>/unequip`
-- `POST /api/characters/<character_id>/recompute`
-
 ### Admin (`/api/admin`)
 - `GET /api/admin/users`
 - `GET /api/admin/users/<user_id>`
@@ -98,7 +85,6 @@
 - `POST /api/admin/items`
 - `PATCH /api/admin/items/<item_id>`
 - `DELETE /api/admin/items/<item_id>`
-- `GET /api/admin/item_instances`
 - `GET /api/admin/characters/<character_id>/inventory`
 - `GET /api/admin/recipes`
 - `GET /api/admin/resources`
@@ -123,7 +109,10 @@
 - `GET /api/shards/<name>`
 - `PUT /api/shards/<name>`
 
-### Items API (legacy)
+### Items API
 - `POST /api/items`
-- `POST /api/item_instances`
 - `POST /api/game/characters/<character_id>/inventory`
+
+### Inventory Shapes
+- Inventory item: `{ item_id, slug, display_name, icon_url, quantity, stackable, max_stack, rarity, description, slot?, equipped }`
+- Equip body: `{ character_item_id?: int, slug?: string, slot: string }`

@@ -112,9 +112,15 @@ export const API = {
    * -> { equipped: {slot: item|null}, inventory: [...], derived_stats: {...} }
    */
   async loadout(characterId) {
-    const r = await fetch(`/api/characters/${characterId}/inventory`, { credentials: 'include' });
-    if (!r.ok) throw new Error('loadout failed');
-    return r.json();
+    const [invRes, eqRes] = await Promise.all([
+      fetch(`/api/characters/${characterId}/inventory`, { credentials: 'include' }),
+      fetch(`/api/characters/${characterId}/equipment`, { credentials: 'include' })
+    ]);
+    if (!invRes.ok) throw new Error('inventory load failed');
+    if (!eqRes.ok) throw new Error('equipment load failed');
+    const inv = await invRes.json();
+    const eq = await eqRes.json();
+    return { character_id: characterId, inventory: inv.items || [], equipped: eq };
   },
 
 async getEquipment(characterId) {
@@ -123,7 +129,7 @@ async getEquipment(characterId) {
   return r.json();
 },
   /**
-   * POST /api/characters/:id/equip { item_instance_id, slot }
+   * POST /api/characters/:id/equip { character_item_id?, slug?, slot }
    * -> same DTO as loadout()
    */
   // Equip by slug or character_item_id (v2 semantics)
@@ -139,7 +145,9 @@ async getEquipment(characterId) {
     });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(data.error || data.message || 'equip failed');
-    return data; // returns { character_id, items: [...] }
+    const eqRes = await fetch(`/api/characters/${characterId}/equipment`, { credentials: 'include' });
+    const eq = eqRes.ok ? await eqRes.json() : {};
+    return { character_id: characterId, inventory: data.items || [], equipped: eq };
   },
 
   /**
@@ -155,7 +163,9 @@ async getEquipment(characterId) {
   });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data.error || data.message || 'unequip failed');
-  return data;
+  const eqRes = await fetch(`/api/characters/${characterId}/equipment`, { credentials: 'include' });
+  const eq = eqRes.ok ? await eqRes.json() : {};
+  return { character_id: characterId, inventory: data.items || [], equipped: eq };
 },
 };
 

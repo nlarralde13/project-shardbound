@@ -15,8 +15,6 @@ from .models import (
     Quest,
     QuestState,
     Item,
-    ItemInstance,
-    CharacterInventory,
     User,
 )
 from .models.inventory_v2 import StarterLoadout, CharacterItem
@@ -26,24 +24,14 @@ bp = Blueprint("api_gameplay", __name__, url_prefix="/api/game")
 
 
 def _grant_item(char_id: str, item_id: str, qty: int = 1, slot_start: int = 0):
-    """Grant an item instance to character inventory."""
+    """Grant CharacterItem rows to a character."""
     item = Item.query.get(item_id)
     if not item:
         return
-    for i in range(qty):
-        inst = ItemInstance(instance_id=f"inst_{char_id}_{item_id}_{random.randint(1,999999)}",
-                            item_id=item.item_id,
-                            item_version=item.item_version,
-                            quantity=1)
-        db.session.add(inst)
-        inv = CharacterInventory(id=f"inv_{inst.instance_id}",
-                                  character_id=char_id,
-                                  slot_index=slot_start + i,
-                                  item_id=item.item_id,
-                                  instance_id=inst.instance_id,
-                                  qty=1,
-                                  equipped=False)
-        db.session.add(inv)
+    db.session.add_all([
+        CharacterItem(character_id=char_id, item_id=item.item_id, quantity=1, slot=None)
+        for _ in range(qty)
+    ])
 
 
 def _now():
@@ -346,7 +334,7 @@ def talk(char_id: str):
         if not qs:
             return jsonify(message="Nothing for me."), 200
         # check item
-        inv = CharacterInventory.query.filter_by(character_id=char_id, item_id="itm_letter_sealed").first()
+        inv = CharacterItem.query.filter_by(character_id=char_id, item_id="itm_letter_sealed").first()
         if not inv:
             return jsonify(message="You don't have the letter."), 200
         db.session.delete(inv)

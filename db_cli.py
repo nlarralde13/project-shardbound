@@ -14,9 +14,9 @@ import sqlalchemy as sa  # type: ignore
 from api import create_app  # type: ignore
 from api.models import db, User, Character  # type: ignore
 try:
-    from api.models import Item, ItemInstance, CharacterInventory  # type: ignore
+    from api.models import Item  # type: ignore
 except Exception:
-    Item = ItemInstance = CharacterInventory = None  # type: ignore
+    Item = None  # type: ignore
 
 ALLOWED_ROLES = ["user","moderator","gm","admin","dev"]
 
