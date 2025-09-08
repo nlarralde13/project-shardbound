@@ -21,6 +21,7 @@ from .security import admin_guard
 from .admin_panel import admin_ui
 from .api_inventory import bp as inventory_api_bp
 from .api.api_console import api_console
+from .ui_layout_api import ui_layout_api, limiter as ui_limiter
 
 # ----------------------
 # Helpers & utilities
@@ -170,6 +171,9 @@ def create_app():
     app.register_blueprint(admin_ui)
     app.register_blueprint(inventory_api_bp)
     app.register_blueprint(api_console, url_prefix="/api/console")
+    if ui_limiter:
+        ui_limiter.init_app(app)
+    app.register_blueprint(ui_layout_api, url_prefix="/api/ui")
 
     # Gameplay API
     try:

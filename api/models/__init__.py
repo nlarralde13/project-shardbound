@@ -14,6 +14,7 @@ from .gameplay import (
     Town, TownRoom, NPC, Quest, QuestState, CharacterState, EncounterTrigger,
 )  # noqa: F401
 from .audit import AdminAuditLog  # noqa: F401
+from .ui_layout import UserUILayout  # noqa: F401
 # from .crafting import Recipe               # noqa: F401
 
 __all__ = [
@@ -23,5 +24,6 @@ __all__ = [
     "ItemV1", "InventoryItem", "StarterLoadout", "CharacterItem",
     "Town", "TownRoom", "NPC", "Quest", "QuestState", "CharacterState", "EncounterTrigger",
     "AdminAuditLog",
+    "UserUILayout",
     # "Recipe",
 ]
