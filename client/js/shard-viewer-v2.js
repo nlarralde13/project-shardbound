@@ -47,8 +47,9 @@ import { hasAt, removeAt } from './removeHelpers.js';
   // Overlay canvas
   const overlay = document.createElement('canvas'); overlay.id='overlayCanvasV2'; overlay.style.pointerEvents='none';
   els.frame?.appendChild(overlay); const octx = overlay.getContext('2d');
+  const playerToken = new Image(); playerToken.src='/static/assets/tokens/player.png';
   const dpr = () => window.devicePixelRatio || 1;
-  const scale = () => Math.max(1, parseInt(els.scale?.value||'8',10));
+  const scale = () => Math.max(1, parseInt(els.scale?.value||'32',10));
   const alpha = () => Math.max(0, Math.min(1,(parseInt(els.opacity?.value||'85',10)||85)/100));
 
   const linkBanner=document.createElement('div');
@@ -64,7 +65,7 @@ import { hasAt, removeAt } from './removeHelpers.js';
 
   // State
 
-  const ST = { shard:null, grid:null, previews: [], focus:{ x:-1, y:-1 }, baseline: null, pushReady:false, panX: 0, panY: 0, currentBiome:'plains', rectPreview:null, draft:{ settlements:[], pois:[], tiles:{} }, linkSource:null, linkSourceId:null, hoverGateId:null, moving:null };
+  const ST = { shard:null, grid:null, previews: [], focus:{ x:-1, y:-1 }, baseline: null, pushReady:false, panX: 0, panY: 0, currentBiome:'plains', rectPreview:null, draft:{ settlements:[], pois:[], tiles:{} }, linkSource:null, linkSourceId:null, hoverGateId:null, moving:null, playerPos:{ x:-1, y:-1 } };
 
 
   // Fetch JSON
@@ -355,11 +356,17 @@ import { hasAt, removeAt } from './removeHelpers.js';
 
   // Canvas sizing
   function ensureSizes(W,H){ const s=scale(); if(!W||!H) return; if(els.base.width!==W*s||els.base.height!==H*s){ els.base.width=W*s; els.base.height=H*s; els.base.style.width=`${W*s}px`; els.base.style.height=`${H*s}px`; }
-    overlay.width=Math.max(2,Math.floor(W*s*dpr())); overlay.height=Math.max(2,Math.floor(H*s*dpr())); overlay.style.width=`${W*s}px`; overlay.style.height=`${H*s}px`; applyPan(); }
+    overlay.width=Math.max(2,Math.floor(W*s*dpr())); overlay.height=Math.max(2,Math.floor(H*s*dpr())); overlay.style.width=`${W*s}px`; overlay.style.height=`${H*s}px`; if(els.frame){ els.frame.style.width=`${W*s}px`; els.frame.style.height=`${H*s}px`; } applyPan(); }
 
   function applyPan(){ const x = Math.round(ST.panX||0), y = Math.round(ST.panY||0); els.base.style.left = x+"px"; els.base.style.top = y+"px"; overlay.style.left = x+"px"; overlay.style.top = y+"px"; }
 
   function centerInFrame(){ const fw = els.frame?.clientWidth||0, fh = els.frame?.clientHeight||0; const cw = els.base?.width||0, ch = els.base?.height||0; ST.panX = Math.round((fw - cw)/2); ST.panY = Math.round((fh - ch)/2); applyPan(); }
+
+  function centerOnTile(x,y){ const s=scale(); const fw=els.frame?.clientWidth||0, fh=els.frame?.clientHeight||0; ST.panX=Math.round(fw/2-(x+0.5)*s); ST.panY=Math.round(fh/2-(y+0.5)*s); applyPan(); }
+
+  function fitToFrame(){ if(!ST.grid) return; const fw=els.frame?.clientWidth||0, fh=els.frame?.clientHeight||0; const H=ST.grid.length, W=ST.grid[0]?.length||0; if(!fw||!fh||!W||!H) return; const sx=Math.floor(fw/W), sy=Math.floor(fh/H); const s=Math.max(4, Math.min(64, Math.floor(Math.min(sx,sy)))); setScalePx(s); centerInFrame(); }
+
+  function setPlayerPos(x,y){ ST.playerPos={x,y}; const c=$('btnCenter'); if(c){ c.disabled=false; c.title='Center on player'; } scheduleDraw(); }
 
   // Draw base biomes
   const BASE_COLORS={
@@ -418,6 +425,7 @@ import { hasAt, removeAt } from './removeHelpers.js';
     if(els.layerSettlements?.checked){ drawPOIs(); }
     // Settlements (live + draft)
     drawSettlements(s);
+    if(Number.isFinite(ST.playerPos.x) && Number.isFinite(ST.playerPos.y)){ const px=ST.playerPos.x*s, py=ST.playerPos.y*s; octx.drawImage(playerToken, px, py, s, s); }
     // focus border
     if (ST.focus && ST.focus.x>=0 && ST.focus.y>=0){ const fx=ST.focus.x, fy=ST.focus.y; const fpx=fx*s, fpy=fy*s; octx.save(); octx.globalAlpha=1; octx.strokeStyle='rgba(255,214,10,0.95)'; octx.fillStyle='rgba(255,214,10,0.12)'; octx.lineWidth=2; octx.fillRect(fpx,fpy,s,s); octx.strokeRect(fpx+0.5,fpy+0.5,s-1,s-1); octx.restore(); }
     // rect preview
@@ -749,7 +757,8 @@ function drawPreviews(){
   });
   $('btnZoomIn')?.addEventListener('click', (e)=>{ e?.preventDefault?.(); const rect=els.frame.getBoundingClientRect(); zoomAt(rect.width/2, rect.height/2, 1.2); });
   $('btnZoomOut')?.addEventListener('click', (e)=>{ e?.preventDefault?.(); const rect=els.frame.getBoundingClientRect(); zoomAt(rect.width/2, rect.height/2, 0.8); });
-  $('btnFit')?.addEventListener('click', (e)=>{ e?.preventDefault?.(); centerInFrame(); });
+  $('btnFit')?.addEventListener('click', (e)=>{ e?.preventDefault?.(); fitToFrame(); });
+  $('btnCenter')?.addEventListener('click', (e)=>{ e?.preventDefault?.(); if(Number.isFinite(ST.playerPos.x)&&Number.isFinite(ST.playerPos.y)) centerOnTile(ST.playerPos.x, ST.playerPos.y); else centerInFrame(); });
   // Undo to last baseline + Save draft
   $('btnUndoToSave')?.addEventListener('click', (e)=>{ e?.preventDefault?.(); revertToBaseline2(); });
   $('btnSaveDraft')?.addEventListener('click', async (e)=>{ e?.preventDefault?.();
@@ -769,6 +778,9 @@ function drawPreviews(){
   // Removed standalone Save All / Clear Draft (now part of Save Draft flow)
   // Clear log
   $('btnClearLog')?.addEventListener('click', (e)=>{ e?.preventDefault?.(); const el=$('actionLog'); if(el) el.textContent=''; setStatus('Log cleared'); });
+
+  async function loadPlayer(){ try{ const r=await fetch('/api/state'); const j=await r.json(); const pos=j?.player?.pos; if(Array.isArray(pos)){ setPlayerPos(pos[0], pos[1]); } } catch{} }
+  loadPlayer();
 
   // Context menu for placement
   const ctx = createContextMenuV2({ onSelect: onPlaceSelect });
