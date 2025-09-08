@@ -21,6 +21,7 @@
     <a href="/account">Account</a>
     <a id="linkDevTools" href="/dev" style="display:none">Dev Tools</a>
   </nav>
+  <div id="layout">
   <!-- LEFT: Character + Inventory (single expanded card, no scrolling) -->
   <aside id="panel-left">
     <section class="card" id="cardCharacter">
@@ -29,24 +30,26 @@
       <!-- Two-column grid: paperdoll shrine + embedded inventory -->
       <div class="char-grid">
         <!-- Paperdoll shrine -->
-        <div>
-          <div class="paperdoll-window">
+        <div class="paperdoll">
+          <div class="paperdoll-stage">
             <!-- Central doll image (replace src with your sprite path) -->
             <img class="doll-image"
                  src="/static/assets/character_models/placeholder_warrior.png"
                  alt="Character"
                  draggable="false" />
-            <!-- Slot scaffold; paperdoll.js will populate each .equip-slot -->
-            <div class="equip-slot" data-slot="head"      aria-label="Head"></div>
-            <div class="equip-slot" data-slot="cloak"     aria-label="Cloak"></div>
-            <div class="equip-slot" data-slot="chest"     aria-label="Chest"></div>
-            <div class="equip-slot" data-slot="belt"      aria-label="Belt"></div>
-            <div class="equip-slot" data-slot="pants"     aria-label="Pants"></div>
-            <div class="equip-slot" data-slot="boots"     aria-label="Boots"></div>
-            <div class="equip-slot" data-slot="mainhand"  aria-label="Main Hand"></div>
-            <div class="equip-slot" data-slot="offhand"   aria-label="Off Hand"></div>
-            <div class="equip-slot" data-slot="jewelry"   aria-label="Jewelry"></div>
-            <div class="equip-slot" data-slot="gadget"    aria-label="Gadget"></div>
+            <div class="paperdoll-grid">
+              <!-- Slot scaffold; paperdoll.js will populate each .equip-slot -->
+              <div class="equip-slot" data-slot="head"      aria-label="Head"></div>
+              <div class="equip-slot" data-slot="cloak"     aria-label="Cloak"></div>
+              <div class="equip-slot" data-slot="chest"     aria-label="Chest"></div>
+              <div class="equip-slot" data-slot="belt"      aria-label="Belt"></div>
+              <div class="equip-slot" data-slot="pants"     aria-label="Pants"></div>
+              <div class="equip-slot" data-slot="boots"     aria-label="Boots"></div>
+              <div class="equip-slot" data-slot="mainhand"  aria-label="Main Hand"></div>
+              <div class="equip-slot" data-slot="offhand"   aria-label="Off Hand"></div>
+              <div class="equip-slot" data-slot="jewelry"   aria-label="Jewelry"></div>
+              <div class="equip-slot" data-slot="gadget"    aria-label="Gadget"></div>
+            </div>
           </div>
         </div>
 
@@ -63,7 +66,8 @@
   <main id="viewport">
     <div class="viewer-row">
       <!-- Map frame -->
-      <section class="canvas-wrap" id="frame">
+      <section class="card canvas-wrap" id="frame">
+        <header class="card-h">Map</header>
         <canvas id="canvas"></canvas>
         <canvas id="overlayCanvasLite"></canvas>
         <div class="zoomOverlay">
@@ -80,23 +84,19 @@
         <header class="card-h">Actions</header>
         <div id="action-root"></div>
         <div class="quick-actions">
-          <button id="btnLook">Look</button>
-          <button id="btnInteract">Interact</button>
-          <button id="btnRest">Rest</button>
-          <button id="btnSkill1">Action 1</button>
-          <button id="btnSkill2">Action 2</button>
+          <button id="btnLook" class="btn">Look</button>
+          <button id="btnInteract" class="btn">Interact</button>
+          <button id="btnRest" class="btn">Rest</button>
+          <button id="btnSkill1" class="btn">Action 1</button>
+          <button id="btnSkill2" class="btn">Action 2</button>
         </div>
       </aside>
     </div>
 
     <!-- Console -->
     <section class="card console-card">
-
       <header class="card-h">Console</header>
-      <div id="console-root">
-        <div id="console-log" style="height:160px; overflow:auto; font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; padding:8px; background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.06); border-radius:6px;"></div>
-        <input id="console-input" placeholder="Type a command and press Enter" style="width:100%; margin-top:8px; padding:6px 8px; border-radius:6px; border:1px solid rgba(255,255,255,.08); background:rgba(0,0,0,.25); color:#ddd;">
-      </div>
+      <div id="console-root"></div>
     </section>
   </main>
 
@@ -121,6 +121,7 @@
       </div>
     </section>
   </aside>
+  </div>
 
   <!-- Scripts -->
   <script src="{{ url_for('static', filename='js/consoleUI.js') }}"></script>
