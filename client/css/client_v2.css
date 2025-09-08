@@ -41,16 +41,26 @@ body{
 }
 
 /* Layout rails (kept lean; adapt to your markup) */
-#panel-left,#panel-right,#viewport,#topbar,#console-root{
+#panel-left,#panel-right,#viewport,#topbar{
   border:1px solid var(--line);
   border-radius: 12px;
   background: linear-gradient(180deg, #0d0c13, #0b0a11);
   box-shadow: 0 6px 18px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.03);
 }
 #topbar{padding:8px 10px;display:flex;gap:10px;margin:8px}
-#panel-left,#panel-right{padding:10px;margin:8px}
-#viewport{padding:10px;margin:8px}
-#console-root{padding:10px;margin:8px;font-family: ui-monospace, monospace;min-height:110px}
+
+/* three‑column layout wrapper */
+#layout{display:flex;gap:8px;margin:0 8px 8px;}
+#panel-left,#panel-right,#viewport{margin:0;}
+#panel-left,#panel-right{padding:10px;flex:0 0 auto;}
+#viewport{
+  padding:10px;
+  flex:1;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
 
 /* Cards */
 .card{
@@ -86,13 +96,20 @@ body{
 /* ================= */
 /* MAP CANVAS FRAME  */
 /* ================= */
+.viewer-row{display:flex;gap:12px;align-items:flex-start}
 .canvas-wrap{
-  display:inline-block;
+  display:flex;
+  flex-direction:column;
+  flex:1;
   background: linear-gradient(180deg,#1b1a23,#0e0d13);
-  border-radius:14px;border:1px solid var(--line);
-  box-shadow: 0 10px 30px rgba(0,0,0,.5), inset 0 0 0 2px rgba(255,255,255,.03);
   position:relative;
 }
+.canvas-wrap canvas{flex:1;}
+.action-dock{width:200px;flex-shrink:0}
+.console-card{width:100%;}
+.char-grid{display:flex;flex-direction:column;gap:16px}
+.paperdoll{flex-shrink:0;align-self:center}
+.inv-embed{flex:0 0 auto}
 .zoomOverlay .zbtn{
   width:32px;height:32px;line-height:32px;text-align:center;
   border-radius:8px;border:1px solid var(--line);
@@ -180,18 +197,18 @@ body{
 }
 .paperdoll-stage{
   position:relative;
-  display:grid;
-  grid-template-columns: 1fr;
-  grid-auto-rows: auto;
-  gap:12px;
-  place-items:center;
+  width:calc(var(--slot)*4 + var(--gap)*3);
+  height:calc(var(--slot)*4 + var(--gap)*3);
 }
 
 /* Doll image with subtle halo */
 .doll-image{
+  position:absolute;
+  left:50%; top:50%; transform:translate(-50%,-50%);
   max-width:180px; max-height:220px;
   image-rendering:pixelated; pointer-events:none;
   filter: drop-shadow(0 8px 18px rgba(0,0,0,.45));
+  z-index:1;
 }
 .paperdoll-stage::before{
   content:"";
@@ -210,7 +227,9 @@ body{
   grid-template-columns: repeat(4, var(--slot));
   grid-template-rows: repeat(4, var(--slot));
   gap: var(--gap);
-  position:relative;
+  position:absolute;
+  top:0; left:0;
+  z-index:2;
 }
 
 /* Equip slot visuals */
