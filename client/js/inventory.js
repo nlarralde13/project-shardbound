@@ -76,7 +76,15 @@ function render() {
 
 function applyLoadout(dto) {
   const items = Array.isArray(dto?.inventory) ? dto.inventory : [];
-  inventory = items.map(normalizeItem);
+  const eqMap = dto?.equipped || {};
+  const equippedIds = new Set(
+    Object.values(eqMap)
+      .filter(Boolean)
+      .map(it => it.character_item_id || it.id || it.slug)
+  );
+  inventory = items
+    .filter(it => !equippedIds.has(it.character_item_id || it.id || it.slug))
+    .map(normalizeItem);
   render();
 }
 
