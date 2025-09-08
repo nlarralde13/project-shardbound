@@ -118,13 +118,13 @@ function ensureMoveButtons() {
     wrap.innerHTML = `
       <div style="display:grid;grid-template-columns:repeat(3,36px);grid-auto-rows:36px;gap:6px;justify-content:center;margin-top:8px;">
         <span></span>
-        <button id="btnMoveN"  title="North">N</button>
+        <button id="btnMoveN"  class="btn" title="North">N</button>
         <span></span>
-        <button id="btnMoveW"  title="West">W</button>
-        <button id="btnMoveC"  title="Center" disabled>·</button>
-        <button id="btnMoveE"  title="East">E</button>
+        <button id="btnMoveW"  class="btn" title="West">W</button>
+        <button id="btnMoveC"  class="btn" title="Center" disabled>·</button>
+        <button id="btnMoveE"  class="btn" title="East">E</button>
         <span></span>
-        <button id="btnMoveS"  title="South">S</button>
+        <button id="btnMoveS"  class="btn" title="South">S</button>
         <span></span>
       </div>`;
     dock.appendChild(wrap);
