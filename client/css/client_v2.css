@@ -1,282 +1,146 @@
-/* client_v2.css — v3 modern overhaul
-   Focus: 4×4 paperdoll equip grid (2px gap), unified visuals, duplicate cleanup.
-   Palette + sizing variables are centralized for easy tuning.
-*/
-
-/* ===================== */
-/* THEME & DESIGN SYSTEM */
-/* ===================== */
+/* ===== TOKENS ===== */
 :root{
-  /* Core palette */
-  --bg: #0b0a11;
-  --panel: #13111b;
-  --ink: #e9e4d8;
-  --muted: #b8b2a4;
-  --line: #2a2740;
-  --accent: #d4a64e;          /* gold */
-  --accent-deep: #b3822d;
-  --rune: #62c0ff;
-
-  /* Depth */
-  --ring-glow: 0 0 24px rgba(98,192,255,.25);
-  --gold-glow: 0 0 18px rgba(212,166,78,.35);
-
-  /* UI scale */
-  --radius: 12px;
-  --slot: 64px;               /* base size for slots & inventory cells */
-  --gap: 2px;                 /* paperdoll equip grid gap (requested) */
+  --bg:#0b0a11; --panel:#13111b; --ink:#e9e4d8; --muted:#b8b2a4;
+  --line:#2a2740; --gold:#d4a64e; --rune:#62c0ff;
+  --slot:64px; --gap:10px; --radius:12px;
+  --gold-glow:0 0 18px rgba(212,166,78,.35);
 }
-
-/* Global baseline */
-*{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0;
+body.theme-fantasy{
   color:var(--ink);
   background:
     radial-gradient(1200px 800px at 50% -20%, rgba(98,192,255,.06), transparent 60%),
     radial-gradient(800px 600px at 80% 120%, rgba(212,166,78,.08), transparent 60%),
     var(--bg);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
 }
 
-/* Layout rails (kept lean; adapt to your markup) */
-#panel-left,#panel-right,#viewport,#topbar{
-  border:1px solid var(--line);
-  border-radius: 12px;
-  background: linear-gradient(180deg, #0d0c13, #0b0a11);
-  box-shadow: 0 6px 18px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.03);
+/* ===== LAYOUT ===== */
+#layout{
+  display:grid;
+  grid-template-columns: 380px 1fr 360px;
+  grid-template-rows: auto 1fr;
 }
-#topbar{padding:8px 10px;display:flex;gap:10px;margin:8px}
-
-
-/* three‑column layout wrapper */
-#layout{display:flex;gap:8px;margin:0 8px 8px;}
-#panel-left,#panel-right,#viewport{margin:0;}
-#panel-left,#panel-right{padding:10px;flex:0 0 auto;}
-#viewport{
-  padding:10px;
-  flex:1;
-  min-width:0;
-
-  display:flex;
-  flex-direction:column;
-  gap:12px;
+#panel-left{padding:10px; border-right:1px solid var(--line);}
+#panel-right{padding:10px; border-left:1px solid var(--line);}
+#viewport{display:flex; flex-direction:column; align-items:center; gap:12px; padding:10px 0;}
+.viewer-row{
+  display:grid;
+  grid-template-columns: 720px 200px; /* map + actions */
+  gap:12px; align-items:start;
 }
 
-/* Cards */
+/* ===== CARDS ===== */
 .card{
-  background: linear-gradient(180deg, #14121c 0%, #0f0d16 100%);
-  border:1px solid var(--line);
-  border-radius: 14px;
-  padding:12px;
-  box-shadow: 0 8px 22px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.03);
-  position:relative;
+  position:relative; background:#13111b;
+  border:1px solid var(--line); border-radius:14px; padding:12px; margin:10px 8px;
+  box-shadow:0 6px 20px rgba(0,0,0,.45), 0 1px 0 rgba(255,255,255,.03) inset;
 }
-.card-h{
-  margin:0 0 10px; color:#ffe6b3; font-weight:700;
-  display:flex;align-items:center;gap:8px;
-}
-.card-h::after{
-  content:""; flex:1; height:1px;
-  background:linear-gradient(90deg, rgba(212,166,78,.6), rgba(212,166,78,0));
-}
+.card-h{font-family:"Cinzel", serif; font-weight:700; color:#ffe6b3; margin:0 0 10px;}
+.card-h::after{content:""; display:inline-block; height:1px; background:linear-gradient(90deg, rgba(212,166,78,.5), transparent); width:100%; margin-left:8px; vertical-align:middle}
 
-/* Buttons */
+/* ===== MAP (contained) ===== */
+.map-card{ width:720px; }
+.canvas-wrap{ background:linear-gradient(180deg,#1b1a23,#0e0d13); border:1px solid var(--line); border-radius:14px; box-shadow: inset 0 0 0 2px rgba(255,255,255,.03), 0 10px 30px rgba(0,0,0,.5); }
+#frame{ width:720px; height:512px; overflow:hidden; position:relative; }
+#frame canvas{ display:block; width:100%; height:100%; background:transparent; }
+.zoomOverlay{
+  position:absolute; right:8px; bottom:8px; display:flex; gap:6px; z-index:10;
+}
+.zbtn{
+  width:32px; height:32px; line-height:32px; text-align:center;
+  border-radius:8px; border:1px solid var(--line);
+  background: radial-gradient(circle at 50% 35%, rgba(255,255,255,.06), transparent 60%), #16141f;
+  color:#e7d7b3; text-shadow:0 1px 0 #2a1f0c; box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
+}
+.zbtn:hover{ box-shadow: var(--gold-glow), inset 0 0 0 1px rgba(255,255,255,.06); }
+
+/* ===== ACTION DOCK ===== */
+.action-dock{ position:sticky; top:10px; width:200px; }
+.quick-actions{ display:flex; flex-direction:column; gap:10px; }
 .btn{
-  display:inline-flex;align-items:center;justify-content:center;gap:8px;
-  padding:10px 12px;border-radius:10px;border:1px solid var(--line);
-  color:#ffe6b3;
-  background: radial-gradient(40% 60% at 50% 10%, rgba(255,255,255,.06), rgba(0,0,0,0) 60%), linear-gradient(180deg, #1a1723, #12101a);
-  text-shadow:0 1px 0 #2a1f0c;
+  padding:10px 12px; border-radius:10px; border:1px solid var(--line);
+  background:linear-gradient(180deg,#1a1723,#12101a);
+  color:#ffe6b3; text-shadow:0 1px 0 #2a1f0c;
   box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
-  cursor:pointer; user-select:none;
-  transition: transform .08s ease, box-shadow .12s ease, border-color .12s ease;
 }
-.btn:hover{border-color:var(--accent); box-shadow: var(--gold-glow), inset 0 0 0 1px rgba(255,255,255,.06); transform:translateY(-1px)}
+.btn:hover{ border-color:var(--gold); box-shadow:var(--gold-glow), inset 0 0 0 1px rgba(255,255,255,.06); }
 
-/* ================= */
-/* MAP CANVAS FRAME  */
-/* ================= */
-.viewer-row{display:flex;gap:12px;align-items:flex-start}
-.canvas-wrap{
-  display:flex;
-  flex-direction:column;
-  flex:1;
-  background: linear-gradient(180deg,#1b1a23,#0e0d13);
+/* ===== CONSOLE aligned to map width ===== */
+.console-card{ width:720px; }
+#console-root{
+  min-height:110px; border:1px solid var(--line); border-radius:10px;
+  background:linear-gradient(180deg,#0d0c13,#0b0a11);
+  font-family:ui-monospace,monospace; color:#e9e4d8; padding:8px;
+}
+
+/* ===== CHARACTER: paperdoll + inventory ===== */
+.char-grid{ display:grid; grid-template-columns: 1fr; grid-template-rows:auto auto; gap:16px; }
+
+/* Paperdoll stage */
+.paperdoll{ padding:8px; }
+.paperdoll-stage{
+  position:relative;
+  width: calc(var(--slot)*3 + var(--gap)*2);
+  height: calc(var(--slot)*3 + var(--gap)*2);
+  margin:0 auto;
+  background: radial-gradient(80% 80% at 50% 30%, rgba(255,255,255,.05), transparent 60%), linear-gradient(180deg, #14121c, #0f0d16);
+  border:1px solid var(--line); border-radius:12px; box-shadow: inset 0 0 60px rgba(0,0,0,.45);
+}
+.paperdoll-stage::before{
+  content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:240px; height:240px; border-radius:50%;
+  background: repeating-conic-gradient(from 0deg, rgba(98,192,255,.25) 0 4deg, transparent 4deg 12deg),
+             radial-gradient(closest-side, rgba(98,192,255,.18), rgba(98,192,255,.04) 60%, transparent 70%);
+  pointer-events:none; filter:blur(.2px);
+}
+.doll-image{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); max-width:180px; max-height:220px; image-rendering:pixelated; filter:drop-shadow(0 8px 18px rgba(0,0,0,.45)); }
+
+/* 3×3 ring grid around the doll */
+.paperdoll-grid{
+  position:absolute; inset:0;
+  display:grid; grid-template-columns:repeat(3, var(--slot)); grid-template-rows:repeat(3, var(--slot));
+  gap:var(--gap); place-items:center;
+}
+.equip-slot{
+  width:var(--slot); height:var(--slot);
+  border-radius:12px; border:1px solid var(--line);
+  background: radial-gradient(circle at 40% 30%, rgba(255,255,255,.06), transparent 60%), #0f0d16;
+  display:grid; place-items:center; transition:.08s transform, .12s box-shadow, .12s border-color;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
   position:relative;
 }
-.canvas-wrap canvas{flex:1;}
-.action-dock{width:200px;flex-shrink:0}
-.console-card{width:100%;}
-.char-grid{display:flex;gap:16px;align-items:flex-start}
-.paperdoll{flex-shrink:0}
-.inv-embed{flex:1}
-.zoomOverlay .zbtn{
-  width:32px;height:32px;line-height:32px;text-align:center;
-  border-radius:8px;border:1px solid var(--line);
-  background: radial-gradient(circle at 50% 35%, rgba(255,255,255,.06), rgba(0,0,0,0) 60%), #16141f;
-  color:#e7d7b3; text-shadow:0 1px 0 #2a1f0c;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
-}
-.zoomOverlay .zbtn:hover{ box-shadow: var(--gold-glow), inset 0 0 0 1px rgba(255,255,255,.05); }
+.equip-slot img{ width:100%; height:100%; object-fit:contain; image-rendering:pixelated; pointer-events:none; }
+.equip-slot.busy{ outline:1px solid #ffc10755; filter:saturate(.65); }
+.equip-slot.reject{ animation: rej .35s; }
+@keyframes rej { 0%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} 100%{transform:translateX(0)} }
+.equip-slot::after{ content:attr(aria-label); position:absolute; left:7px; bottom:6px; font:600 10px/1 "Cinzel", serif; color:#c9e6ff; opacity:.85; text-shadow:0 1px 0 #08111a; }
 
-/* =================== */
-/* INVENTORY — UNIFIED */
-/* =================== */
+/* ring positions */
+.equip-slot[data-slot="head"]     { grid-column:2; grid-row:1; }
+.equip-slot[data-slot="cloak"]    { grid-column:1; grid-row:1; }
+.equip-slot[data-slot="offhand"]  { grid-column:3; grid-row:1; }
+.equip-slot[data-slot="chest"]    { grid-column:1; grid-row:2; }
+.equip-slot[data-slot="mainhand"] { grid-column:3; grid-row:2; }
+.equip-slot[data-slot="belt"]     { grid-column:1; grid-row:3; }
+.equip-slot[data-slot="pants"]    { grid-column:2; grid-row:3; }
+.equip-slot[data-slot="boots"]    { grid-column:3; grid-row:3; }
+/* “ear” slots flanking the head */
+.equip-slot[data-slot="jewelry"]  { grid-column:2; grid-row:1; justify-self:end;   transform: translateX(-78px); }
+.equip-slot[data-slot="gadget"]   { grid-column:2; grid-row:1; justify-self:start; transform: translateX( 78px); }
+
+/* Inventory under the doll */
+.sub-h{ font:700 13px "Cinzel", serif; color:#ffe6b3; margin:10px 0 8px; text-align:center; }
 .inventory-grid{
   --cell: var(--slot);
-  display:grid;
-  grid-template-columns: repeat(6, var(--cell));
-  gap: 8px;
-  align-content:start;
+  display:grid; grid-template-columns: repeat(4, var(--cell)); gap:10px; align-content:start; justify-content:center;
 }
 .inventory-grid .inv-cell{
   width:var(--cell); height:var(--cell);
-  border-radius: var(--radius);
-  border:1px solid var(--line);
-  background: radial-gradient(circle at 40% 30%, rgba(255,255,255,.06), rgba(0,0,0,0) 60%), #0f0d16;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
-  overflow:hidden; position:relative;
+  border-radius:12px; border:1px solid var(--line); background: radial-gradient(circle at 40% 30%, rgba(255,255,255,.06), transparent 60%), #0f0d16;
+  overflow:hidden; position:relative; box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
 }
-.inventory-grid .inv-cell:focus{outline:2px solid #60a5fa}
-.inventory-grid .inv-cell img,
-.inventory-grid .inv-cell .icon{
-  width:100%; height:100%; object-fit:contain; image-rendering:pixelated; pointer-events:none;
-}
+.inventory-grid .inv-cell img{ width:100%; height:100%; object-fit:contain; image-rendering:pixelated; pointer-events:none; }
 .inventory-grid .inv-cell .qty{
-  position:absolute; right:6px; bottom:4px;
-  padding:0 6px; border-radius:6px;
-  font:700 12px/18px ui-monospace, monospace;
-  color:#18161f; background:#e8dfc8; border:1px solid rgba(0,0,0,.35);
+  position:absolute; right:6px; bottom:4px; padding:0 6px; border-radius:6px;
+  font:700 12px/18px ui-monospace, monospace; color:#18161f; background:#e8dfc8; border:1px solid rgba(0,0,0,.35);
 }
-
-/* Rarity glows (shared) */
-[data-rarity]{position:relative}
-[data-rarity="common"]    { box-shadow: inset 0 0 0 1px rgba(255,255,255,.03); }
-[data-rarity="uncommon"]  { box-shadow: 0 0 10px rgba(67,160,71,.35),  inset 0 0 0 1px rgba(67,160,71,.25); }
-[data-rarity="rare"]      { box-shadow: 0 0 12px rgba(59,130,246,.45), inset 0 0 0 1px rgba(59,130,246,.30); }
-[data-rarity="epic"]      { box-shadow: 0 0 14px rgba(168,85,247,.50), inset 0 0 0 1px rgba(168,85,247,.35); }
-[data-rarity="legendary"] { box-shadow: 0 0 16px rgba(245,158,11,.55), inset 0 0 0 1px rgba(245,158,11,.40); }
-
-/* ============================= */
-/* PAPERDOLL — 4×4 EQUIP GRID 💎 */
-/* ============================= */
-/*
-  Structure (recommended HTML):
-  <div class="paperdoll card">
-    <h3 class="card-h">Equipment</h3>
-    <div class="paperdoll-stage">
-      <img class="doll-image" src="/static/player/doll.png" alt="">
-      <div class="paperdoll-grid">
-        <!-- 16 slots, use data-slot for type & aria-label for tiny caption -->
-        <div class="equip-slot" data-slot="head"      aria-label="Head"></div>
-        <div class="equip-slot" data-slot="neck"      aria-label="Neck"></div>
-        <div class="equip-slot" data-slot="shoulders" aria-label="Shoulders"></div>
-        <div class="equip-slot" data-slot="cloak"     aria-label="Cloak"></div>
-
-        <div class="equip-slot" data-slot="chest"     aria-label="Chest"></div>
-        <div class="equip-slot" data-slot="wrists"    aria-label="Wrists"></div>
-        <div class="equip-slot" data-slot="hands"     aria-label="Hands"></div>
-        <div class="equip-slot" data-slot="belt"      aria-label="Belt"></div>
-
-        <div class="equip-slot" data-slot="pants"     aria-label="Legs"></div>
-        <div class="equip-slot" data-slot="boots"     aria-label="Boots"></div>
-        <div class="equip-slot" data-slot="ring1"     aria-label="Ring"></div>
-        <div class="equip-slot" data-slot="ring2"     aria-label="Ring"></div>
-
-        <div class="equip-slot" data-slot="mainhand"  aria-label="Main"></div>
-        <div class="equip-slot" data-slot="offhand"   aria-label="Off"></div>
-        <div class="equip-slot" data-slot="trinket1"  aria-label="Trinket"></div>
-        <div class="equip-slot" data-slot="trinket2"  aria-label="Trinket"></div>
-      </div>
-    </div>
-  </div>
-*/
-
-.paperdoll{
-  padding:14px;
-}
-.paperdoll-stage{
-  position:relative;
-  width:calc(var(--slot)*4 + var(--gap)*3);
-  height:calc(var(--slot)*4 + var(--gap)*3);
-}
-
-/* Doll image with subtle halo */
-.doll-image{
-  position:absolute;
-  left:50%; top:50%; transform:translate(-50%,-50%);
-  max-width:180px; max-height:220px;
-  image-rendering:pixelated; pointer-events:none;
-  filter: drop-shadow(0 8px 18px rgba(0,0,0,.45));
-  z-index:1;
-}
-.paperdoll-stage::before{
-  content:"";
-  position:absolute; left:50%; top:0; transform:translateX(-50%);
-  width: 260px; height: 260px; border-radius:50%;
-  background:
-    repeating-conic-gradient(from 0deg, rgba(98,192,255,.25) 0 4deg, transparent 4deg 12deg),
-    radial-gradient(closest-side, rgba(98,192,255,.18), rgba(98,192,255,.04) 60%, transparent 70%);
-  box-shadow: var(--ring-glow);
-  opacity:.85; pointer-events:none;
-}
-
-/* The requested 4×4 grid with a 2px gap */
-.paperdoll-grid{
-  display:grid;
-  grid-template-columns: repeat(4, var(--slot));
-  grid-template-rows: repeat(4, var(--slot));
-  gap: var(--gap);
-  position:absolute;
-  top:0; left:0;
-  z-index:2;
-}
-
-/* Equip slot visuals */
-.equip-slot{
-  width:var(--slot); height:var(--slot);
-  border-radius: var(--radius);
-  border:1px solid var(--line);
-  background:
-    radial-gradient(circle at 40% 30%, rgba(255,255,255,.06), rgba(0,0,0,0) 60%),
-    #0f0d16;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
-  display:grid; place-items:center;
-  transition: transform .08s ease, box-shadow .08s ease, border-color .08s ease;
-}
-.equip-slot:hover{
-  border-color:var(--accent);
-  box-shadow: var(--gold-glow), inset 0 0 0 1px rgba(255,255,255,.06);
-}
-.equip-slot[draggable="true"]{cursor:grab}
-.equip-slot.reject{animation: rej .28s ease}
-@keyframes rej{0%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}100%{transform:translateX(0)}}
-
-/* Slot label (tiny caption) */
-.equip-slot::after{
-  content: attr(aria-label);
-  position:absolute; left:6px; bottom:6px;
-  font: 600 10px/1 "Cinzel", serif;
-  color:#c9e6ff; text-shadow:0 1px 0 #08111a; opacity:.9;
-}
-
-/* Item icon inside slot */
-.equip-slot .icon, .equip-slot img{
-  width:100%; height:100%; object-fit:contain; image-rendering:pixelated; pointer-events:none;
-}
-
-/* Helpful state hooks */
-.equip-slot.is-empty{opacity:.9}
-.equip-slot.is-dragover{outline:2px dashed rgba(98,192,255,.6); outline-offset:-3px}
-
-/* ================================== */
-/* UTILS / COMPACT EMBED VARIATIONS   */
-/* ================================== */
-.sub-h{font:700 13px "Cinzel", serif; color:#ffe6b3; margin:2px 0 8px}
-.muted{color:var(--muted)}
-.quick-actions{display:flex;flex-direction:column;gap:10px}
-
-/* Optional: embedded inventory variant (4-wide to save height) */
-.inv-embed .inventory-grid{grid-template-columns:repeat(4, var(--slot))}

@@ -6,14 +6,14 @@
   <title>Shardbound Client v2</title>
   <link rel="icon" href="data:,">
 
-  <!-- Fantasy fonts (already safe to include; optional) -->
+  <!-- Fantasy fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Uncial+Antiqua&display=swap" rel="stylesheet">
 
-  <!-- v2 map viewer styles + client layout -->
+  <!-- Styles -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/shard-viewer-v2.css') }}" />
-<link rel="stylesheet" href="{{ url_for('static', filename='css/client_v2.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/client_v2.css') }}" />
 </head>
 <body class="theme-fantasy">
   <nav id="topbar" class="card">
@@ -21,110 +21,110 @@
     <a href="/account">Account</a>
     <a id="linkDevTools" href="/dev" style="display:none">Dev Tools</a>
   </nav>
-  <div id="layout">
-  <!-- LEFT: Character + Inventory (single expanded card, no scrolling) -->
-  <aside id="panel-left">
-    <section class="card" id="cardCharacter">
-      <header class="card-h">Character</header>
 
-      <!-- Two-column grid: paperdoll shrine + embedded inventory -->
-      <div class="char-grid">
-        <!-- Paperdoll shrine -->
-        <div class="paperdoll">
-          <div class="paperdoll-stage">
-            <!-- Central doll image (replace src with your sprite path) -->
-            <img class="doll-image"
-                 src="/static/assets/character_models/placeholder_warrior.png"
-                 alt="Character"
-                 draggable="false" />
-            <div class="paperdoll-grid">
-              <!-- Slot scaffold; paperdoll.js will populate each .equip-slot -->
-              <div class="equip-slot" data-slot="head"      aria-label="Head"></div>
-              <div class="equip-slot" data-slot="cloak"     aria-label="Cloak"></div>
-              <div class="equip-slot" data-slot="chest"     aria-label="Chest"></div>
-              <div class="equip-slot" data-slot="belt"      aria-label="Belt"></div>
-              <div class="equip-slot" data-slot="pants"     aria-label="Pants"></div>
-              <div class="equip-slot" data-slot="boots"     aria-label="Boots"></div>
-              <div class="equip-slot" data-slot="mainhand"  aria-label="Main Hand"></div>
-              <div class="equip-slot" data-slot="offhand"   aria-label="Off Hand"></div>
-              <div class="equip-slot" data-slot="jewelry"   aria-label="Jewelry"></div>
-              <div class="equip-slot" data-slot="gadget"    aria-label="Gadget"></div>
+  <div id="layout">
+    <!-- LEFT: Character + Inventory -->
+    <aside id="panel-left">
+      <section class="card" id="cardCharacter">
+        <header class="card-h">Character</header>
+
+        <div class="char-grid">
+          <!-- Paperdoll shrine -->
+          <div id="paperdoll" class="paperdoll">
+            <div id="paperdoll-stage" class="paperdoll-stage">
+              <img class="doll-image"
+                   src="/static/assets/character_models/placeholder_warrior.png"
+                   alt="Character" draggable="false" />
+              <div id="paperdoll-grid" class="paperdoll-grid">
+                <div class="equip-slot" data-slot="head"      aria-label="Head"></div>
+                <div class="equip-slot" data-slot="cloak"     aria-label="Cloak"></div>
+                <div class="equip-slot" data-slot="chest"     aria-label="Chest"></div>
+                <div class="equip-slot" data-slot="belt"      aria-label="Belt"></div>
+                <div class="equip-slot" data-slot="pants"     aria-label="Pants"></div>
+                <div class="equip-slot" data-slot="boots"     aria-label="Boots"></div>
+                <div class="equip-slot" data-slot="mainhand"  aria-label="Main Hand"></div>
+                <div class="equip-slot" data-slot="offhand"   aria-label="Off Hand"></div>
+                <div class="equip-slot" data-slot="jewelry"   aria-label="Jewelry"></div>
+                <div class="equip-slot" data-slot="gadget"    aria-label="Gadget"></div>
+              </div>
+            </div>
+
+            <!-- Inventory under the doll -->
+            <div class="inv-embed">
+              <header class="sub-h">Inventory</header>
+              <div id="inventory-grid" class="inventory-grid"></div>
             </div>
           </div>
         </div>
+      </section>
+    </aside>
 
-        <!-- Embedded Inventory (same #inventory-grid id so drag↔drop keeps working) -->
-        <div class="inv-embed">
-          <header class="sub-h">Inventory</header>
-          <div id="inventory-grid" class="inventory-grid"></div>
-        </div>
+    <!-- CENTER: Map + Actions -->
+    <main id="viewport">
+      <div class="viewer-row">
+        <!-- Map card with banner -->
+        <section id="mapCard" class="card map-card">
+          <header class="card-h">Map</header>
+          <div class="canvas-wrap">
+            <div id="frame">
+              <canvas id="canvas"></canvas>
+              <canvas id="overlayCanvasLite"></canvas>
+              <div class="zoomOverlay">
+                <button class="zbtn" id="btnFit"     title="Fit (refit)">⤢</button>
+                <button class="zbtn" id="btnZoomIn"  title="Zoom in">+</button>
+                <button class="zbtn" id="btnZoomOut" title="Zoom out">−</button>
+                <button class="zbtn" id="btnCenter"  title="Player not placed yet" disabled>◎</button>
+              </div>
+              <div id="tooltip" class="tooltip"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Actions dock -->
+        <aside class="action-dock card" id="cardActions">
+          <header class="card-h">Actions</header>
+          <div id="action-root"></div>
+          <div class="quick-actions">
+            <button id="btnLook"     class="btn">Look</button>
+            <button id="btnInteract" class="btn">Interact</button>
+            <button id="btnRest"     class="btn">Rest</button>
+            <button id="btnSkill1"   class="btn">Action 1</button>
+            <button id="btnSkill2"   class="btn">Action 2</button>
+          </div>
+        </aside>
       </div>
-    </section>
-  </aside>
 
-  <!-- CENTER: Map viewer + Actions dock -->
-  <main id="viewport">
-    <div class="viewer-row">
-      <!-- Map frame -->
-      <section class="card canvas-wrap" id="frame">
-        <header class="card-h">Map</header>
-        <canvas id="canvas"></canvas>
-        <canvas id="overlayCanvasLite"></canvas>
-        <div class="zoomOverlay">
-          <button class="zbtn" id="btnFit" title="Fit (refit)">⤢</button>
-          <button class="zbtn" id="btnZoomIn" title="Zoom in">+</button>
-          <button class="zbtn" id="btnZoomOut" title="Zoom out">−</button>
-          <button class="zbtn" id="btnCenter" title="Player not placed yet" disabled>◎</button>
+      <!-- Console aligned to map width -->
+      <section class="card console-card">
+        <header class="card-h">Console</header>
+        <div id="console-root"></div>
+      </section>
+    </main>
+
+    <!-- RIGHT: Quest + Journal -->
+    <aside id="panel-right">
+      <section class="card" id="cardQuests">
+        <header class="card-h">Quest Log</header>
+        <div class="flavor">
+          <p><em>No quests yet.</em></p>
+          <p>A faint whisper echoes from the shards… “Seek the runes. The path will reveal itself.”</p>
         </div>
-        <div id="tooltip" class="tooltip"></div>
       </section>
 
-      <!-- Actions dock (attached to map) -->
-      <aside class="action-dock card" id="cardActions">
-        <header class="card-h">Actions</header>
-        <div id="action-root"></div>
-        <div class="quick-actions">
-          <button id="btnLook" class="btn">Look</button>
-          <button id="btnInteract" class="btn">Interact</button>
-          <button id="btnRest" class="btn">Rest</button>
-          <button id="btnSkill1" class="btn">Action 1</button>
-          <button id="btnSkill2" class="btn">Action 2</button>
+      <section class="card" id="cardJournal">
+        <header class="card-h">Journal</header>
+        <div class="journal-wrap">
+          <textarea id="journal-input" rows="10" placeholder="Write notes, rumors, coordinates, and secrets here..."></textarea>
+          <div class="tile-buttons">
+            <button id="btnUpdateJournal">Update Journal</button>
+            <span id="journal-status" class="muted"></span>
+          </div>
         </div>
-      </aside>
-    </div>
-
-    <!-- Console -->
-    <section class="card console-card">
-      <header class="card-h">Console</header>
-      <div id="console-root"></div>
-    </section>
-  </main>
-
-  <!-- RIGHT: Quest Log + Journal -->
-  <aside id="panel-right">
-    <section class="card" id="cardQuests">
-      <header class="card-h">Quest Log</header>
-      <div class="flavor">
-        <p><em>No quests yet.</em></p>
-        <p>A faint whisper echoes from the shards… “Seek the runes. The path will reveal itself.”</p>
-      </div>
-    </section>
-
-    <section class="card" id="cardJournal">
-      <header class="card-h">Journal</header>
-      <div class="journal-wrap">
-        <textarea id="journal-input" rows="10" placeholder="Write notes, rumors, coordinates, and secrets here..."></textarea>
-        <div class="tile-buttons">
-          <button id="btnUpdateJournal">Update Journal</button>
-          <span id="journal-status" class="muted"></span>
-        </div>
-      </div>
-    </section>
-  </aside>
+      </section>
+    </aside>
   </div>
 
-  <!-- Scripts -->
-  <script src="{{ url_for('static', filename='js/consoleUI.js') }}"></script>
+  <!-- Scripts (module only) -->
   <script type="module" src="{{ url_for('static', filename='js/client_v2.js') }}"></script>
   <script type="module" src="{{ url_for('static', filename='js/paperdoll.js') }}"></script>
   <script type="module" src="{{ url_for('static', filename='js/inventory.js') }}"></script>
