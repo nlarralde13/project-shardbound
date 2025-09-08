@@ -11,123 +11,96 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Uncial+Antiqua&display=swap" rel="stylesheet">
 
-  <!-- Theme / base styles -->
+  <!-- Layout-only CSS -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-layout.css') }}" />
-
-  <!-- Sandbox-only styling: free-layout rules + visible snap grid -->
- 
 </head>
-
 <body class="theme-fantasy">
-  <!-- snap grid background -->
-  <div id="snapGrid" aria-hidden="true"></div>
 
-  <!-- Topbar with sandbox controls -->
-  <nav id="topbar" class="card">
-    <a href="/forums">Forums</a>
-    <a href="/account">Account</a>
-    <span style="flex:1"></span>
-    <button id="toggleLayout" class="link-btn">Free layout</button>
-    <button id="toggleLock" class="link-btn">Lock panels</button>
-  </nav>
+  <!-- Top banner (96px) -->
+  <header id="banner" class="card">
+    <div class="brand">Shardbound — Layout Sandbox</div>
+    <div class="spacer"></div>
 
-  <!-- Docked layout (3 columns). In free mode, panels float; this grid is disabled. -->
-  <div id="layout">
-    <!-- LEFT -->
-    <aside id="panel-left">
-      <section class="card panel" id="cardCharacter">
-        <header class="card-h">Character</header>
-        <div class="char-grid">
-          <!-- Minimal placeholder content (no API) -->
-          <div class="paperdoll">
-            <div class="paperdoll-stage">
-              <img class="doll-image" src="/static/assets/character_models/placeholder_warrior.png" alt="" draggable="false" />
-              <div class="paperdoll-grid">
-                <div class="equip-slot" data-slot="head"     aria-label="Head"></div>
-                <div class="equip-slot" data-slot="cloak"    aria-label="Cloak"></div>
-                <div class="equip-slot" data-slot="offhand"  aria-label="Offhand"></div>
-                <div class="equip-slot" data-slot="chest"    aria-label="Chest"></div>
-                <div class="equip-slot" data-slot="mainhand" aria-label="Mainhand"></div>
-                <div class="equip-slot" data-slot="belt"     aria-label="Belt"></div>
-                <div class="equip-slot" data-slot="pants"    aria-label="Pants"></div>
-                <div class="equip-slot" data-slot="boots"    aria-label="Boots"></div>
-                <div class="equip-slot" data-slot="jewelry"  aria-label="Jewelry"></div>
-                <div class="equip-slot" data-slot="gadget"   aria-label="Gadget"></div>
-              </div>
-            </div>
-          </div>
-          <div class="inv-embed">
-            <header class="sub-h">Inventory</header>
-            <div class="inventory-grid">
-              <div class="inv-cell"></div><div class="inv-cell"></div><div class="inv-cell"></div><div class="inv-cell"></div>
-              <div class="inv-cell"></div><div class="inv-cell"></div><div class="inv-cell"></div><div class="inv-cell"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-    </aside>
+    <div class="field">
+    <label for="snapMode">Snap</label>
+    <select id="snapMode">
+        <option value="pixel" selected>Pixels</option>
+        <option value="cols">Columns</option>
+    </select>
+    </div>
 
-    <!-- CENTER -->
-    <main id="viewport">
-      <div class="viewer-row">
-        <section class="card map-card panel" id="mapCard">
-          <header class="card-h">Map</header>
-          <div class="canvas-wrap">
-            <div id="frame">
-              <!-- Pure placeholder canvas; no viewer wiring in sandbox -->
-              <canvas id="canvas"></canvas>
-              <canvas id="overlayCanvasLite"></canvas>
-              <div class="zoomOverlay" aria-hidden="true" style="pointer-events:none">
-                <button class="zbtn" disabled>⤢</button>
-                <button class="zbtn" disabled>+</button>
-                <button class="zbtn" disabled>−</button>
-                <button class="zbtn" disabled>◎</button>
-              </div>
-            </div>
-          </div>
-        </section>
+    <div class="field" id="fieldSnapPx">
+    <label for="snapPxSelect">Step</label>
+    <select id="snapPxSelect">
+        <option value="16">16px</option>
+        <option value="20">20px</option>
+        <option value="24" selected>24px</option>
+        <option value="32">32px</option>
+        <option value="40">40px</option>
+    </select>
+    </div>
 
-        <aside class="action-dock card panel" id="cardActions">
-          <header class="card-h">Actions</header>
-          <div class="quick-actions">
-            <button class="btn" disabled>Look</button>
-            <button class="btn" disabled>Interact</button>
-            <button class="btn" disabled>Rest</button>
-            <button class="btn" disabled>Action 1</button>
-            <button class="btn" disabled>Action 2</button>
-          </div>
-        </aside>
+    <div class="field" id="fieldColW" style="display:none">
+    <label for="colSelect">Col</label>
+    <select id="colSelect">
+        <option value="320">320px</option>
+        <option value="360" selected>360px</option>
+        <option value="400">400px</option>
+        <option value="480">480px</option>
+    </select>
+    </div>
+
+<button id="toggleLayout" class="link-btn">Free layout</button>
+<button id="toggleLock" class="link-btn">Lock panels</button>
+<button id="resetLayout" class="link-btn">Reset positions</button>
+
+  </header>
+
+  <!-- BOUNDED PLAYFIELD (panels stay inside this box) -->
+  <div id="playfield" class="docked">
+    <div id="snapGrid" aria-hidden="true"></div>
+
+    <!-- Panels (placeholders only) -->
+    <section class="card panel" id="cardCharacter">
+      <header class="card-h">Character</header>
+      <div class="muted" style="padding:8px">Placeholder</div>
+    </section>
+
+    <section class="card map-card panel" id="mapCard">
+      <header class="card-h">Map</header>
+      <div class="canvas-wrap">
+        <div id="frame"></div>
       </div>
+    </section>
 
-      <section class="card console-card panel" id="cardConsole">
-        <header class="card-h">Console</header>
-        <div id="console-root" style="min-height:160px"></div>
-      </section>
-    </main>
-
-    <!-- RIGHT -->
-    <aside id="panel-right">
-      <section class="card panel" id="cardQuests">
-        <header class="card-h">Quest Log</header>
-        <div class="flavor">
-          <p><em>No quests yet.</em></p>
-          <p>A faint whisper echoes from the shards… “Seek the runes. The path will reveal itself.”</p>
-        </div>
-      </section>
-
-      <section class="card panel" id="cardJournal">
-        <header class="card-h">Journal</header>
-        <div class="journal-wrap">
-          <textarea rows="8" placeholder="Sandbox notes…"></textarea>
-          <div class="tile-buttons" style="margin-top:8px">
-            <button class="btn" disabled>Update Journal</button>
-          </div>
-        </div>
-      </section>
+    <aside class="action-dock card panel" id="cardActions">
+      <header class="card-h">Actions</header>
+      <div class="quick-actions">
+        <button class="btn" disabled>Look</button>
+        <button class="btn" disabled>Interact</button>
+        <button class="btn" disabled>Rest</button>
+        <button class="btn" disabled>Action 1</button>
+        <button class="btn" disabled>Action 2</button>
+      </div>
     </aside>
+
+    <section class="card console-card panel" id="cardConsole">
+      <header class="card-h">Console</header>
+      <div style="min-height:160px"></div>
+    </section>
+
+    <section class="card panel" id="cardQuests">
+      <header class="card-h">Quest Log</header>
+      <div class="flavor"><em>No quests yet.</em></div>
+    </section>
+
+    <section class="card panel" id="cardJournal">
+      <header class="card-h">Journal</header>
+      <textarea rows="6" style="width:100%"></textarea>
+    </section>
   </div>
 
-  <!-- Only the panels script: no API, no viewer wiring -->
+  <!-- Only the panels controller (bounded + snapping) -->
   <script type="module" src="{{ url_for('static', filename='js/panels.js') }}"></script>
 </body>
 </html>

@@ -144,3 +144,20 @@ body.theme-fantasy{
   position:absolute; right:6px; bottom:4px; padding:0 6px; border-radius:6px;
   font:700 12px/18px ui-monospace, monospace; color:#18161f; background:#e8dfc8; border:1px solid rgba(0,0,0,.35);
 }
+
+
+/* ---- Free layout toggle button in topbar ---- */
+#topbar .link-btn{
+  background: none; border: 0; color: #8fb3ff; cursor: pointer; margin-left: 8px;
+  font: inherit; padding: 2px 6px;
+}
+#topbar .link-btn:hover{ text-decoration: underline; }
+
+/* ---- Floating panel mode ---- */
+body[data-free-layout="1"] #layout{ display: block; }          /* disable grid */
+body[data-free-layout="1"] .panel{ position: fixed; margin: 0; }
+body[data-free-layout="1"] .card-h{ cursor: move; user-select: none; }
+
+.panel.dragging{
+  box-shadow: 0 0 0 2px rgba(212,166,78,.35), 0 16px 48px rgba(0,0,0,.6);
+}

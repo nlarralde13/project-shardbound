@@ -1,10 +1,13 @@
-/* ===== TOKENS ===== */
+/* ===== TOKENS & GLOBALS ===== */
 :root{
   --bg:#0b0a11; --panel:#13111b; --ink:#e9e4d8; --muted:#b8b2a4;
   --line:#2a2740; --gold:#d4a64e; --rune:#62c0ff;
-  --slot:64px; --gap:10px; --radius:12px;
-  --gold-glow:0 0 18px rgba(212,166,78,.35);
+  --slot:64px; --gap:10px; --radius:12px; --gold-glow:0 0 18px rgba(212,166,78,.35);
+  --banner-h:96px;         /* layout-only */
+  --snap:24px;             /* default snap size (panels.js will update this) */
+  --pf-pad:12px;           /* inner padding of the playfield */
 }
+
 body.theme-fantasy{
   color:var(--ink);
   background:
@@ -14,20 +17,7 @@ body.theme-fantasy{
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
 }
 
-/* ===== LAYOUT ===== */
-#layout{
-  display:grid;
-  grid-template-columns: 380px 1fr 360px;
-  grid-template-rows: auto 1fr;
-}
-#panel-left{padding:10px; border-right:1px solid var(--line);}
-#panel-right{padding:10px; border-left:1px solid var(--line);}
-#viewport{display:flex; flex-direction:column; align-items:center; gap:12px; padding:10px 0;}
-.viewer-row{
-  display:grid;
-  grid-template-columns: 720px 200px; /* map + actions */
-  gap:12px; align-items:start;
-}
+.muted{ color:var(--muted); font-size:13px; }
 
 /* ===== CARDS ===== */
 .card{
@@ -38,45 +28,65 @@ body.theme-fantasy{
 .card-h{font-family:"Cinzel", serif; font-weight:700; color:#ffe6b3; margin:0 0 10px;}
 .card-h::after{content:""; display:inline-block; height:1px; background:linear-gradient(90deg, rgba(212,166,78,.5), transparent); width:100%; margin-left:8px; vertical-align:middle}
 
-/* ===== MAP (contained) ===== */
-.map-card{ width:720px; }
-.canvas-wrap{ background:linear-gradient(180deg,#1b1a23,#0e0d13); border:1px solid var(--line); border-radius:14px; box-shadow: inset 0 0 0 2px rgba(255,255,255,.03), 0 10px 30px rgba(0,0,0,.5); }
-#frame{ width:720px; height:512px; overflow:hidden; position:relative; }
-#frame canvas{ display:block; width:100%; height:100%; background:transparent; }
-.zoomOverlay{
-  position:absolute; right:8px; bottom:8px; display:flex; gap:6px; z-index:10;
+/* ===== BANNER (fixed 96px) ===== */
+#banner{
+  position:fixed; left:0; right:0; top:0; height:var(--banner-h);
+  z-index:20; display:flex; align-items:center; gap:12px; padding:12px 16px;
 }
-.zbtn{
-  width:32px; height:32px; line-height:32px; text-align:center;
-  border-radius:8px; border:1px solid var(--line);
-  background: radial-gradient(circle at 50% 35%, rgba(255,255,255,.06), transparent 60%), #16141f;
-  color:#e7d7b3; text-shadow:0 1px 0 #2a1f0c; box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
-}
-.zbtn:hover{ box-shadow: var(--gold-glow), inset 0 0 0 1px rgba(255,255,255,.06); }
+#banner .brand{ font-family:"Cinzel", serif; font-weight:700; letter-spacing:.5px; color:#ffe6b3; font-size:18px; }
+#banner .spacer{ flex:1; }
+#banner .link-btn{ background:none; border:0; color:#8fb3ff; cursor:pointer; margin-left:8px; font:inherit; padding:4px 8px; }
+#banner .link-btn:hover{ text-decoration:underline; }
+#banner .field{ color:var(--muted); font-size:13px; display:inline-flex; align-items:center; gap:6px; }
 
-/* ===== ACTION DOCK ===== */
-.action-dock{ position:sticky; top:10px; width:200px; }
+/* ===== BOUNDED PLAYFIELD ===== */
+#playfield{
+  position:fixed; left:0; right:0; top:var(--banner-h); bottom:0;
+  padding:var(--pf-pad); overflow:hidden; z-index:10;
+}
+
+/* Docked (grid) layout by default */
+#playfield.docked{
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-auto-rows: minmax(160px, auto);
+  gap:12px;
+}
+
+/* Free layout: panels absolute within playfield */
+#playfield.free { display:block; }
+#playfield.free .panel{ position:absolute; margin:0; }
+#playfield .panel.dragging{ box-shadow: 0 0 0 2px rgba(212,166,78,.35), 0 16px 48px rgba(0,0,0,.6); }
+#playfield .panel .card-h{ user-select:none; }
+
+/* Snap grid overlay */
+#snapGrid{
+  position:absolute; inset:0; z-index:0; pointer-events:none;
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,.06) 1px, transparent 1px);
+  background-size: var(--snap) var(--snap);
+  opacity:.06; transition:opacity .2s ease;
+}
+#playfield.free #snapGrid{ opacity:.18; }
+
+/* ===== MAP / ACTIONS / CONSOLE (placeholder sizing) ===== */
+.map-card{ width:720px; }
+.console-card{ width:720px; }
+.canvas-wrap{ background:linear-gradient(180deg,#1b1a23,#0e0d13); border:1px solid var(--line); border-radius:14px; box-shadow: inset 0 0 0 2px rgba(255,255,255,.03), 0 10px 30px rgba(0,0,0,.5); }
+#frame{ width:720px; height:420px; background:radial-gradient(60% 60% at 30% 40%, rgba(255,255,255,.04), transparent 60%), #101018; border-radius:10px; border:1px solid var(--line); }
+
+.action-dock{ width:200px; }
 .quick-actions{ display:flex; flex-direction:column; gap:10px; }
 .btn{
   padding:10px 12px; border-radius:10px; border:1px solid var(--line);
   background:linear-gradient(180deg,#1a1723,#12101a);
-  color:#ffe6b3; text-shadow:0 1px 0 #2a1f0c;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
+  color:#ffe6b3; text-shadow:0 1px 0 #2a1f0c; box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
 }
 .btn:hover{ border-color:var(--gold); box-shadow:var(--gold-glow), inset 0 0 0 1px rgba(255,255,255,.06); }
 
-/* ===== CONSOLE aligned to map width ===== */
-.console-card{ width:720px; }
-#console-root{
-  min-height:110px; border:1px solid var(--line); border-radius:10px;
-  background:linear-gradient(180deg,#0d0c13,#0b0a11);
-  font-family:ui-monospace,monospace; color:#e9e4d8; padding:8px;
-}
-
-/* ===== CHARACTER: paperdoll + inventory ===== */
-.char-grid{ display:grid; grid-template-columns: 1fr; grid-template-rows:auto auto; gap:6px; }
-
-/* Paperdoll stage */
+/* ===== CHARACTER: paperdoll + inventory (for visual parity) ===== */
+.char-grid{ display:grid; grid-template-columns:1fr; grid-template-rows:auto auto; gap:6px; }
 .paperdoll{ padding:8px; }
 .paperdoll-stage{
   position:relative;
@@ -95,7 +105,6 @@ body.theme-fantasy{
 }
 .doll-image{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); max-width:180px; max-height:220px; image-rendering:pixelated; filter:drop-shadow(0 8px 18px rgba(0,0,0,.45)); }
 
-/* 3×3 ring grid around the doll */
 .paperdoll-grid{
   position:absolute; inset:0;
   display:grid; grid-template-columns:repeat(3, var(--slot)); grid-template-rows:repeat(3, var(--slot));
@@ -115,20 +124,20 @@ body.theme-fantasy{
 @keyframes rej { 0%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} 100%{transform:translateX(0)} }
 .equip-slot::after{ content:attr(aria-label); position:absolute; left:7px; bottom:6px; font:600 10px/1 "Cinzel", serif; color:#c9e6ff; opacity:.85; text-shadow:0 1px 0 #08111a; }
 
-/* ring positions */
-.equip-slot[data-slot="head"]     { grid-column:1; grid-row:1; }
-.equip-slot[data-slot="cloak"]    { grid-column:2; grid-row:2; }
-.equip-slot[data-slot="offhand"]  { grid-column:3; grid-row:3; }
-.equip-slot[data-slot="chest"]    { grid-column:4; grid-row:4; }
-.equip-slot[data-slot="mainhand"] { grid-column:1; grid-row:1; }
-.equip-slot[data-slot="belt"]     { grid-column:1; grid-row:1; }
-.equip-slot[data-slot="pants"]    { grid-column:1; grid-row:1; }
-.equip-slot[data-slot="boots"]    { grid-column:1; grid-row:1; }
+/* Correct 3×3 ring positions */
+.equip-slot[data-slot="head"]     { grid-column:2; grid-row:1; }
+.equip-slot[data-slot="cloak"]    { grid-column:1; grid-row:1; }
+.equip-slot[data-slot="offhand"]  { grid-column:3; grid-row:1; }
+.equip-slot[data-slot="chest"]    { grid-column:1; grid-row:2; }
+.equip-slot[data-slot="mainhand"] { grid-column:3; grid-row:2; }
+.equip-slot[data-slot="belt"]     { grid-column:1; grid-row:3; }
+.equip-slot[data-slot="pants"]    { grid-column:2; grid-row:3; }
+.equip-slot[data-slot="boots"]    { grid-column:3; grid-row:3; }
 /* “ear” slots flanking the head */
-.equip-slot[data-slot="jewelry"]  { grid-column:1; grid-row:1;  }
-.equip-slot[data-slot="gadget"]   { grid-column:3; grid-row:4;  }
+.equip-slot[data-slot="jewelry"]  { grid-column:2; grid-row:1; justify-self:end;   transform:translateX(-78px); }
+.equip-slot[data-slot="gadget"]   { grid-column:2; grid-row:1; justify-self:start; transform:translateX( 78px); }
 
-/* Inventory under the doll */
+/* Inventory under the doll (for parity) */
 .sub-h{ font:700 13px "Cinzel", serif; color:#ffe6b3; margin:10px 0 8px; text-align:center; }
 .inventory-grid{
   --cell: var(--slot);
@@ -144,20 +153,15 @@ body.theme-fantasy{
   position:absolute; right:6px; bottom:4px; padding:0 6px; border-radius:6px;
   font:700 12px/18px ui-monospace, monospace; color:#18161f; background:#e8dfc8; border:1px solid rgba(0,0,0,.35);
 }
+/* show drag cursor on headers only in free mode */
+#playfield.free .panel .card-h { cursor: grab; }
+#playfield.free .panel.dragging .card-h { cursor: grabbing; }
 
-
-/* ---- Free layout toggle button in topbar ---- */
-#topbar .link-btn{
-  background: none; border: 0; color: #8fb3ff; cursor: pointer; margin-left: 8px;
-  font: inherit; padding: 2px 6px;
+/* alignment guides (drawn by panels.js) */
+.guide {
+  position: absolute; z-index: 50; pointer-events: none;
+  background: rgba(212,166,78,.7);
+  box-shadow: 0 0 0 1px rgba(0,0,0,.35);
 }
-#topbar .link-btn:hover{ text-decoration: underline; }
-
-/* ---- Floating panel mode ---- */
-body[data-free-layout="1"] #layout{ display: block; }          /* disable grid */
-body[data-free-layout="1"] .panel{ position: fixed; margin: 0; }
-body[data-free-layout="1"] .card-h{ cursor: move; user-select: none; }
-
-.panel.dragging{
-  box-shadow: 0 0 0 2px rgba(212,166,78,.35), 0 16px 48px rgba(0,0,0,.6);
-}
+.guide.v { width: 2px; height: 100%; top: 0; }
+.guide.h { height: 2px; width: 100%; left: 0; }
