@@ -81,7 +81,9 @@ Users/Characters:
 - `users`, `user`, `characters`
 
 DB Inspection:
-- `tables`, `head`, `sql`, `export`
+- `tables` – list table names with row counts
+- `head <table>` – show rows from a table (`--limit`, `--id`, `--where`)
+- `sql`, `export`
 
 Items/Inventory:
 - `items`, `item`, `item-upsert`, `instances`, `mint`, `inventory`, `grant`,

@@ -233,6 +233,39 @@ def _xy_from_character(c: Character):
 # Commands
 # --------------------
 
+def cmd_tables(args):
+    insp = sa.inspect(db.engine)
+    rows = []
+    for name in sorted(insp.get_table_names()):
+        try:
+            cnt = db.session.execute(sa.text(f"SELECT COUNT(*) FROM {name}")).scalar()
+        except Exception:
+            cnt = None
+        rows.append((name, cnt))
+    print_rows(rows, ["table", "rows"])
+
+
+def cmd_head(args):
+    table = args.table
+    insp = sa.inspect(db.engine)
+    names = insp.get_table_names()
+    if table not in names:
+        print(f"Table not found: {table}")
+        return
+    sql = f"SELECT * FROM {table}"
+    params = {}
+    if args.id is not None:
+        sql += " WHERE id = :id"
+        params["id"] = args.id
+    elif args.where:
+        sql += " WHERE " + args.where
+    if args.limit:
+        sql += f" LIMIT {int(args.limit)}"
+    res = db.session.execute(sa.text(sql), params)
+    rows = res.fetchall()
+    headers = list(rows[0].keys()) if rows else []
+    print_rows([tuple(r) for r in rows], headers)
+
 def cmd_users(args):
     rows = []
     q = User.query
@@ -360,6 +393,16 @@ def cmd_sql(args):
 def build_parser():
     p = argparse.ArgumentParser(description="Shardbound DB CLI")
     sub = p.add_subparsers(dest="cmd", required=True)
+
+    s = sub.add_parser("tables", help="List tables and row counts")
+    s.set_defaults(func=cmd_tables)
+
+    s = sub.add_parser("head", help="Show first rows of a table")
+    s.add_argument("table", help="Table name")
+    s.add_argument("--limit", type=int, default=5, help="Max rows to display")
+    s.add_argument("--id", help="Filter by id column")
+    s.add_argument("--where", help="Additional WHERE clause")
+    s.set_defaults(func=cmd_head)
 
     s = sub.add_parser("users", help="List users")
     s.add_argument("--email", help="Filter by email contains")
