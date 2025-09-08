@@ -1,131 +1,109 @@
-/* inventory.js
-   Renders the inventory grid and manages drag/drop reordering and unequip.
-   Public events: dispatches 'inventory:add', 'inventory:unequip';
-   listens for 'equip:changed'.
-*/
-
+// static/js/inventory.js
 import { API } from './api.js';
 
 const grid = document.getElementById('inventory-grid');
-
-// Local fallback icon if an item does not declare one
 const FALLBACK_ICON = '/static/assets/items/_fallback.png';
 
-// Current character inventory; populated from the server.
 let inventory = [];
 
-
-function render() {
-  grid.innerHTML = '';
-  inventory.forEach((item, idx) => {
-    const cell = document.createElement('div');
-    cell.className = 'cell';
-    cell.draggable = true;
-    cell.dataset.index = idx;
-    const img = document.createElement('img');
-    img.className = 'icon';
-    img.draggable = false;            // let the cell handle drag, not the image
-    img.alt = item.name || '';
-    img.src = item.icon;              // e.g. /static/assets/items/wooden_sword.png
-    cell.appendChild(img);
-    if (item.rarity) {
-      cell.dataset.rarity = String(item.rarity).toLowerCase();
-    }
-
-    cell.title = item.name;
-    if (item.qty > 1) {
-      const stack = document.createElement('span');
-      stack.className = 'stack';
-      stack.textContent = item.qty;
-      cell.appendChild(stack);
-    }
-
-    cell.addEventListener('dragstart', (e) => {
-      e.dataTransfer.setData('text/plain', JSON.stringify({ ...item, index: idx, from: 'inventory' }));
-    });
-
-    cell.addEventListener('dragover', (e) => e.preventDefault());
-    cell.addEventListener('drop', (e) => {
-      e.preventDefault();
-      const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-      if (data.from === 'inventory') {
-        const from = data.index;
-        const to = idx;
-        const [moved] = inventory.splice(from, 1);
-        inventory.splice(to, 0, moved);
-        render();
-      } else if (data.from === 'paperdoll') {
-        inventory.splice(idx, 0, data);
-        render();
-        document.dispatchEvent(new CustomEvent('inventory:unequip', { detail: { slot: data.slot } }));
-      }
-    });
-
-    grid.appendChild(cell);
-  });
+function normalizeItem(it) {
+  const slug = it.slug || it.name || it.display_name || '';
+  const inferred = slug ? `/static/assets/items/${String(slug).toLowerCase().replace(/\s+/g,'_').replace(/-/g,'_')}.png` : FALLBACK_ICON;
+  return {
+    id: it.slug || it.item_id || it.item_instance_id || it.instance_id || slug,
+    name: it.display_name || it.name || slug || 'Item',
+    slot: it.slot || null,
+    icon: it.icon_url || it.icon_path || inferred || FALLBACK_ICON,
+    qty: it.quantity ?? it.qty ?? 1,
+    rarity: it.rarity || null,
+    item_instance_id: it.item_instance_id || it.instance_id || it.id,
+  };
 }
 
-grid.addEventListener('dragover', (e) => e.preventDefault());
-grid.addEventListener('drop', (e) => {
-  e.preventDefault();
-  const text = e.dataTransfer.getData('text/plain');
-  if (!text) return;
-  const data = JSON.parse(text);
-  if (data.from === 'paperdoll') {
-    inventory.push(data);
-    render();
-    document.dispatchEvent(new CustomEvent('inventory:unequip', { detail: { slot: data.slot } }));
-  }
-});
+function makeCell(item, idx) {
+  const cell = document.createElement('div');
+  cell.className = 'inv-cell';
 
-document.addEventListener('inventory:add', (e) => {
-  inventory.push(e.detail);
-  render();
-});
+  const img = document.createElement('img');
+  img.draggable = true;
+  img.alt = item.name || '';
+  img.src = item.icon || FALLBACK_ICON;
+  cell.appendChild(img);
 
-document.addEventListener('equip:changed', (e) => {
-  const { item, previous } = e.detail;
-  if (item.from === 'inventory') {
-    inventory = inventory.filter((_, i) => i !== item.index);
+  if ((item.qty ?? 1) > 1) {
+    const b = document.createElement('span');
+    b.className = 'qty';
+    b.textContent = String(item.qty);
+    cell.appendChild(b);
   }
-  if (previous) {
-    inventory.push(previous);
-  }
+
+  // drag payload includes item_instance_id
+  cell.addEventListener('dragstart', (e) => {
+    const payload = { ...item, index: idx, from: 'inventory' };
+    if (!payload.item_instance_id && item.instance_id) payload.item_instance_id = item.instance_id;
+    e.dataTransfer.setData('text/plain', JSON.stringify(payload));
+  });
+
+  // reorder within inventory; if a paperdoll item drops here -> unequip
+  cell.addEventListener('dragover', (e) => e.preventDefault());
+  cell.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const text = e.dataTransfer.getData('text/plain');
+    if (!text) return;
+    const data = JSON.parse(text);
+
+    if (data.from === 'inventory') {
+      const from = data.index;
+      const to = idx;
+      const [moved] = inventory.splice(from, 1);
+      inventory.splice(to, 0, moved);
+      render();
+    } else if (data.from === 'paperdoll') {
+      document.dispatchEvent(new CustomEvent('inventory:unequip', { detail: { slot: data.slot } }));
+    }
+  });
+
+  return cell;
+}
+
+function render() {
+  if (!grid) return;
+  grid.innerHTML = '';
+  inventory.forEach((it, i) => grid.appendChild(makeCell(it, i)));
+}
+
+function applyLoadout(dto) {
+  const items = Array.isArray(dto?.inventory) ? dto.inventory : [];
+  inventory = items.map(normalizeItem);
   render();
-});
+}
 
 async function loadInventory() {
   try {
     const active = await API.characterActive();
     const characterId = active?.character_id || active?.id;
     if (!characterId) return;
-    const r = await fetch(`/api/characters/${characterId}/inventory`, {
-      credentials: 'include',
-      headers: { 'Accept': 'application/json' }
-    });
-    if (!r.ok) return;
-    const data = await r.json();
-    inventory = (data.items || [])
-    
-      .filter(it => !it.slot)
-      .map(it => {
-        const slug = it.slug || '';
-        const inferred = slug ? `/static/assets/items/${slug.replace(/-/g, '_')}.png` : FALLBACK_ICON;
-        return {
-          id: slug || it.item_id,
-          name: it.display_name || slug,
-          slot: it.slot || null,
-          icon: it.icon_url || it.icon_path || inferred || FALLBACK_ICON,
-          qty: it.quantity || 1,
-          rarity: it.rarity || null,
-        };
-      });
-    render();
+    const dto = await API.loadout(characterId);
+    applyLoadout(dto);
   } catch (err) {
-    console.error('Failed to load inventory', err);
+    console.error('[inventory] load failed', err);
   }
 }
 
-// Initial load and refresh when the active character changes
+// Drop-to-background to unequip
+if (grid) {
+  grid.addEventListener('dragover', (e) => e.preventDefault());
+  grid.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const text = e.dataTransfer.getData('text/plain');
+    if (!text) return;
+    const data = JSON.parse(text);
+    if (data.from === 'paperdoll') {
+      document.dispatchEvent(new CustomEvent('inventory:unequip', { detail: { slot: data.slot } }));
+    }
+  });
+}
+
 loadInventory();
 window.addEventListener('character:ready', loadInventory);
+document.addEventListener('loadout:updated', (e) => applyLoadout(e.detail || {}));

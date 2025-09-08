@@ -1,5 +1,58 @@
 <!DOCTYPE html>
 <html lang="en">
+  <style>
+  /* Inventory sizing override */
+  .inventory-grid {
+    --cell: 48px;
+    display: grid;
+    grid-template-columns: repeat(6, var(--cell));
+    gap: 6px;
+    align-content: start;
+  }
+  .inventory-grid .inv-cell {
+    width: var(--cell);
+    height: var(--cell);
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px;
+    background: rgba(0,0,0,0.35);
+    overflow: hidden;
+  }
+  .inventory-grid .inv-cell img { width: 100%; height: 100%; object-fit: contain; }
+  .inventory-grid .inv-cell .qty {
+    position: absolute; right: 4px; bottom: 2px; font: 600 11px/1 system-ui;
+    padding: 1px 4px; border-radius: 4px; background: rgba(0,0,0,0.6);
+    color: #ddd;
+  }
+
+  /* Paperdoll slots sizing (match inventory) */
+  .paperdoll-window { position: relative; }
+  .paperdoll-window .doll-image { display: block; width: 100%; height: auto; pointer-events: none; }
+  .paperdoll-window .equip-slot {
+    --cell: 48px;
+    width: var(--cell); height: var(--cell);
+    position: absolute; border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px; background: rgba(0,0,0,0.35);
+    display: grid; place-items: center; overflow: hidden;
+  }
+  .paperdoll-window .equip-slot img { width: 100%; height: 100%; object-fit: contain; }
+  .paperdoll-window .equip-slot.busy { outline: 1px solid #ffc10755; filter: saturate(0.6); }
+  .paperdoll-window .equip-slot.reject { animation: rej .35s; }
+  @keyframes rej { 0%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} 100%{transform:translateX(0)} }
+
+  /* Position your slots roughly (adjust to taste) */
+  .equip-slot[data-slot="head"]     { top: 10px; left: 10px; }
+  .equip-slot[data-slot="cloak"]    { top: 10px; right: 10px; }
+  .equip-slot[data-slot="chest"]    { top: 70px; left: 10px; }
+  .equip-slot[data-slot="belt"]     { top: 70px; right: 10px; }
+  .equip-slot[data-slot="pants"]    { top: 130px; left: 10px; }
+  .equip-slot[data-slot="boots"]    { top: 130px; right: 10px; }
+  .equip-slot[data-slot="mainhand"] { bottom: 10px; left: 10px; }
+  .equip-slot[data-slot="offhand"]  { bottom: 10px; right: 10px; }
+  .equip-slot[data-slot="jewelry"]  { bottom: 70px; left: 10px; }
+  .equip-slot[data-slot="gadget"]   { bottom: 70px; right: 10px; }
+</style>
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -91,8 +144,12 @@
 
     <!-- Console -->
     <section class="card console-card">
+
       <header class="card-h">Console</header>
-      <div id="console-root"></div>
+      <div id="console-root">
+        <div id="console-log" style="height:160px; overflow:auto; font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; padding:8px; background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.06); border-radius:6px;"></div>
+        <input id="console-input" placeholder="Type a command and press Enter" style="width:100%; margin-top:8px; padding:6px 8px; border-radius:6px; border:1px solid rgba(255,255,255,.08); background:rgba(0,0,0,.25); color:#ddd;">
+      </div>
     </section>
   </main>
 
@@ -119,6 +176,7 @@
   </aside>
 
   <!-- Scripts -->
+  <script src="{{ url_for('static', filename='js/consoleUI.js') }}"></script>
   <script type="module" src="{{ url_for('static', filename='js/client_v2.js') }}"></script>
   <script type="module" src="{{ url_for('static', filename='js/paperdoll.js') }}"></script>
   <script type="module" src="{{ url_for('static', filename='js/inventory.js') }}"></script>

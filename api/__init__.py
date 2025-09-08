@@ -1,5 +1,5 @@
-# api/__init__.py
 import os
+import sys
 import json
 import logging
 import sqlalchemy as sa
@@ -21,6 +21,10 @@ from .security import admin_guard
 from .admin_panel import admin_ui
 from .api_inventory import bp as inventory_api_bp
 from .api.api_console import api_console
+
+# ----------------------
+# Helpers & utilities
+# ----------------------
 
 def _json_column_type_for(engine) -> str:
     return "TEXT" if engine.dialect.name == "sqlite" else "JSON"
@@ -64,6 +68,14 @@ def _backfill_coords(conn: sa.engine.Connection, have_xy: bool):
             WHERE last_coords IS NULL AND first_time_spawn IS NOT NULL
         """))
 
+def _is_running_migration_process() -> bool:
+    """Best-effort detection to avoid schema auto-creation during Alembic operations."""
+    argv = " ".join(sys.argv).lower()
+    # common flask-migrate / alembic verbs
+    signals = (" db ", " upgrade", " downgrade", " stamp", " revision", " migrate")
+    return any(s in argv for s in signals)
+
+
 def create_app():
     app = Flask(
         __name__,
@@ -91,53 +103,61 @@ def create_app():
     # Helpful startup log
     app.logger.setLevel(logging.INFO)
     app.logger.info("DB URI: %s", app.config["SQLALCHEMY_DATABASE_URI"])
-    app.logger.info("AUTO_CREATE_TABLES=%s", os.environ.get("AUTO_CREATE_TABLES", "1"))
+
+    # IMPORTANT: default AUTO_CREATE_TABLES to OFF. Use only for first-run dev setups.
+    # We also disable it automatically when a migration command is detected.
+    env_autocreate = os.environ.get("AUTO_CREATE_TABLES", "0") == "1"
+    allow_autocreate = env_autocreate and not _is_running_migration_process()
+    app.logger.info("AUTO_CREATE_TABLES=%s (effective=%s)", os.environ.get("AUTO_CREATE_TABLES", "0"),
+                    "1" if allow_autocreate else "0")
 
     with app.app_context():
         # Ensure all models are imported so metadata is complete
         from . import models as _models  # noqa: F401
 
         # ===== DEV SAFETY MODE =====
-        # Keep your original "startup safety" block, guarded by AUTO_CREATE_TABLES.
-        if os.environ.get("AUTO_CREATE_TABLES", "1") == "1":
+        # Only run create_all() when explicitly enabled AND not during migrations.
+        if allow_autocreate:
             SA_DB.create_all()
 
-            inspector = sa.inspect(SA_DB.engine)
-            cols = _column_names(inspector, "character")
-            if cols:
-                json_type = _json_column_type_for(SA_DB.engine)
-                with SA_DB.engine.begin() as conn:
-                    _add_column_if_missing(conn, inspector, "character", "is_deleted", "BOOLEAN NOT NULL DEFAULT 0")
-                    _add_column_if_missing(conn, inspector, "character", "biography", "TEXT")
-                    if "biography" in _column_names(inspector, "character") and "bio" in cols:
-                        conn.execute(sa.text("UPDATE character SET biography = bio WHERE biography IS NULL"))
-
-                    _add_column_if_missing(conn, inspector, "character", "is_active", "BOOLEAN NOT NULL DEFAULT 1")
-                    if "is_deleted" in cols:
-                        conn.execute(sa.text("UPDATE character SET is_active = 0 WHERE is_deleted = 1"))
-
-                    _add_column_if_missing(conn, inspector, "character", "last_seen_at", "DATETIME")
-                    _add_column_if_missing(conn, inspector, "character", "cur_loc", "VARCHAR(64)")
-                    if "cur_loc" in _column_names(inspector, "character") and "x" in cols and "y" in cols:
-                        conn.execute(sa.text(
-                            "UPDATE character SET cur_loc = x || ',' || y "
-                            "WHERE cur_loc IS NULL AND x IS NOT NULL AND y IS NOT NULL"
-                        ))
-
-                    _add_column_if_missing(conn, inspector, "character", "x", "x INTEGER")
-                    _add_column_if_missing(conn, inspector, "character", "y", "y INTEGER")
-
-                    _add_column_if_missing(conn, inspector, "character", "first_time_spawn", f"{json_type}")
-                    _add_column_if_missing(conn, inspector, "character", "last_coords", f"{json_type}")
-
-                    cols_after = _column_names(inspector, "character")
-                    have_xy = "x" in cols_after and "y" in cols_after
-                    _backfill_coords(conn, have_xy)
-
-                    # RBAC columns on users
-                    _add_column_if_missing(conn, inspector, "users", "role", "role VARCHAR(16) NOT NULL DEFAULT 'user'")
+            # Gentle, opt-in, SQLite-only column backfills for legacy fields.
+            # These are guarded behind allow_autocreate to avoid fighting Alembic.
+            if SA_DB.engine.dialect.name == "sqlite":
+                inspector = sa.inspect(SA_DB.engine)
+                cols = _column_names(inspector, "character")
+                if cols:
                     json_type = _json_column_type_for(SA_DB.engine)
-                    _add_column_if_missing(conn, inspector, "users", "scopes", f"scopes {json_type}")
+                    with SA_DB.engine.begin() as conn:
+                        _add_column_if_missing(conn, inspector, "character", "is_deleted", "BOOLEAN NOT NULL DEFAULT 0")
+                        _add_column_if_missing(conn, inspector, "character", "biography", "TEXT")
+                        if "biography" in _column_names(inspector, "character") and "bio" in cols:
+                            conn.execute(sa.text("UPDATE character SET biography = bio WHERE biography IS NULL"))
+
+                        _add_column_if_missing(conn, inspector, "character", "is_active", "BOOLEAN NOT NULL DEFAULT 1")
+                        if "is_deleted" in cols:
+                            conn.execute(sa.text("UPDATE character SET is_active = 0 WHERE is_deleted = 1"))
+
+                        _add_column_if_missing(conn, inspector, "character", "last_seen_at", "DATETIME")
+                        _add_column_if_missing(conn, inspector, "character", "cur_loc", "VARCHAR(64)")
+                        if "cur_loc" in _column_names(inspector, "character") and "x" in cols and "y" in cols:
+                            conn.execute(sa.text(
+                                "UPDATE character SET cur_loc = x || ',' || y "
+                                "WHERE cur_loc IS NULL AND x IS NOT NULL AND y IS NOT NULL"
+                            ))
+
+                        _add_column_if_missing(conn, inspector, "character", "x", "x INTEGER")
+                        _add_column_if_missing(conn, inspector, "character", "y", "y INTEGER")
+
+                        _add_column_if_missing(conn, inspector, "character", "first_time_spawn", f"{json_type}")
+                        _add_column_if_missing(conn, inspector, "character", "last_coords", f"{json_type}")
+
+                        cols_after = _column_names(inspector, "character")
+                        have_xy = "x" in cols_after and "y" in cols_after
+                        _backfill_coords(conn, have_xy)
+
+                        # RBAC columns on users
+                        _add_column_if_missing(conn, inspector, "users", "role", "role VARCHAR(16) NOT NULL DEFAULT 'user'")
+                        _add_column_if_missing(conn, inspector, "users", "scopes", f"scopes {json_type}")
 
     # Blueprints (your existing ones)
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
