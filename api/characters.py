@@ -4,8 +4,6 @@ from pathlib import Path
 from flask import Blueprint, jsonify, render_template, redirect, request
 from flask_login import login_required
 from .models import db, Character
-from services.equipment import get_loadout, equip_item, unequip_slot, EquipError
-from services.derived_stats import build_snapshot
 
 characters_bp = Blueprint("characters_bp", __name__)
 
@@ -93,42 +91,3 @@ def autosave_state():
 
 # ----- equipment endpoints -----
 
-@characters_bp.get("/api/characters/<string:character_id>/loadout")
-def loadout(character_id: str):
-    char = Character.query.get(character_id)
-    if not char:
-        return jsonify(error="not_found"), 404
-    if not char.combat_snapshot:
-        char.combat_snapshot = build_snapshot(character_id)
-        db.session.commit()
-    return jsonify(get_loadout(character_id))
-
-
-@characters_bp.post("/api/characters/<string:character_id>/equip")
-def api_equip(character_id: str):
-    data = request.get_json() or {}
-    try:
-        dto = equip_item(character_id=character_id, item_instance_id=data.get("item_instance_id"), slot=data.get("slot"))
-    except EquipError as e:
-        return jsonify(error=e.code), 409
-    return jsonify(dto)
-
-
-@characters_bp.post("/api/characters/<string:character_id>/unequip")
-def api_unequip(character_id: str):
-    data = request.get_json() or {}
-    try:
-        dto = unequip_slot(character_id=character_id, slot=data.get("slot"))
-    except EquipError as e:
-        return jsonify(error=e.code), 409
-    return jsonify(dto)
-
-
-@characters_bp.post("/api/characters/<string:character_id>/recompute")
-def api_recompute(character_id: str):
-    char = Character.query.get(character_id)
-    if not char:
-        return jsonify(error="not_found"), 404
-    char.combat_snapshot = build_snapshot(character_id)
-    db.session.commit()
-    return jsonify(get_loadout(character_id))

@@ -10,13 +10,14 @@ function normalizeItem(it) {
   const slug = it.slug || it.name || it.display_name || '';
   const inferred = slug ? `/static/assets/items/${String(slug).toLowerCase().replace(/\s+/g,'_').replace(/-/g,'_')}.png` : FALLBACK_ICON;
   return {
-    id: it.slug || it.item_id || it.item_instance_id || it.instance_id || slug,
+    id: it.character_item_id || it.id || it.slug || it.item_id || slug,
     name: it.display_name || it.name || slug || 'Item',
     slot: it.slot || null,
     icon: it.icon_url || it.icon_path || inferred || FALLBACK_ICON,
     qty: it.quantity ?? it.qty ?? 1,
     rarity: it.rarity || null,
-    item_instance_id: it.item_instance_id || it.instance_id || it.id,
+    character_item_id: it.character_item_id || it.id,
+    slug,
   };
 }
 
@@ -37,10 +38,11 @@ function makeCell(item, idx) {
     cell.appendChild(b);
   }
 
-  // drag payload includes item_instance_id
+  // drag payload includes character_item_id (or slug fallback)
   cell.addEventListener('dragstart', (e) => {
-    const payload = { ...item, index: idx, from: 'inventory' };
-    if (!payload.item_instance_id && item.instance_id) payload.item_instance_id = item.instance_id;
+    const payload = { index: idx, from: 'inventory' };
+    if (item.character_item_id != null) payload.character_item_id = item.character_item_id;
+    else if (item.slug) payload.slug = item.slug;
     e.dataTransfer.setData('text/plain', JSON.stringify(payload));
   });
 

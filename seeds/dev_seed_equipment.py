@@ -1,6 +1,6 @@
 """Minimal seed for equipment demo"""
 from api import create_app
-from api.models import db, User, Character, Item, ItemInstance, CharacterItem, CharacterEquipped
+from api.models import db, User, Character, Item, CharacterItem
 
 def run():
     app = create_app()
@@ -18,20 +18,11 @@ def run():
         ring = Item(item_id="ring", item_version="1", name="Ring", type="trinket", rarity="common", stats={"crit_chance": 1}, slot="ring1")
         chest = Item(item_id="chest", item_version="1", name="Chest", type="armor", rarity="common", stats={"armor": 3}, slot="chest")
         db.session.add_all([sword, shield, helm, ring, chest])
-        # instances
-        inst1 = ItemInstance(instance_id="sword1", item_id="sword", item_version="1")
-        inst2 = ItemInstance(instance_id="shield1", item_id="shield", item_version="1")
-        inst3 = ItemInstance(instance_id="helm1", item_id="helm", item_version="1")
-        inst4 = ItemInstance(instance_id="ring1", item_id="ring", item_version="1")
-        inst5 = ItemInstance(instance_id="chest1", item_id="chest", item_version="1")
-        db.session.add_all([inst1, inst2, inst3, inst4, inst5])
-        # ownership
-        for item in [sword, shield, helm, ring, chest]:
-            db.session.add(CharacterItem(character_id=char.character_id, item_id=item.item_id, quantity=1))
         db.session.commit()
-        # pre-equip sword
-        ce = CharacterEquipped(character_id=char.character_id, slot="main_hand", item_instance_id="sword1")
-        db.session.add(ce)
+        # ownership (pre-equip sword via slot)
+        db.session.add(CharacterItem(character_id=char.character_id, item_id="sword", quantity=1, slot="mainhand"))
+        for item in [shield, helm, ring, chest]:
+            db.session.add(CharacterItem(character_id=char.character_id, item_id=item.item_id, quantity=1))
         db.session.commit()
         print("Seeded character", char.character_id)
 

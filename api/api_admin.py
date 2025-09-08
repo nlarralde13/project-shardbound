@@ -1,7 +1,8 @@
 # app/api_admin.py
 from flask import Blueprint, request, jsonify
 from sqlalchemy import func
-from .models import db, User, Character, Item, ItemInstance, CharacterInventory, Town
+from .models import db, User, Character, Item, Town
+from .models.inventory_v2 import CharacterItem
 from .security import admin_guard
 from .security_rbac import (
     require_role,
@@ -186,19 +187,25 @@ def character_detail(character_id):
     if not c:
         return jsonify(error="Character not found"), 404
 
-    inv_q = (db.session.query(
-        CharacterInventory.slot_index, CharacterInventory.item_id, Item.name,
-        CharacterInventory.instance_id, CharacterInventory.qty,
-        CharacterInventory.equipped, CharacterInventory.acquired_at)
-        .outerjoin(Item, Item.item_id == CharacterInventory.item_id)
-        .filter(CharacterInventory.character_id == c.character_id)
-        .order_by(CharacterInventory.slot_index.asc()))
+    inv_q = (
+        db.session.query(CharacterItem, Item)
+        .outerjoin(Item, Item.item_id == CharacterItem.item_id)
+        .filter(CharacterItem.character_id == c.character_id)
+        .order_by(CharacterItem.id.asc())
+    )
 
-    inventory = [dict(
-        slot_index=r.slot_index, item_id=r.item_id, name=r.name or "(unknown)",
-        instance_id=r.instance_id, qty=r.qty, equipped=bool(r.equipped),
-        acquired_at=r.acquired_at.isoformat() if r.acquired_at else None
-    ) for r in inv_q.all()]
+    inventory = [
+        dict(
+            id=ci.id,
+            item_id=ci.item_id,
+            name=itm.name or "(unknown)",
+            quantity=ci.quantity,
+            slot=ci.slot,
+            bound=bool(ci.bound),
+            created_at=ci.created_at.isoformat() if getattr(ci, "created_at", None) else None,
+        )
+        for ci, itm in inv_q.all()
+    ]
 
     payload = dict(
         character_id=c.character_id, name=c.name, class_id=getattr(c, "class_id", None),
@@ -324,30 +331,34 @@ def item_delete(item_id):
 
 @admin_api.get("/item_instances")
 def instances_list():
-    page, limit, offset = _pg()
-    base = ItemInstance.query
-    if (iid := request.args.get("item_id")): base = base.filter(ItemInstance.item_id == iid)
-    total = base.count()
-    rows = base.order_by(ItemInstance.instance_id.asc()).limit(limit).offset(offset).all()
-    data = [dict(instance_id=i.instance_id, item_id=i.item_id, item_version=i.item_version, quantity=i.quantity) for i in rows]
-    return jsonify(instances=data, meta=_meta(total, page, limit))
+    return jsonify(error="v1_removed"), 410
 
 @admin_api.get("/characters/<character_id>/inventory")
 def inventory_list(character_id):
     page, limit, offset = _pg()
     c = db.session.get(Character, character_id)
-    if not c: return jsonify(error="Character not found"), 404
-    q = (db.session.query(
-            CharacterInventory.slot_index, CharacterInventory.item_id, Item.name,
-            CharacterInventory.instance_id, CharacterInventory.qty, CharacterInventory.equipped, CharacterInventory.acquired_at)
-        .outerjoin(Item, Item.item_id == CharacterInventory.item_id)
-        .filter(CharacterInventory.character_id == character_id)
-        .order_by(CharacterInventory.slot_index.asc()))
+    if not c:
+        return jsonify(error="Character not found"), 404
+    q = (
+        db.session.query(CharacterItem, Item)
+        .outerjoin(Item, Item.item_id == CharacterItem.item_id)
+        .filter(CharacterItem.character_id == character_id)
+        .order_by(CharacterItem.id.asc())
+    )
     total = q.count()
     rows = q.limit(limit).offset(offset).all()
-    data = [dict(slot_index=r.slot_index, item_id=r.item_id, name=r.name or "(unknown)",
-                 instance_id=r.instance_id, qty=r.qty, equipped=bool(r.equipped),
-                 acquired_at=(r.acquired_at.isoformat() if r.acquired_at else None)) for r in rows]
+    data = [
+        dict(
+            id=ci.id,
+            item_id=ci.item_id,
+            name=itm.name or "(unknown)",
+            quantity=ci.quantity,
+            slot=ci.slot,
+            bound=bool(ci.bound),
+            created_at=ci.created_at.isoformat() if ci.created_at else None,
+        )
+        for ci, itm in rows
+    ]
     return jsonify(inventory=data, meta=_meta(total, page, limit))
 
 # -------------- Recipes (optional) --------------

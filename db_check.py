@@ -82,25 +82,23 @@ def create_character_equipped(
     con: sqlite3.Connection,
     character_table: str,
     character_pk: str,
-    items_table: str,
-    items_pk: str,
 ) -> bool:
     if table_exists(con, "character_equipped"):
         print("[OK] Table character_equipped already exists")
         return False
 
-    sql = f"""
+    sql = """
     CREATE TABLE IF NOT EXISTS character_equipped (
       id INTEGER PRIMARY KEY,
       character_id VARCHAR(64) NOT NULL,
       slot VARCHAR(32) NOT NULL,
-      item_instance_id VARCHAR(64) NOT NULL,
+      character_item_id INTEGER NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
       CONSTRAINT uq_character_equipped_slot UNIQUE (character_id, slot),
-      UNIQUE (item_instance_id),
-      FOREIGN KEY(character_id) REFERENCES {character_table} ({character_pk}) ON DELETE CASCADE,
-      FOREIGN KEY(item_instance_id) REFERENCES {items_table} ({items_pk})
+      UNIQUE (character_item_id),
+      FOREIGN KEY(character_id) REFERENCES character ({character_pk}) ON DELETE CASCADE,
+      FOREIGN KEY(character_item_id) REFERENCES character_items (id)
     )
     """
     con.execute(sql)

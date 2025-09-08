@@ -1,14 +1,10 @@
 from flask import Blueprint, request, jsonify
 from sqlalchemy.exc import IntegrityError
-from datetime import datetime
-import uuid
 
-from .models import db, Item, ItemInstance, CharacterInventory, Character
+from .models import db, Item, Character
+from .models.inventory_v2 import CharacterItem
 
 api = Blueprint('api', __name__, url_prefix='/api')
-
-def _uid():
-    return uuid.uuid4().hex
 
 @api.route('/items', methods=['POST'])
 def create_item():
@@ -50,54 +46,25 @@ def create_item():
 
 @api.route('/item_instances', methods=['POST'])
 def create_item_instance():
-    data = request.get_json(force=True, silent=True) or {}
-    required = ['item_id', 'item_version', 'quantity']
-    missing = [k for k in required if k not in data]
-    if missing:
-        return jsonify(error=f"Missing fields: {', '.join(missing)}"), 400
-
-    item = db.session.get(Item, data['item_id'])
-    if not item:
-        return jsonify(error="Item not found"), 404
-
-    inst = ItemInstance(
-        instance_id=_uid(),
-        item_id=data['item_id'],
-        item_version=data['item_version'],
-        quantity=max(1, int(data.get('quantity', 1))),
-    )
-    db.session.add(inst)
-    db.session.commit()
-    return jsonify(message='instance created', instance_id=inst.instance_id), 201
+    return jsonify(error='v1_removed'), 410
 
 
 @api.route('/game/characters/<character_id>/inventory', methods=['POST'])
 def grant_inventory(character_id):
     data = request.get_json(force=True, silent=True) or {}
-    required = ['slot_index', 'item_id', 'instance_id', 'qty', 'equipped']
-    missing = [k for k in required if k not in data]
-    if missing:
-        return jsonify(error=f"Missing fields: {', '.join(missing)}"), 400
-
+    item_id = data.get('item_id')
+    quantity = int(data.get('quantity', 1))
+    slot = data.get('slot')
+    if not item_id:
+        return jsonify(error='item_id required'), 400
     char = db.session.get(Character, character_id)
     if not char:
         return jsonify(error='Character not found'), 404
-
-    row = CharacterInventory(
-        id=_uid(),
-        character_id=character_id,
-        slot_index=int(data['slot_index']),
-        item_id=data['item_id'],
-        instance_id=data['instance_id'],
-        qty=max(1, int(data['qty'])),
-        equipped=bool(data['equipped']),
-        acquired_at=datetime.utcnow(),
-    )
+    row = CharacterItem(character_id=character_id, item_id=item_id, quantity=quantity, slot=slot)
     db.session.add(row)
     try:
         db.session.commit()
     except IntegrityError as e:
         db.session.rollback()
-        return jsonify(error='Integrity error (duplicate slot or FK)', detail=str(e)), 400
-
+        return jsonify(error='Integrity error', detail=str(e)), 400
     return jsonify(message='granted', id=row.id), 201

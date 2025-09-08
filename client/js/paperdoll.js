@@ -26,8 +26,7 @@ let equipment = {};
 function el(sel, root = document) { return root.querySelector(sel); }
 
 function iconFromItem(it) {
-  const slug = it?.slug || it?.name || it?.display_name || it?.item_instance_id || it?.instance_id;
-  // try guessed sprite path; onerror will swap to CLEAR_PX if 404
+  const slug = it?.slug || it?.name || it?.display_name;
   const guess = slug ? `/static/assets/items/${String(slug).toLowerCase().replace(/\s+/g,'_').replace(/-/g,'_')}.png` : CLEAR_PX;
   return it?.icon_url || it?.icon_path || guess || CLEAR_PX;
 }
@@ -55,19 +54,14 @@ function updateCell(cell, item) {
   img.alt = item.name || '';
   img.draggable = true;
   img.ondragstart = (e) => {
-    const payload = {
-      from: 'paperdoll',
-      slot: item.slot,
-      item_instance_id: item.item_instance_id || item.id,
-      name: item.name
-    };
+    const payload = { from: 'paperdoll', slot: item.slot, name: item.name };
     e.dataTransfer.setData('text/plain', JSON.stringify(payload));
   };
   img.onerror = () => { img.onerror = null; img.src = CLEAR_PX; };
   img.src = item.icon || FALLBACK_ICON;
 
   cell.classList.add('filled');
-  cell.setAttribute('data-item-id', item.item_instance_id || item.id || '');
+  cell.setAttribute('data-item-id', item.id || '');
 }
 
 function pulse(elm, cls) {
@@ -95,13 +89,16 @@ function wireSlot(slot) {
     if (!text) return;
     const data = JSON.parse(text);
 
-    const instanceId = data.item_instance_id || data.instance_id || data.id;
-    if (!instanceId) { pulse(cell, 'reject'); return; }
-
     const serverSlot = UI_TO_SERVER_SLOT[slot] || slot;
+    const body = { slot: serverSlot };
+    if (data.character_item_id != null) body.character_item_id = data.character_item_id;
+    else if (data.slug) body.slug = data.slug;
+    if (!body.character_item_id && !body.slug) { pulse(cell, 'reject'); return; }
+
     cell.classList.add('busy');
     try {
-      const dto = await API.equip(null, instanceId, serverSlot);
+      const characterId = await API.characterIdOrThrow();
+      const dto = await API.equip(characterId, body);
       document.dispatchEvent(new CustomEvent('loadout:updated', { detail: dto }));
     } catch (err) {
       console.warn('[paperdoll] equip failed', err);
@@ -124,13 +121,13 @@ function applyLoadout(dto) {
     const it = eq[serverSlot];
     if (!it) { equipment[uiSlot] = null; updateCell(cell, null); continue; }
     const itemObj = {
-      id: it.slug || it.name || it.display_name || it.item_instance_id || it.instance_id,
+      id: it.slug || it.name || it.display_name || '',
       name: it.name || it.display_name || it.slug || 'Item',
       slot: uiSlot,
       icon: iconFromItem(it),
       qty: it.quantity ?? 1,
       rarity: it.rarity || null,
-      item_instance_id: it.item_instance_id || it.instance_id || it.id,
+      slug: it.slug,
     };
     equipment[uiSlot] = itemObj;
     updateCell(cell, itemObj);
@@ -159,7 +156,8 @@ async function loadFromAPI() {
     const el = slotEls[slot];
     el?.classList.add('busy');
     try {
-      const dto = await API.unequip(null, serverSlot);
+      const characterId = await API.characterIdOrThrow();
+      const dto = await API.unequip(characterId, { slot: serverSlot });
       document.dispatchEvent(new CustomEvent('loadout:updated', { detail: dto }));
     } catch (err) {
       console.warn('[paperdoll] unequip failed', err);
