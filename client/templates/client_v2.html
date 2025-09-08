@@ -124,9 +124,41 @@
     </aside>
   </div>
 
+  <!-- topbar: add a toggle button -->
+  <nav id="topbar" class="card">
+    <a href="/forums">Forums</a>
+    <a href="/account">Account</a>
+    <a id="linkDevTools" href="/dev" style="display:none">Dev Tools</a>
+    <button id="toggleLayout" class="link-btn">Free layout</button>
+  </nav>
+
+  <!-- add class="panel" to each top-level card -->
+  <aside id="panel-left">
+    <section class="card panel" id="cardCharacter"> … </section>
+  </aside>
+
+  <main id="viewport">
+    <div class="viewer-row">
+      <section class="card map-card panel" id="mapCard"> … </section>
+      <aside class="action-dock card panel" id="cardActions"> … </aside>
+    </div>
+
+    <!-- give console an id and panel class -->
+    <section class="card console-card panel" id="cardConsole">
+      <header class="card-h">Console</header>
+      <div id="console-root"></div>
+    </section>
+  </main>
+
+  <aside id="panel-right">
+    <section class="card panel" id="cardQuests"> … </section>
+    <section class="card panel" id="cardJournal"> … </section>
+  </aside>
+
   <!-- Scripts (module only) -->
   <script type="module" src="{{ url_for('static', filename='js/client_v2.js') }}"></script>
   <script type="module" src="{{ url_for('static', filename='js/paperdoll.js') }}"></script>
   <script type="module" src="{{ url_for('static', filename='js/inventory.js') }}"></script>
+  <script type="module" src="{{ url_for('static', filename='js/panels.js') }}"></script>
 </body>
 </html>
