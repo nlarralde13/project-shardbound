@@ -208,7 +208,48 @@ function remapIntoBounds(){
     save(POS_KEY + el.id, {x,y});
   });
 }
+function resetToDefaultLayout(){
+  if (!container) return;
+  const c = container.getBoundingClientRect();
+  const gap = 24;                 // visual spacing
+  // Query sizes (fallbacks if not rendered yet)
+  const map  = document.getElementById("mapCard");
+  const acts = document.getElementById("cardActions");
+  const cons = document.getElementById("cardConsole");
+  const char = document.getElementById("cardCharacter");
+  const qlog = document.getElementById("cardQuests");
+  const jour = document.getElementById("cardJournal");
 
+  // Measured (or sensible defaults)
+  const mapW = map?.offsetWidth  || 720, mapH = map?.offsetHeight  || 460;
+  const actW = acts?.offsetWidth || 200, actH = acts?.offsetHeight || 320;
+  const conW = cons?.offsetWidth || 720, conH = cons?.offsetHeight || 180;
+  const colStepX = (snapMode === "cols") ? colStep() : snapPx;
+
+  // Base anchors
+  let x0 = 0, y0 = 0;
+  // Row 1
+  place(map,  snapX(x0),                 snapY(y0));
+  place(acts, snapX(x0 + mapW + gap),    snapY(y0));
+  // Row 2
+  place(cons, snapX(x0),                 snapY(y0 + mapH + gap));
+  // Left column extras
+  place(char, snapX(x0),                 snapY(y0 + mapH + conH + gap*2));
+  // Right column stack
+  place(qlog, snapX(x0 + mapW + gap),    snapY(y0 + actH + gap));
+  place(jour, snapX(x0 + mapW + gap),    snapY(y0 + actH + (qlog?.offsetHeight || 160) + gap*2));
+
+  // Persist positions
+  [map, acts, cons, char, qlog, jour].forEach((el) => {
+    if (!el) return;
+    const r = el.getBoundingClientRect(), cc = container.getBoundingClientRect();
+    save(POS_KEY + el.id, { x: r.left - cc.left, y: r.top - cc.top });
+  });
+
+  // optional: ping server if you implemented server-side persistence
+  if (window.saveLayoutToServerDebounced) try { window.saveLayoutToServerDebounced(); } catch {}
+}
+    
 function init(){
   container = $("#"+CONTAINER_ID);
   ensureGuides();
@@ -233,3 +274,16 @@ function init(){
   uiSync();
 }
 window.addEventListener("DOMContentLoaded", init);
+
+
+// ✅ Add this near the bottom of panels.js (after all function declarations)
+window.panelsAPI = {
+  // state
+  isFree:   () => free === true,
+  isLocked: () => locked === true,
+
+  // actions
+  enableFreeLayout,     // (on:boolean) -> void
+  setLocked,            // (on:boolean) -> void
+  resetToDefaultLayout, // () -> void (we define next)
+};

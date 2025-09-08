@@ -16,74 +16,52 @@
 </head>
 <body class="theme-fantasy">
 
-  <!-- Top banner (96px) -->
+  <!-- Top banner (height controlled by --banner-h in ui-layout.css) -->
   <header id="banner" class="card">
-    <!-- User chip (fills automatically) -->
-    <div id="userChip"
-        class="user-chip"
-        data-username="{{ current_user.username if (current_user and current_user.is_authenticated) else '' }}"
-        data-fullname="{{ current_user.name if (current_user and current_user.is_authenticated) else '' }}"
-        data-email="{{ current_user.email if (current_user and current_user.is_authenticated) else '' }}"
-        data-avatar="{{ current_user.avatar_url if (current_user and current_user.is_authenticated) else '' }}">
-    <button id="userChipBtn" class="user-chip-btn" aria-haspopup="menu" aria-expanded="false">
-        <span class="avatar ring">
-        <img id="userAvatar" alt="" />
-        <span id="userInitials" class="initials" aria-hidden="true">?</span>
-        <span class="status-dot" title="online"></span>
-        </span>
-        <span class="label">
-        <span class="hello">Logged in as</span>
-        <span id="userName" class="name">Guest</span>
-        </span>
-        <svg class="chev" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
-        <path fill="currentColor" d="M7 10l5 5 5-5z"/>
-        </svg>
-    </button>
-
-    <div id="userMenu" class="user-menu" role="menu" hidden>
-        <a role="menuitem" href="/account">Account</a>
-        <a role="menuitem" href="/settings">Settings</a>
-        <form action="/logout" method="post">
-        <button role="menuitem" type="submit">Log out</button>
-        </form>
-    </div>
-    </div>
     <div class="brand">Shardbound — Layout Sandbox</div>
     <div class="spacer"></div>
 
-    <div class="field">
-    <label for="snapMode">Snap</label>
-    <select id="snapMode">
-        <option value="pixel" selected>Pixels</option>
-        <option value="cols">Columns</option>
-    </select>
+    <!-- User chip (auto-fills from Jinja, /api/me, or localStorage) -->
+    <div id="userChip"
+         class="user-chip"
+         data-username="{{ current_user.username if (current_user and current_user.is_authenticated) else '' }}"
+         data-fullname="{{ current_user.name if (current_user and current_user.is_authenticated) else '' }}"
+         data-email="{{ current_user.email if (current_user and current_user.is_authenticated) else '' }}"
+         data-avatar="{{ current_user.avatar_url if (current_user and current_user.is_authenticated) else '' }}">
+      <button id="userChipBtn" class="user-chip-btn" aria-haspopup="menu" aria-expanded="false">
+        <span class="avatar ring">
+          <img id="userAvatar" alt="" />
+          <span id="userInitials" class="initials" aria-hidden="true">?</span>
+          <span class="status-dot" title="online"></span>
+        </span>
+        <span class="label">
+          <span class="hello">Logged in as</span>
+          <span id="userName" class="name">Guest</span>
+        </span>
+        <svg class="chev" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="currentColor" d="M7 10l5 5 5-5z"/>
+        </svg>
+      </button>
+
+      <!-- User menu with layout controls -->
+      <div id="userMenu" class="user-menu" role="menu" hidden>
+        <a role="menuitem" href="/account">Account</a>
+        <a role="menuitem" href="/settings">Settings</a>
+
+        <div class="menu-sep" role="separator"></div>
+        <div class="menu-group">
+          <div class="group-label">Layout</div>
+          <button id="menuMode"  role="menuitem" type="button">Free layout</button>
+          <button id="menuLock"  role="menuitem" type="button">Lock panels</button>
+          <button id="menuReset" role="menuitem" type="button">Reset layout</button>
+        </div>
+
+        <div class="menu-sep" role="separator"></div>
+        <form action="/logout" method="post">
+          <button role="menuitem" type="submit">Log out</button>
+        </form>
+      </div>
     </div>
-
-    <div class="field" id="fieldSnapPx">
-    <label for="snapPxSelect">Step</label>
-    <select id="snapPxSelect">
-        <option value="16">16px</option>
-        <option value="20">20px</option>
-        <option value="24" selected>24px</option>
-        <option value="32">32px</option>
-        <option value="40">40px</option>
-    </select>
-    </div>
-
-    <div class="field" id="fieldColW" style="display:none">
-    <label for="colSelect">Col</label>
-    <select id="colSelect">
-        <option value="320">320px</option>
-        <option value="360" selected>360px</option>
-        <option value="400">400px</option>
-        <option value="480">480px</option>
-    </select>
-    </div>
-
-<button id="toggleLayout" class="link-btn">Free layout</button>
-<button id="toggleLock" class="link-btn">Lock panels</button>
-<button id="resetLayout" class="link-btn">Reset positions</button>
-
   </header>
 
   <!-- BOUNDED PLAYFIELD (panels stay inside this box) -->
@@ -130,9 +108,8 @@
     </section>
   </div>
 
-  <!-- Only the panels controller (bounded + snapping) -->
+  <!-- Scripts -->
   <script type="module" src="{{ url_for('static', filename='js/user-chip.js') }}"></script>
-
   <script type="module" src="{{ url_for('static', filename='js/panels.js') }}"></script>
 </body>
 </html>
