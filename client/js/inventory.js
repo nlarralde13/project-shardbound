@@ -6,6 +6,18 @@ const FALLBACK_ICON = '/static/assets/items/_fallback.png';
 
 let inventory = [];
 
+// Stable key for DOM reuse
+const nodeById = new Map();
+const keyOf = (it) => String(it?.character_item_id ?? it?.id ?? it?.slug ?? "");
+const FALLBACK_ICON = '/static/assets/items/_fallback.png';
+
+function getCellIndex(el) {
+  const cell = el.closest('.inv-cell');
+  if (!cell || !grid) return -1;
+  return Array.prototype.indexOf.call(grid.children, cell);
+}
+
+
 function normalizeItem(it) {
   const slug = it.slug || it.name || it.display_name || '';
   const inferred = slug ? `/static/assets/items/${String(slug).toLowerCase().replace(/\s+/g,'_').replace(/-/g,'_')}.png` : FALLBACK_ICON;
@@ -21,45 +33,57 @@ function normalizeItem(it) {
   };
 }
 
-function makeCell(item, idx) {
+function makeCell(item) {
+  const id = keyOf(item);
   const cell = document.createElement('div');
   cell.className = 'inv-cell';
+  cell.dataset.id = id;
 
   const img = document.createElement('img');
   img.draggable = true;
   img.alt = item.name || '';
   img.src = item.icon || FALLBACK_ICON;
+  img.onerror = () => { img.onerror = null; img.src = FALLBACK_ICON; };
   cell.appendChild(img);
 
-  if ((item.qty ?? 1) > 1) {
-    const b = document.createElement('span');
-    b.className = 'qty';
-    b.textContent = String(item.qty);
-    cell.appendChild(b);
-  }
+  const qty = document.createElement('span');
+  qty.className = 'qty';
+  cell.appendChild(qty);
 
-  // drag payload includes character_item_id (or slug fallback)
+  // Drag start: compute index *at drag time* so it’s never stale
   cell.addEventListener('dragstart', (e) => {
-    const payload = { index: idx, from: 'inventory' };
-    if (item.character_item_id != null) payload.character_item_id = item.character_item_id;
-    else if (item.slug) payload.slug = item.slug;
+    const from = getCellIndex(e.target);
+    const payload = {
+      index: from,
+      from: 'inventory',
+      character_item_id: item.character_item_id ?? null,
+      id
+    };
     e.dataTransfer.setData('text/plain', JSON.stringify(payload));
   });
 
-  // reorder within inventory; if a paperdoll item drops here -> unequip
+  // Allow drops
   cell.addEventListener('dragover', (e) => e.preventDefault());
+
+  // Drop: compute target index from DOM
   cell.addEventListener('drop', (e) => {
     e.preventDefault();
     const text = e.dataTransfer.getData('text/plain');
     if (!text) return;
-    const data = JSON.parse(text);
+    let data;
+    try { data = JSON.parse(text); } catch { return; }
+
+    const to = getCellIndex(e.target);
+    if (to < 0) return;
 
     if (data.from === 'inventory') {
       const from = data.index;
-      const to = idx;
-      const [moved] = inventory.splice(from, 1);
-      inventory.splice(to, 0, moved);
-      render();
+      if (from >= 0 && from !== to) {
+        const [moved] = inventory.splice(from, 1);
+        inventory.splice(to, 0, moved);
+        // Re-render will reuse nodes and just reorder them
+        render();
+      }
     } else if (data.from === 'paperdoll') {
       document.dispatchEvent(new CustomEvent('inventory:unequip', { detail: { slot: data.slot } }));
     }
@@ -68,11 +92,54 @@ function makeCell(item, idx) {
   return cell;
 }
 
+function updateCell(cell, item) {
+  // id already set in makeCell
+  const img = cell.querySelector('img');
+  if (img && img.src !== (item.icon || FALLBACK_ICON)) {
+    img.src = item.icon || FALLBACK_ICON;
+  }
+
+  const qtyEl = cell.querySelector('.qty');
+  const q = Number(item.qty ?? 1);
+  if (q > 1) {
+    qtyEl.textContent = String(q);
+    qtyEl.style.display = '';
+  } else {
+    qtyEl.textContent = '';
+    qtyEl.style.display = 'none';
+  }
+}
+
+
+
 function render() {
   if (!grid) return;
-  grid.innerHTML = '';
-  inventory.forEach((it, i) => grid.appendChild(makeCell(it, i)));
+
+  const frag = document.createDocumentFragment();
+  const seen = new Set();
+
+  // Build in desired order, reusing nodes when possible
+  for (const it of inventory) {
+    const id = keyOf(it);
+    let cell = nodeById.get(id);
+    if (!cell) {
+      cell = makeCell(it);
+      nodeById.set(id, cell);
+    }
+    updateCell(cell, it);
+    frag.appendChild(cell);
+    seen.add(id);
+  }
+
+  // Clean up removed items
+  for (const id of nodeById.keys()) {
+    if (!seen.has(id)) nodeById.delete(id);
+  }
+
+  // One atomic swap keeps layout stable and fast
+  grid.replaceChildren(frag);
 }
+
 
 function applyLoadout(dto) {
   const items = Array.isArray(dto?.inventory) ? dto.inventory : [];
